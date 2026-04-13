@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SaaS Attendance System: SyncTime
 
-## Getting Started
+A professional, multi-tenant attendance tracking system using Telegram for employee interaction and a premium Next.js dashboard for administration.
 
-First, run the development server:
+## 🚀 Getting Started
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+### 1. Database Setup (Supabase)
+Run the following SQL in your Supabase SQL Editor:
+```sql
+-- Create tables and enable RLS as defined in supabase/schema.sql
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Telegram Bot Setup
+1. Message **@BotFather** on Telegram.
+2. Create a new bot and copy the **API Token**.
+3. Set the Webhook URL (after deploying):
+   `https://your-domain.com/api/telegram/webhook`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Environment Variables
+Copy `.env.example` to `.env.local` and fill in your credentials from Supabase and Telegram.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 4. Running Locally
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+## 🏗 System Architecture
 
-To learn more about Next.js, take a look at the following resources:
+### Multi-tenancy
+- Every `company` has an `owner_id` (the user who signed up).
+- Every `employee` and `attendance` record is linked to a `company_id`.
+- Supabase Row Level Security (RLS) ensures one company cannot see another's data.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Bot Logic
+- **Linking**: When an employee shares their contact, the bot matches their phone number with the database record and links their `telegram_user_id`.
+- **Attendance**: The bot uses simple buttons for `Check In` and `Check Out`.
+- **Rules**: 
+  - Only one check-in allowed per day.
+  - Check-ins after 10:00 AM are automatically marked as **Late**.
+  - Working hours are calculated automatically on check-out.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📱 Features
+- **Modern Dashboard**: Built with Next.js, Tailwind, and Glassmorphic aesthetics.
+- **Real-time Stats**: Track presence, lateness, and total hours.
+- **Employee Management**: Manage your team and track their Telegram connectivity.
+- **Exportable Reports**: Generate CSVs for payroll.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠 Project Structure
+- `/src/app/api/telegram/webhook`: The brain of the Telegram bot.
+- `/src/app/(dashboard)`: The multi-page admin dashboard.
+- `/src/lib/supabase`: Database and Auth initialization.
+- `/supabase/schema.sql`: Database definition.

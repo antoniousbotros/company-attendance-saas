@@ -1,0 +1,69 @@
+-- TABLES
+CREATE TABLE public.companies (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    owner_id UUID NOT NULL REFERENCES auth.users(id),
+    plan_id TEXT DEFAULT 'starter' CHECK (plan_id IN ('starter', 'growth', 'pro', 'enterprise')),
+    subscription_status TEXT DEFAULT 'trialing' CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled')),
+    trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '14 days'),
+    current_period_end TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE public.employees (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    phone TEXT NOT NULL UNIQUE,
+    telegram_user_id BIGINT UNIQUE,
+    invite_token UUID DEFAULT uuid_generate_v4(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE public.attendance (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    check_in TIMESTAMP WITH TIME ZONE,
+    check_out TIMESTAMP WITH TIME ZONE,
+    working_hours NUMERIC(5,2),
+    status TEXT CHECK (status IN ('present', 'late', 'absent')) DEFAULT 'present',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(employee_id, date)
+);
+
+-- RLS POLICIES (Simplified for dev, but important for production)
+ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Owners can view their own company" ON public.companies 
+    FOR ALL USING (auth.uid() = owner_id);
+
+CREATE POLICY "Owners can view employees of their company" ON public.employees 
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );
+
+CREATE POLICY "Owners can view attendance of their company" ON public.attendance 
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );
+
+-- SUBSCRIPTIONS TABLE
+CREATE TABLE public.subscriptions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID REFERENCES public.companies(id),
+    stripe_id TEXT,
+    amount NUMERIC,
+    currency TEXT DEFAULT 'EGP',
+    status TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owners can view their own subscriptions" ON public.subscriptions 
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );
