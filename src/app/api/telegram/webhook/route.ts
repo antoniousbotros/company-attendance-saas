@@ -54,11 +54,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
 
+    const { data: botCompany } = await supabaseAdmin.from("companies").select("id").eq("telegram_token", token).single();
+    if (!botCompany && token !== process.env.TELEGRAM_BOT_TOKEN) {
+       console.error("Unknown bot token");
+       return NextResponse.json({ ok: false }, { status: 400 });
+    }
+    const currentCompanyId = botCompany ? botCompany.id : null;
+    
     const bot = new Telegraf(token);
 
     bot.start(async (ctx) => {
       const telegramUserId = ctx.from.id;
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
 
       if (employee) {
         const lang = (employee.companies as any).bot_language || 'en';
@@ -194,7 +201,7 @@ export async function POST(req: NextRequest) {
     };
 
     bot.on("location", async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const company = (employee.companies as any);
 
@@ -225,7 +232,7 @@ export async function POST(req: NextRequest) {
     });
 
     bot.hears(["✅ Check In", "✅ تسجيل حضور", "🚪 Check Out", "🚪 تسجيل انصراف"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return ctx.reply("Please /start and link your account first.");
       const lang = employee.companies.bot_language || 'en';
       if (employee.companies.enable_geofencing) {
@@ -235,7 +242,7 @@ export async function POST(req: NextRequest) {
     });
 
     bot.hears(["📊 My Attendance", "📊 تقرير حضوري"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const lang = (employee.companies as any).bot_language || 'en';
       const { data: logs } = await supabaseAdmin.from("attendance").select("*").eq("employee_id", employee.id).order("date", { ascending: false }).limit(5);
@@ -247,7 +254,7 @@ export async function POST(req: NextRequest) {
     });
     // ANNOUNCEMENTS HOOK
     bot.hears(["📢 Announcements", "📢 إعلانات الشركة"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       
       const lang = (employee.companies as any).bot_language || 'en';
@@ -287,7 +294,7 @@ export async function POST(req: NextRequest) {
 
     // P2P TASK ASSIGNMENTS - NEW MODULE
     bot.hears(["📌 New Task", "📌 مهمة جديدة"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       
       const lang = (employee.companies as any).bot_language || 'en';
@@ -310,7 +317,7 @@ export async function POST(req: NextRequest) {
 
     // Task Read Mechanics
     bot.hears(["📝 My Tasks", "📝 مهامي"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const lang = employee.companies.bot_language || 'en';
 
@@ -334,7 +341,7 @@ export async function POST(req: NextRequest) {
 
     // TEAM LEADER REPORTS HOOK
     bot.hears(["📊 Team Reports", "📊 تقارير فريقي"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const lang = employee.companies.bot_language || 'en';
 
@@ -400,7 +407,7 @@ export async function POST(req: NextRequest) {
 
     // SALES TRACKING HOOK
     bot.hears(["📈 Submit Report", "📈 تقرير مبيعات"], async (ctx) => {
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const lang = employee.companies.bot_language || 'en';
 
@@ -449,7 +456,7 @@ export async function POST(req: NextRequest) {
         const assigneeFullId = data.replace("assign_task_to_", "");
         const shortRef = assigneeFullId.substring(0, 8); // Extremely slim UUID footprint
 
-        const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+        const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
         if(!employee) return;
         const lang = (employee.companies as any).bot_language || 'en';
 
@@ -532,7 +539,7 @@ export async function POST(req: NextRequest) {
          const shortTaskId = parts[1];
          const offset = parts[2];
          
-         const { data: executer } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+         const { data: executer } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
          if(!executer) return;
          const lang = (executer.companies as any).bot_language || 'en';
 
@@ -582,7 +589,7 @@ export async function POST(req: NextRequest) {
           await ctx.answerCbQuery().catch(()=>{});
           
           const telegramUserId = ctx.callbackQuery.from.id;
-          const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+          const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
           if(!employee) return;
           const lang = (employee.companies as any).bot_language || 'en';
 
@@ -624,7 +631,7 @@ export async function POST(req: NextRequest) {
           if (match) {
              const shortRef = match[1];
              const taskTitle = ctx.message.text.trim();
-             const { data: sender } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+             const { data: sender } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
              if(!sender) return;
              const lang = (sender.companies as any).bot_language || 'en';
 
@@ -680,7 +687,7 @@ export async function POST(req: NextRequest) {
              const targetFieldShort = match[2];
              const inputValue = ctx.message.text.trim();
              
-             const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+             const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
              if(!employee) return;
              const lang = (employee.companies as any).bot_language || 'en';
 
@@ -729,7 +736,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Default Menu Handler for unknown inputs
-      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).limit(1).single();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const lang = (employee.companies as any).bot_language || 'en';
       ctx.reply(lang === 'ar' ? "استخدم الحوار أعلاه لتعيين المهام، أو الأزرار للحضور." : "Please use the inline dialog to assign tasks, or menu buttons for attendance.", getMainMenu(employee.companies));
