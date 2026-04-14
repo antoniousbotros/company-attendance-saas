@@ -5,6 +5,7 @@ CREATE TABLE public.companies (
     owner_id UUID NOT NULL REFERENCES auth.users(id),
     plan_id TEXT DEFAULT 'starter' CHECK (plan_id IN ('starter', 'growth', 'pro', 'enterprise')),
     subscription_status TEXT DEFAULT 'trialing' CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled')),
+    onboarding_step INTEGER DEFAULT 1,
     trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '14 days'),
     current_period_end TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -75,7 +76,7 @@ RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.companies (name, owner_id)
   VALUES (
-    COALESCE(new.raw_user_meta_data->>'company_name', 'My Company'),
+    COALESCE(new.raw_user_meta_data->>'full_name', 'My') || '''s Company',
     new.id
   );
   RETURN new;
