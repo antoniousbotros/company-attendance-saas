@@ -68,8 +68,8 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-[dir="rtl"], .rtl {
-  font-family: var(--font-arabic);
+[dir="rtl"], .rtl, [dir="rtl"] * {
+  font-family: var(--font-arabic) !important;
 }
 
 /* Scrollbar */
