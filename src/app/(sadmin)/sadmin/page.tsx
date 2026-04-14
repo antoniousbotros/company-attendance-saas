@@ -3,33 +3,33 @@
 import React, { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { 
-  Building2, Bot, CreditCard, ShieldCheck, 
-  ExternalLink, LogIn, Clock, AlertTriangle, CheckCircle2,
-  RefreshCw, Power
+  Building2, TrendingUp, Users, Activity, 
+  RefreshCw, DollarSign, ArrowUpRight
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
-export default function SadminDashboard() {
+const PLAN_PRICES = {
+  starter: 29,
+  growth: 99,
+  pro: 199,
+  enterprise: 499,
+};
+
+export default function SadminOverview() {
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [impersonating, setImpersonating] = useState<string | null>(null);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const router = useRouter();
 
   const loadData = async () => {
     setLoading(true);
-    // Note: To fetch everything, we actually need an API route using Service Role Key
-    // because standard RLS blocks us.
     try {
       const res = await fetch("/api/sadmin/data");
       const data = await res.json();
       if (data.ok) {
         setCompanies(data.companies);
       } else {
-        alert("API Error: " + data.error);
+        console.error("API Error: ", data.error);
       }
     } catch (e: any) {
-      alert("Fetch Error: " + e.message);
+      console.error("Fetch Error: ", e.message);
     }
     setLoading(false);
   };
@@ -38,186 +38,143 @@ export default function SadminDashboard() {
     loadData();
   }, []);
 
-  const handleImpersonate = async (ownerId: string, companyId: string) => {
-    if (!confirm("Are you sure you want to login as this user?")) return;
-    setImpersonating(companyId);
-    
-    try {
-      const res = await fetch("/api/sadmin/impersonate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ownerId }),
-      });
-      const data = await res.json();
-      
-      if (data.ok && data.url) {
-        window.location.href = data.url; // Redirect via Magic Link
-      } else {
-        alert(data.error || "Failed to impersonate");
-      }
-    } catch (e: any) {
-      alert(e.message);
-    }
-    setImpersonating(null);
-  };
-
-  const handleUpdatePlan = async (companyId: string, newPlan: string, extendDays: number = 0) => {
-    setUpdating(companyId);
-    try {
-      const res = await fetch("/api/sadmin/update-plan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ companyId, newPlan, extendDays }),
-      });
-      if (res.ok) {
-        await loadData(); // Reload stats
-      } else {
-        const errorData = await res.json();
-        alert(errorData.error);
-      }
-    } catch (e: any) {
-      alert(e.message);
-    }
-    setUpdating(null);
-  };
-  
-  const handleSignout = async () => {
-     await fetch("/api/sadmin/auth?action=logout", { method: "POST" });
-     router.push("/sadmin/login");
-  };
-
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-zinc-500">Loading Intelligence...</div>;
+     return <div className="min-h-screen flex items-center justify-center text-zinc-500">Loading Intelligence...</div>;
   }
 
+  // Analytics Computations
+  const totalCompanies = companies.length;
+  
+  const trialingCompanies = companies.filter(
+    (c) => new Date(c.trial_ends_at) > new Date()
+  ).length;
+  
+  const mrr = companies.reduce((acc, c) => {
+    const price = PLAN_PRICES[c.plan_id as keyof typeof PLAN_PRICES] || 0;
+    return acc + price;
+  }, 0);
+
+  const activeBots = companies.filter(c => c.telegram_token).length;
+
+  const recentCompanies = [...companies].sort((a, b) => 
+     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  ).slice(0, 5);
+
   return (
-    <div className="min-h-screen bg-[#09090b] text-white p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between bg-zinc-900 border border-zinc-800 p-6 rounded-3xl">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-500/20 text-indigo-400 rounded-xl flex items-center justify-center">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black">God Mode</h1>
-              <p className="text-zinc-400 text-sm">Managing {companies.length} active companies</p>
-            </div>
+    <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+      
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight text-white mb-1">Overview</h1>
+          <p className="text-zinc-400">Your high-level Super Admin intelligence matrix.</p>
+        </div>
+        <button onClick={loadData} className="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-all">
+          <RefreshCw className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Primary Metrics Grid - Stripe Aesthetic */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* MRR */}
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 relative overflow-hidden group">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <DollarSign className="w-24 h-24" />
           </div>
-          <div className="flex items-center gap-3">
-             <button onClick={loadData} className="p-3 bg-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-700 rounded-xl transition-all">
-                <RefreshCw className="w-5 h-5" />
-             </button>
-             <button onClick={handleSignout} className="p-3 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all flex items-center gap-2 font-bold text-sm">
-                <Power className="w-5 h-5" /> Sign Out
-             </button>
+          <div className="flex items-center gap-2 text-zinc-400 mb-4">
+             <TrendingUp className="w-4 h-4 text-emerald-400" />
+             <span className="font-medium text-sm">Estimated MRR</span>
+          </div>
+          <p className="text-4xl font-black tracking-tight text-white">${mrr.toLocaleString()}</p>
+          <div className="mt-4 flex items-center gap-1 text-xs text-zinc-500">
+            <span className="text-emerald-400 flex items-center"><ArrowUpRight className="w-3 h-3"/>100%</span> active subs
           </div>
         </div>
 
-        {/* Company List */}
-        <div className="grid grid-cols-1 gap-4">
-          {companies.map((company) => {
-            const isTrialActive = new Date(company.trial_ends_at) > new Date();
-            
-            return (
-              <div key={company.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 flex flex-col lg:flex-row gap-6 relative overflow-hidden group">
-                
-                {/* Visual Accent */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 ${company.plan_id === 'enterprise' ? 'bg-indigo-500' : company.plan_id === 'pro' ? 'bg-primary' : 'bg-emerald-500'}`} />
+        {/* Total Accounts */}
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 relative overflow-hidden group">
+           <div className="flex items-center gap-2 text-zinc-400 mb-4">
+             <Building2 className="w-4 h-4 text-indigo-400" />
+             <span className="font-medium text-sm">Total Accounts</span>
+          </div>
+          <p className="text-4xl font-black tracking-tight text-white">{totalCompanies}</p>
+          <div className="mt-4 text-xs text-zinc-500">
+             Across all billing tiers
+          </div>
+        </div>
 
-                {/* Left: Core Info */}
-                <div className="flex-1 space-y-4 text-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        <Building2 className="w-5 h-5 text-zinc-400" />
-                        {company.name}
-                      </h2>
-                      <p className="text-zinc-500 font-mono mt-1 text-xs">{company.id}</p>
-                    </div>
-                  </div>
+        {/* Trialing */}
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 relative overflow-hidden group">
+           <div className="flex items-center gap-2 text-zinc-400 mb-4">
+             <Activity className="w-4 h-4 text-amber-400" />
+             <span className="font-medium text-sm">Active Trials</span>
+          </div>
+          <p className="text-4xl font-black tracking-tight text-white">{trialingCompanies}</p>
+          <div className="mt-4 text-xs text-zinc-500">
+             Companies in 14-day window
+          </div>
+        </div>
 
-                  <div className="grid grid-cols-2 gap-4 bg-zinc-950 p-4 rounded-2xl border border-zinc-800/50">
-                    <div>
-                      <p className="text-zinc-500 mb-1 flex items-center gap-1"><Bot className="w-4 h-4"/> Bot Name</p>
-                      <p className="font-medium text-sky-400">{company.bot_name ? `@${company.bot_name}` : "Not Connected"}</p>
-                    </div>
-                    <div>
-                      <p className="text-zinc-500 mb-1 flex items-center gap-1"><ShieldCheck className="w-4 h-4"/> Token</p>
-                      <p className="font-mono text-xs text-zinc-300 truncate" title={company.telegram_token}>
-                        {company.telegram_token ? `${company.telegram_token.substring(0, 10)}...` : "N/A"}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 text-zinc-400 pt-2">
-                     <p>Owner: <span className="text-white font-medium">{company.ownerData?.email || company.owner_id}</span></p>
-                  </div>
-                </div>
-
-                {/* Middle: Plan Status */}
-                <div className="lg:w-72 bg-zinc-950 p-5 rounded-2xl border border-zinc-800/50 flex flex-col justify-center text-sm">
-                  <div className="flex items-center justify-between mb-4">
-                     <span className="text-zinc-400 flex items-center gap-1"><CreditCard className="w-4 h-4"/> Current Plan</span>
-                     <span className="uppercase font-black text-xs px-2 py-1 bg-white text-black rounded-md">{company.plan_id}</span>
-                  </div>
-                  <div className="flex items-center justify-between mb-4">
-                     <span className="text-zinc-400 flex items-center gap-1"><Clock className="w-4 h-4"/> Trial</span>
-                     <span className={`font-bold ${isTrialActive ? 'text-emerald-400' : 'text-red-400'}`}>
-                       {company.trial_ends_at ? format(new Date(company.trial_ends_at), "MMM d, yyyy") : "N/A"}
-                     </span>
-                  </div>
-
-                   <div className="flex gap-2">
-                      <select 
-                        value={company.plan_id}
-                        onChange={(e) => handleUpdatePlan(company.id, e.target.value)}
-                        disabled={updating === company.id}
-                        className="flex-1 bg-zinc-900 border border-zinc-800 text-white rounded-lg px-2 py-1.5 outline-none text-xs"
-                      >
-                        <option value="starter">Starter</option>
-                        <option value="growth">Growth</option>
-                        <option value="pro">Pro</option>
-                        <option value="enterprise">Enterprise</option>
-                      </select>
-                      
-                      <button 
-                        onClick={() => handleUpdatePlan(company.id, company.plan_id, 14)}
-                        disabled={updating === company.id}
-                        title="+14 Days Trial"
-                        className="bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                      >
-                        +14d
-                      </button>
-                   </div>
-                </div>
-
-                {/* Right: Actions */}
-                <div className="lg:w-48 flex flex-col justify-center gap-3">
-                  <button 
-                    onClick={() => handleImpersonate(company.owner_id, company.id)}
-                    disabled={impersonating === company.id}
-                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                  >
-                    {impersonating === company.id ? "Connecting..." : (
-                      <>
-                        <LogIn className="w-5 h-5" />
-                        Impersonate
-                      </>
-                    )}
-                  </button>
-                </div>
-
-              </div>
-            );
-          })}
-
-          {companies.length === 0 && (
-            <div className="text-center text-zinc-500 py-12">No companies found in database.</div>
-          )}
+        {/* Active Bots */}
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 relative overflow-hidden group">
+           <div className="flex items-center gap-2 text-zinc-400 mb-4">
+             <Users className="w-4 h-4 text-sky-400" />
+             <span className="font-medium text-sm">Configured Bots</span>
+          </div>
+          <p className="text-4xl font-black tracking-tight text-white">{activeBots}</p>
+          <div className="mt-4 text-xs text-zinc-500">
+             Using valid Telegram tokens
+          </div>
         </div>
       </div>
+
+      {/* Recent Activity Mini-Table */}
+      <div className="mt-8 bg-zinc-900/40 border border-zinc-800/50 rounded-3xl overflow-hidden">
+         <div className="px-6 py-5 border-b border-zinc-800/50 flex items-center justify-between">
+           <h2 className="text-lg font-bold text-white">Recent Signups</h2>
+         </div>
+         <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+               <thead>
+                  <tr className="bg-zinc-900/80 text-xs uppercase tracking-wider text-zinc-500 border-b border-zinc-800/50">
+                     <th className="px-6 py-4 font-semibold">Company Name</th>
+                     <th className="px-6 py-4 font-semibold">Owner Email</th>
+                     <th className="px-6 py-4 font-semibold">Plan</th>
+                     <th className="px-6 py-4 font-semibold">Joined At</th>
+                  </tr>
+               </thead>
+               <tbody className="divide-y divide-zinc-800/30 text-sm">
+                 {recentCompanies.length === 0 && (
+                   <tr><td colSpan={4} className="px-6 py-8 text-center text-zinc-500">No activity found.</td></tr>
+                 )}
+                 {recentCompanies.map(company => (
+                   <tr key={company.id} className="hover:bg-zinc-800/20 transition-colors">
+                      <td className="px-6 py-4 font-medium text-white flex items-center gap-3">
+                         <div className="w-8 h-8 rounded bg-zinc-800 flex items-center justify-center font-bold text-indigo-400 text-xs">
+                           {company.name.charAt(0).toUpperCase()}
+                         </div>
+                         {company.name}
+                      </td>
+                      <td className="px-6 py-4 text-zinc-400 font-mono text-xs">{company.ownerData?.email || 'Unknown'}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 text-xs font-bold uppercase rounded-md tracking-wide ${
+                          company.plan_id === 'enterprise' ? 'bg-indigo-500/20 text-indigo-400' :
+                          company.plan_id === 'pro' ? 'bg-white/10 text-white' :
+                          'bg-emerald-500/10 text-emerald-400'
+                        }`}>
+                          {company.plan_id}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-zinc-500">
+                        {company.created_at ? format(new Date(company.created_at), "MMM d, yyyy") : 'Unknown'}
+                      </td>
+                   </tr>
+                 ))}
+               </tbody>
+            </table>
+         </div>
+      </div>
+
     </div>
   );
 }
