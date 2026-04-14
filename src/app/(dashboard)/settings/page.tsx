@@ -12,7 +12,8 @@ import {
   Timer,
   MapPin,
   Banknote,
-  CalendarDays
+  CalendarDays,
+  Link as LinkIcon
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -70,6 +71,8 @@ export default function SettingsPage() {
   const { t, isRTL } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [mapsLink, setMapsLink] = useState("");
+  const [extracting, setExtracting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     telegram_token: "",
@@ -188,6 +191,51 @@ export default function SettingsPage() {
       });
     }
     setSaving(false);
+  };
+
+  const handleExtractMapLink = async () => {
+    if (!mapsLink) return;
+    setExtracting(true);
+    setMessage({ type: "", text: "" });
+
+    try {
+      // First try local regex (if they pasted a long link already)
+      const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+      const match = mapsLink.match(regex);
+      
+      if (match) {
+        setFormData(prev => ({
+          ...prev, 
+          office_lat: match[1], 
+          office_lng: match[2] 
+        }));
+        setMapsLink("");
+        setExtracting(false);
+        return;
+      }
+
+      // If no local match, it might be a shortened goo.gl link. Fallback to API crawler
+      const res = await fetch("/api/tools/expand-maps-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: mapsLink })
+      });
+      const result = await res.json();
+      
+      if (result.ok) {
+        setFormData(prev => ({
+          ...prev,
+          office_lat: String(result.lat),
+          office_lng: String(result.lng)
+        }));
+        setMapsLink("");
+      } else {
+         setMessage({ type: "error", text: isRTL ? "لم نتمكن من استخراج الإحداثيات من هذا الرابط" : "Could not extract coordinates from this link." });
+      }
+    } catch (err) {
+       setMessage({ type: "error", text: isRTL ? "حدث خطأ أثناء فحص الرابط" : "An error occurred while expanding the map link." });
+    }
+    setExtracting(false);
   };
 
   if (loading)
@@ -426,6 +474,32 @@ export default function SettingsPage() {
           </div>
           
           <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-8 transition-opacity", !formData.enable_geofencing && "opacity-50 pointer-events-none")}>
+            
+            <div className="md:col-span-3 bg-[#f9fafb] border border-[#e5e7eb] rounded-xl p-4 flex flex-col md:flex-row gap-4 items-end">
+               <div className="flex-1 w-full">
+                  <Field label={isRTL ? "رابط خريطة جوجل (استخراج تلقائي)" : "Google Maps Link (Auto Extract)"} hint={isRTL ? "انسخ رابط المقر من جوجل ماب لنستخرج الإحداثيات فوراً" : "Paste a Google Map link to instantly extract Lat/Lng"}>
+                     <div className="relative">
+                        <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                        <input
+                           type="url"
+                           value={mapsLink}
+                           onChange={(e) => setMapsLink(e.target.value)}
+                           className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                           placeholder="https://maps.app.goo.gl/..."
+                        />
+                     </div>
+                  </Field>
+               </div>
+               <PrimaryButton 
+                 type="button" 
+                 onClick={handleExtractMapLink}
+                 disabled={!mapsLink || extracting}
+                 className="h-[46px] w-full md:w-auto px-6 whitespace-nowrap bg-[#111] hover:bg-[#333] text-white"
+               >
+                 {extracting ? (isRTL ? "جاري الاستخراج..." : "Extracting...") : (isRTL ? "استخراج" : "Extract")}
+               </PrimaryButton>
+            </div>
+
             <Field label={isRTL ? "خط العرض (Latitude)" : "Latitude"}>
               <input
                 type="text"
