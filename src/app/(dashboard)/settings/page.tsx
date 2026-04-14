@@ -77,6 +77,7 @@ export default function SettingsPage() {
     name: "",
     telegram_token: "",
     bot_name: "",
+    bot_language: "en",
     work_start_time: "09:00",
     work_end_time: "17:00",
     late_threshold: 15,
@@ -116,6 +117,7 @@ export default function SettingsPage() {
           name: data.name || "",
           telegram_token: data.telegram_token || "",
           bot_name: data.bot_name || "",
+          bot_language: data.bot_language || "en",
           work_start_time: data.work_start_time || "09:00",
           work_end_time: data.work_end_time || "17:00",
           late_threshold: data.late_threshold || 15,
@@ -152,6 +154,7 @@ export default function SettingsPage() {
         name: formData.name,
         telegram_token: formData.telegram_token,
         bot_name: formData.bot_name,
+        bot_language: formData.bot_language,
         work_start_time: formData.work_start_time,
         work_end_time: formData.work_end_time,
         late_threshold: formData.late_threshold,
@@ -551,6 +554,17 @@ export default function SettingsPage() {
                 className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
                 placeholder="@SyncTimeBot"
               />
+            </Field>
+
+            <Field label={isRTL ? "لغة البوت (للموظفين)" : "Bot Language (For Employees)"}>
+              <select
+                value={formData.bot_language}
+                onChange={(e) => setFormData({ ...formData, bot_language: e.target.value })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+              >
+                <option value="en">{isRTL ? "الإنجليزية (English)" : "English"}</option>
+                <option value="ar">{isRTL ? "العربية (Arabic)" : "Arabic"}</option>
+              </select>
             </Field>
 
             <Field

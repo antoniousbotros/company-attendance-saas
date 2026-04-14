@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS public.companies (
     office_radius INTEGER DEFAULT 200,
     enable_geofencing BOOLEAN DEFAULT false,
     -- Payroll & HR Settings
+    bot_language VARCHAR(2) DEFAULT 'en',
     working_days JSONB DEFAULT '["Sunday","Monday","Tuesday","Wednesday","Thursday"]'::jsonb,
     holidays JSONB DEFAULT '[]'::jsonb,
     late_penalty_per_minute DECIMAL DEFAULT 1.0,
