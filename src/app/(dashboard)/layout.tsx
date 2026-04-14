@@ -18,7 +18,8 @@ import {
   ChevronLeft,
   Globe,
   Banknote,
-  ListTodo
+  ListTodo,
+  Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
@@ -36,7 +37,7 @@ type NavGroup = {
 };
 
 function useNav(): NavGroup[] {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   return [
     {
       label: t.monitor,
@@ -51,6 +52,7 @@ function useNav(): NavGroup[] {
       items: [
         { name: t.employees, href: "/employees", icon: Users },
         { name: (t as any).tasks, href: "/tasks", icon: ListTodo },
+        { name: isRTL ? "التعميمات" : "Announcements", href: "/announcements", icon: Megaphone },
         { name: (t as any).payroll, href: "/payroll", icon: CreditCard },
         { name: t.billing, href: "/billing", icon: CreditCard },
         { name: t.settings, href: "/settings", icon: SettingsIcon },

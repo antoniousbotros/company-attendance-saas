@@ -175,3 +175,30 @@ CREATE POLICY "Owners can view tasks of their company" ON public.tasks
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
+
+-- ANNOUNCEMENTS MODULE
+CREATE TABLE IF NOT EXISTS public.announcements (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    target_type TEXT CHECK (target_type IN ('all', 'department', 'specific')),
+    expire_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES public.employees(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.announcement_targets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    announcement_id UUID NOT NULL REFERENCES public.announcements(id) ON DELETE CASCADE,
+    employee_id UUID REFERENCES public.employees(id) ON DELETE CASCADE,
+    department TEXT
+);
+
+ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owners can manage announcements" ON public.announcements;
+CREATE POLICY "Owners can manage announcements" ON public.announcements
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );

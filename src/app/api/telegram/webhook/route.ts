@@ -20,13 +20,15 @@ const getMainMenu = (enableGeofencing: boolean, lang: string = 'en') => {
     if (enableGeofencing) {
       return Markup.keyboard([
         [Markup.button.locationRequest("📍 إرسال الموقع")],
-        ["📊 تقرير حضوري", "📝 مهامي", "📌 مهمة جديدة"],
+        ["📊 تقرير حضوري", "📝 مهامي"],
+        ["📌 مهمة جديدة", "📢 التعميمات"],
         ["ℹ️ مساعدة"]
       ]).resize();
     }
     return Markup.keyboard([
       ["✅ تسجيل حضور", "🚪 تسجيل انصراف"],
-      ["📊 تقرير حضوري", "📝 مهامي", "📌 مهمة جديدة"],
+      ["📊 تقرير حضوري", "📝 مهامي"],
+      ["📌 مهمة جديدة", "📢 التعميمات"],
       ["ℹ️ مساعدة"]
     ]).resize();
   }
@@ -34,13 +36,15 @@ const getMainMenu = (enableGeofencing: boolean, lang: string = 'en') => {
   if (enableGeofencing) {
     return Markup.keyboard([
       [Markup.button.locationRequest("📍 Send Location (Check In / Out)")],
-      ["📊 My Attendance", "📝 My Tasks", "📌 New Task"],
+      ["📊 My Attendance", "📝 My Tasks"],
+      ["📌 New Task", "📢 Announcements"],
       ["ℹ️ Help"]
     ]).resize();
   }
   return Markup.keyboard([
     ["✅ Check In", "🚪 Check Out"],
-    ["📊 My Attendance", "📝 My Tasks", "📌 New Task"],
+    ["📊 My Attendance", "📝 My Tasks"],
+    ["📌 New Task", "📢 Announcements"],
     ["ℹ️ Help"]
   ]).resize();
 };
@@ -180,6 +184,45 @@ export async function POST(req: NextRequest) {
       let table = lang === 'ar' ? "📅 <b>حضورك وانصرافك مؤخراً</b>\n\n<pre>تاريخ  |حالة |حضور |انصراف\n------+-----+----+-----\n" : "📅 <b>Your Recent Attendance</b>\n\n<pre>Date  |Status| In  | Out \n------+------+-----+-----\n";
       logs.forEach(log => table += `${`${new Date(log.date).getMonth()+1}`.padStart(2,"0")}/${`${new Date(log.date).getDate()}`.padStart(2,"0")} |${log.status.substring(0,4)} |${fT(log.check_in)}|${fT(log.check_out)}\n`);
       return ctx.replyWithHTML(table + "</pre>");
+    });
+    // ANNOUNCEMENTS HOOK
+    bot.hears(["📢 Announcements", "📢 التعميمات"], async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).single();
+      if (!employee) return;
+      
+      const lang = (employee.companies as any).bot_language || 'en';
+
+      const { data: announcements, error } = await supabaseAdmin.from("announcements")
+        .select(`*, announcement_targets(department, employee_id)`)
+        .eq("company_id", employee.company_id)
+        .eq("is_active", true);
+
+      if (error || !announcements || announcements.length === 0) {
+         return ctx.reply(lang === 'ar' ? "🎉 لا توجد تعميمات نشطة حالياً." : "🎉 No active announcements at the moment.");
+      }
+
+      const activeAnnouncements = announcements.filter(a => {
+         if (new Date(a.expire_at) < new Date()) return false;
+         if (a.target_type === 'all') return true;
+         if (a.target_type === 'specific') {
+             return a.announcement_targets.some((t: any) => t.employee_id === employee.id);
+         }
+         if (a.target_type === 'department') {
+             return a.announcement_targets.some((t: any) => t.department === employee.department);
+         }
+         return false;
+      });
+
+      if (activeAnnouncements.length === 0) {
+         return ctx.reply(lang === 'ar' ? "🎉 لا توجد تعميمات نشطة حالياً." : "🎉 No active announcements at the moment.");
+      }
+
+      await ctx.reply(lang === 'ar' ? `لديك ${activeAnnouncements.length} تعميمات نشطة:` : `You have ${activeAnnouncements.length} active announcements:`);
+
+      for (const a of activeAnnouncements) {
+         const msg = `📢 <b>${a.title}</b>\n\n${a.message}\n\n<i>${lang === 'ar' ? 'ينتهي في' : 'Expires'}: ${new Date(a.expire_at).toDateString()}</i>`;
+         await ctx.replyWithHTML(msg);
+      }
     });
 
     // P2P TASK ASSIGNMENTS - NEW MODULE
