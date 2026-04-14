@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   Clock,
   Timer,
-  MapPin
+  MapPin,
+  Banknote,
+  CalendarDays
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -78,7 +80,14 @@ export default function SettingsPage() {
     office_lat: "",
     office_lng: "",
     office_radius: 200,
-    enable_geofencing: false
+    enable_geofencing: false,
+    working_days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"],
+    late_penalty_per_minute: 1.0,
+    absence_penalty_per_day: 1.0,
+    overtime_enabled: false,
+    currency: "EGP",
+    half_day_enabled: false,
+    half_day_hours: 4.0
   });
   const [message, setMessage] = useState<{
     type: "success" | "error" | "";
@@ -110,7 +119,14 @@ export default function SettingsPage() {
           office_lat: data.office_lat ? String(data.office_lat) : "",
           office_lng: data.office_lng ? String(data.office_lng) : "",
           office_radius: data.office_radius || 200,
-          enable_geofencing: !!data.enable_geofencing
+          enable_geofencing: !!data.enable_geofencing,
+          working_days: data.working_days || ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"],
+          late_penalty_per_minute: data.late_penalty_per_minute || 1.0,
+          absence_penalty_per_day: data.absence_penalty_per_day || 1.0,
+          overtime_enabled: !!data.overtime_enabled,
+          currency: data.currency || "EGP",
+          half_day_enabled: !!data.half_day_enabled,
+          half_day_hours: data.half_day_hours || 4.0
         });
       }
       setLoading(false);
@@ -139,7 +155,14 @@ export default function SettingsPage() {
         office_lat: formData.office_lat ? parseFloat(formData.office_lat) : null,
         office_lng: formData.office_lng ? parseFloat(formData.office_lng) : null,
         office_radius: formData.office_radius,
-        enable_geofencing: formData.enable_geofencing
+        enable_geofencing: formData.enable_geofencing,
+        working_days: formData.working_days,
+        late_penalty_per_minute: formData.late_penalty_per_minute,
+        absence_penalty_per_day: formData.absence_penalty_per_day,
+        overtime_enabled: formData.overtime_enabled,
+        currency: formData.currency,
+        half_day_enabled: formData.half_day_enabled,
+        half_day_hours: formData.half_day_hours
       })
       .eq("owner_id", user?.id);
 
@@ -223,6 +246,18 @@ export default function SettingsPage() {
                 placeholder="e.g. Acme Corp"
               />
             </Field>
+            <Field label={isRTL ? "العملة المحلية" : "Currency"}>
+              <select
+                value={formData.currency}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+              >
+                <option value="EGP">EGP (جنيه مصري)</option>
+                <option value="SAR">SAR (ريال سعودي)</option>
+                <option value="AED">AED (درهم إماراتي)</option>
+                <option value="USD">USD (دولار أمريكي)</option>
+              </select>
+            </Field>
           </div>
         </SectionCard>
 
@@ -274,6 +309,98 @@ export default function SettingsPage() {
               </div>
             </Field>
           </div>
+        </SectionCard>
+
+        {/* Payroll Policy */}
+        <SectionCard>
+          <div className="flex items-start justify-between mb-6">
+            <SectionHeader
+              icon={Banknote}
+              title={isRTL ? "سياسة الرواتب (الخصومات والإضافي)" : "Payroll Policy (Penalties & Overtime)"}
+              subtitle={isRTL ? "حدد قواعد الخصومات واحتساب الوقت الإضافي" : "Define penalty rules and overtime logic"}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <Field label={isRTL ? "خصم التأخير (قيمة الدقيقة)" : "Late Penalty (Cost per Min)"} hint={isRTL ? "أدخل قيمة الخصم لكل دقيقة تأخير (مثلا 1.0 = خصم دقيقة واحدة)" : "Penalty multiplier per minute"}>
+              <input
+                type="number"
+                step="0.1"
+                value={formData.late_penalty_per_minute}
+                onChange={(e) => setFormData({ ...formData, late_penalty_per_minute: parseFloat(e.target.value) })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                placeholder="1.0"
+              />
+            </Field>
+            <Field label={isRTL ? "خصم الغياب (قيمة اليوم)" : "Absence Penalty (Cost per Day)"} hint={isRTL ? "كم يوما يخصم لليوم الواحد غياب؟" : "Multiplier of daily salary per absence"}>
+              <input
+                type="number"
+                step="0.1"
+                value={formData.absence_penalty_per_day}
+                onChange={(e) => setFormData({ ...formData, absence_penalty_per_day: parseFloat(e.target.value) })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                placeholder="1.0"
+              />
+            </Field>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-[#f9fafb] rounded-xl border border-[#e5e7eb] mb-6">
+            <div className="flex items-center gap-3">
+              <CalendarDays className="w-5 h-5 text-[#ff5a00]" />
+              <div>
+                <p className="text-sm font-bold text-[#111]">{isRTL ? "السماح بالوقت الإضافي" : "Enable Overtime"}</p>
+                <p className="text-xs text-[#6b7280]">{isRTL ? "احتساب أجر إضافي للموظف إذا تجاوز ساعات عمله" : "Calculate compensation for extra hours worked"}</p>
+              </div>
+            </div>
+            <label className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={formData.overtime_enabled}
+                  onChange={(e) => setFormData({ ...formData, overtime_enabled: e.target.checked })}
+                />
+                <div className={cn("block w-14 h-8 rounded-full transition-colors", formData.overtime_enabled ? "bg-[#1e8e3e]" : "bg-[#e5e7eb]")}></div>
+                <div className={cn("dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform", formData.overtime_enabled && "transform translate-x-6")}></div>
+              </div>
+            </label>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-[#f9fafb] rounded-xl border border-[#e5e7eb] mb-4">
+            <div className="flex items-center gap-3">
+              <Clock className="w-5 h-5 text-[#ff5a00]" />
+              <div>
+                <p className="text-sm font-bold text-[#111]">{isRTL ? "نظام نصف اليوم (Half-Day)" : "Enable Half-Days"}</p>
+                <p className="text-xs text-[#6b7280]">{isRTL ? "إذا عمل الموظف أقل من ساعات محددة يُحسب نصف غياب (0.5 يوماً)" : "Deduct 0.5 absences if employee works under a threshold of hours"}</p>
+              </div>
+            </div>
+            <label className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={formData.half_day_enabled}
+                  onChange={(e) => setFormData({ ...formData, half_day_enabled: e.target.checked })}
+                />
+                <div className={cn("block w-14 h-8 rounded-full transition-colors", formData.half_day_enabled ? "bg-[#1e8e3e]" : "bg-[#e5e7eb]")}></div>
+                <div className={cn("dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform", formData.half_day_enabled && "transform translate-x-6")}></div>
+              </div>
+            </label>
+          </div>
+
+          {formData.half_day_enabled && (
+             <div className="p-4 bg-white border border-[#eeeeee] rounded-xl w-full md:w-1/2">
+                <Field label={isRTL ? "الحد الأدنى لساعات نصف اليوم" : "Half-Day Maximum Limit (Hours)"} hint={isRTL ? "مثال: إذا كان 4.0 وعمل الموظف 3.5 ساعات، يحسب عليه 0.5 غياب" : "If employee works less than this, they get 0.5 days absent deducted"}>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={formData.half_day_hours}
+                    onChange={(e) => setFormData({ ...formData, half_day_hours: parseFloat(e.target.value) })}
+                    className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                  />
+                </Field>
+             </div>
+          )}
         </SectionCard>
 
         {/* Location Verification (Geofencing) */}

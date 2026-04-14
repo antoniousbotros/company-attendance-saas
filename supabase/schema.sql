@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS public.companies (
     office_lng DOUBLE PRECISION,
     office_radius INTEGER DEFAULT 200,
     enable_geofencing BOOLEAN DEFAULT false,
+    -- Payroll & HR Settings
+    working_days JSONB DEFAULT '["Sunday","Monday","Tuesday","Wednesday","Thursday"]'::jsonb,
+    holidays JSONB DEFAULT '[]'::jsonb,
+    late_penalty_per_minute DECIMAL DEFAULT 1.0,
+    absence_penalty_per_day DECIMAL DEFAULT 1.0,
+    overtime_enabled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -27,6 +33,12 @@ CREATE TABLE IF NOT EXISTS public.employees (
     phone TEXT NOT NULL UNIQUE,
     telegram_user_id BIGINT UNIQUE,
     invite_token UUID DEFAULT uuid_generate_v4(),
+    -- Compensation & Rules
+    base_salary DECIMAL DEFAULT 0,
+    salary_type TEXT DEFAULT 'monthly' CHECK (salary_type IN ('monthly', 'daily', 'hourly')),
+    working_hours_per_day DECIMAL DEFAULT 8,
+    allowed_late_minutes INTEGER DEFAULT NULL,
+    overtime_rate DECIMAL DEFAULT 1.5,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -38,7 +50,8 @@ CREATE TABLE IF NOT EXISTS public.attendance (
     check_in TIMESTAMP WITH TIME ZONE,
     check_out TIMESTAMP WITH TIME ZONE,
     working_hours NUMERIC(5,2),
-    status TEXT CHECK (status IN ('present', 'late', 'absent')) DEFAULT 'present',
+    late_minutes INTEGER DEFAULT 0,
+    status TEXT CHECK (status IN ('present', 'late', 'absent', 'holiday')) DEFAULT 'present',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(employee_id, date)
 );
@@ -77,12 +90,47 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS public.payroll (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    month VARCHAR(7) NOT NULL, -- Format: YYYY-MM
+    total_working_days INTEGER DEFAULT 0,
+    present_days INTEGER DEFAULT 0,
+    absent_days INTEGER DEFAULT 0,
+    total_hours DECIMAL DEFAULT 0,
+    late_minutes INTEGER DEFAULT 0,
+    overtime_hours DECIMAL DEFAULT 0,
+    base_salary DECIMAL DEFAULT 0,
+    deductions DECIMAL DEFAULT 0,
+    bonuses DECIMAL DEFAULT 0,
+    final_salary DECIMAL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(employee_id, month)
+);
+
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Owners can view their own subscriptions" ON public.subscriptions;
 CREATE POLICY "Owners can view their own subscriptions" ON public.subscriptions 
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
+
+ALTER TABLE public.payroll ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owners can view payroll of their company" ON public.payroll;
+CREATE POLICY "Owners can view payroll of their company" ON public.payroll 
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );
+
+-- ADD NEW FEATURES (CURRENCY & HALF-DAY)
+ALTER TABLE public.companies
+ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP',
+ADD COLUMN IF NOT EXISTS half_day_enabled BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS half_day_hours DECIMAL DEFAULT 4.0;
+
+ALTER TABLE public.payroll
+ADD COLUMN IF NOT EXISTS half_days DECIMAL DEFAULT 0;
 
 -- ONBOARDING TRIGGER
 -- This function creates a company record automatically when a user signs up

@@ -33,6 +33,10 @@ export default function EmployeesPage() {
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     phone: "",
+    base_salary: 0,
+    salary_type: "monthly",
+    working_hours_per_day: 8,
+    overtime_rate: 1.5
   });
 
   const fetchEmployees = async () => {
@@ -75,6 +79,10 @@ export default function EmployeesPage() {
       name: newEmployee.name.trim(),
       phone,
       company_id: company.id,
+      base_salary: newEmployee.base_salary,
+      salary_type: newEmployee.salary_type,
+      working_hours_per_day: newEmployee.working_hours_per_day,
+      overtime_rate: newEmployee.overtime_rate,
     });
 
     setSaving(false);
@@ -82,7 +90,14 @@ export default function EmployeesPage() {
       alert(error.message);
     } else {
       setShowAddModal(false);
-      setNewEmployee({ name: "", phone: "" });
+      setNewEmployee({ 
+        name: "", 
+        phone: "",
+        base_salary: 0,
+        salary_type: "monthly",
+        working_hours_per_day: 8,
+        overtime_rate: 1.5
+      });
       fetchEmployees();
     }
   };
@@ -274,6 +289,68 @@ export default function EmployeesPage() {
                     ? "أدخل كود الدولة متبوعاً بالرقم، أرقام فقط (مثال: 201234567890)" 
                     : "Include country code, digits only (e.g. 201234567890)"}
                 </p>
+              </div>
+              
+              {/* HR & Payroll Fields */}
+              <div className="pt-4 border-t border-[#eeeeee] space-y-6">
+                <h3 className="text-sm font-bold text-[#111]">{isRTL ? "بيانات الرواتب والموارد البشرية" : "Payroll & HR Data"}</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "نظام الراتب" : "Salary Type"}
+                    </label>
+                    <select
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={newEmployee.salary_type}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, salary_type: e.target.value })}
+                    >
+                      <option value="monthly">{isRTL ? "شهري" : "Monthly"}</option>
+                      <option value="daily">{isRTL ? "يومي" : "Daily"}</option>
+                      <option value="hourly">{isRTL ? "بالساعة" : "Hourly"}</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "الراتب الأساسي" : "Base Salary"}
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={newEmployee.base_salary}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, base_salary: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "ساعات العمل يومياً" : "Daily Hours"}
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={newEmployee.working_hours_per_day}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, working_hours_per_day: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "مضاعف الإضافي" : "Overtime Rate"}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={newEmployee.overtime_rate}
+                      onChange={(e) => setNewEmployee({ ...newEmployee, overtime_rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
               </div>
             </div>
 

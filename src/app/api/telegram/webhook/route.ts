@@ -113,17 +113,25 @@ export async function POST(req: NextRequest) {
         .eq("date", today)
         .single();
 
-      // If they explicitly used location but geofencing is off, we still process it just fine.
       // If we are checking in:
       if (!attendance || !attendance.check_in) {
         let isLate = false;
+        let lateMins = 0;
         if (company.work_start_time) {
           const [startH, startM] = company.work_start_time.split(':').map(Number);
-          const thresholdMin = company.late_threshold || 15;
+          const thresholdMin = employee.allowed_late_minutes !== null ? employee.allowed_late_minutes : (company.late_threshold || 15);
+          
           const workStart = new Date(now);
-          workStart.setHours(startH, startM + thresholdMin, 0, 0);
+          workStart.setHours(startH, startM, 0, 0); // Exact start time
+          
           if (now > workStart) {
-            isLate = true;
+            const diffMs = now.getTime() - workStart.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            
+            if (diffMins > thresholdMin) {
+              isLate = true;
+              lateMins = diffMins; // log correct exact late minutes
+            }
           }
         }
         
@@ -135,11 +143,12 @@ export async function POST(req: NextRequest) {
             company_id: employee.company_id,
             date: today,
             check_in: now.toISOString(),
-            status: status
+            status: status,
+            late_minutes: lateMins
           });
 
         if (error) return ctx.reply("Error recording attendance. Please try again.");
-        return ctx.reply(`✅ Checked In at ${now.toLocaleTimeString()}.${isLate ? " (Marked as Late)" : ""}`);
+        return ctx.reply(`✅ Checked In at ${now.toLocaleTimeString()}.${isLate ? `\n⚠️ You are ${lateMins} minutes late.` : ""}`);
       }
 
       // If checked in, but not checked out:

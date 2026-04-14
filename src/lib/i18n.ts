@@ -12,6 +12,7 @@ export const translations = {
     reports: "Reports",
     employees: "Employees",
     billing: "Payments",
+    payroll: "Payroll",
     settings: "Settings",
 
     // Header
@@ -153,6 +154,7 @@ export const translations = {
     reports: "التقارير",
     employees: "الموظفين",
     billing: "المدفوعات",
+    payroll: "كشف الرواتب",
     settings: "الإعدادات",
 
     helpCenter: "مركز المساعدة",
