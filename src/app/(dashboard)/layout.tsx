@@ -9,21 +9,14 @@ import {
   CalendarCheck, 
   BarChart3, 
   CreditCard,
-  Settings, 
   LogOut,
   Clock,
   Sun,
-  Moon
+  Moon,
+  Languages
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navigation = [
-  { name: "Overview", href: "/overview", icon: LayoutDashboard },
-  { name: "Employees", href: "/employees", icon: Users },
-  { name: "Attendance", href: "/attendance", icon: CalendarCheck },
-  { name: "Reports", href: "/reports", icon: BarChart3 },
-  { name: "Billing", href: "/billing", icon: CreditCard },
-];
+import { translations, type Language } from "@/lib/i18n";
 
 export default function DashboardLayout({
   children,
@@ -32,15 +25,19 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [theme, setTheme] = useState("dark");
+  const [lang, setLang] = useState<Language>("en");
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) {
-      setTheme(savedTheme);
-      document.documentElement.classList.toggle("dark", savedTheme === "dark");
-    } else {
-      document.documentElement.classList.add("dark");
-    }
+    // Theme sync
+    const savedTheme = localStorage.getItem("theme") || "dark";
+    setTheme(savedTheme);
+    document.documentElement.classList.toggle("dark", savedTheme === "dark");
+
+    // Language sync
+    const savedLang = (localStorage.getItem("lang") as Language) || "en";
+    setLang(savedLang);
+    document.documentElement.setAttribute("dir", savedLang === "ar" ? "rtl" : "ltr");
+    document.documentElement.setAttribute("lang", savedLang);
   }, []);
 
   const toggleTheme = () => {
@@ -50,10 +47,31 @@ export default function DashboardLayout({
     document.documentElement.classList.toggle("dark", newTheme === "dark");
   };
 
+  const toggleLang = () => {
+    const newLang = lang === "en" ? "ar" : "en";
+    setLang(newLang);
+    localStorage.setItem("lang", newLang);
+    document.documentElement.setAttribute("dir", newLang === "ar" ? "rtl" : "ltr");
+    document.documentElement.setAttribute("lang", newLang);
+  };
+
+  const t = translations[lang];
+
+  const navigation = [
+    { name: t.overview, href: "/overview", icon: LayoutDashboard },
+    { name: t.employees, href: "/employees", icon: Users },
+    { name: t.attendance, href: "/attendance", icon: CalendarCheck },
+    { name: t.reports, href: "/reports", icon: BarChart3 },
+    { name: t.billing, href: "/billing", icon: CreditCard },
+  ];
+
   return (
-    <div className="min-h-screen bg-background text-foreground flex transition-colors duration-300">
-      {/* Sidebar */}
-      <aside className="w-64 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090b] flex flex-col fixed h-full z-20">
+    <div className="min-h-screen bg-background text-foreground flex transition-all duration-300">
+      {/* Sidebar - Use logical positioning */}
+      <aside className={cn(
+        "w-64 border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#09090b] flex flex-col fixed h-full z-20 transition-all duration-300",
+        lang === 'ar' ? "right-0 border-l" : "left-0 border-r"
+      )}>
         <div className="p-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
@@ -68,7 +86,7 @@ export default function DashboardLayout({
             const isActive = pathname.startsWith(item.href);
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative",
@@ -83,7 +101,10 @@ export default function DashboardLayout({
                 )} />
                 <span className="font-bold text-sm tracking-tight">{item.name}</span>
                 {isActive && (
-                  <div className="absolute left-0 w-1 h-6 bg-indigo-600 rounded-r-full" />
+                  <div className={cn(
+                    "absolute w-1 h-6 bg-indigo-600 rounded-full",
+                    lang === 'ar' ? "right-0 rounded-l-full" : "left-0 rounded-r-full"
+                  )} />
                 )}
               </Link>
             );
@@ -92,21 +113,33 @@ export default function DashboardLayout({
 
         <div className="p-4 space-y-2 border-t border-zinc-200 dark:border-zinc-800">
           <button 
+            onClick={toggleLang}
+            className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-zinc-500 hover:text-indigo-600 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all font-bold text-sm"
+          >
+            <Languages className="w-5 h-5" />
+            {lang === "en" ? "العربية" : "English"}
+          </button>
+          
+          <button 
             onClick={toggleTheme}
             className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-zinc-500 hover:text-indigo-600 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 transition-all font-bold text-sm"
           >
             {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            {theme === "dark" ? "Light Mode" : "Dark Mode"}
+            {theme === "dark" ? t.lightMode : t.darkMode}
           </button>
+          
           <button className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-zinc-500 hover:text-red-600 hover:bg-red-500/10 transition-all font-bold text-sm">
             <LogOut className="w-5 h-5" />
-            Sign Out
+            {t.signOut}
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="ml-64 flex-1 p-8 bg-zinc-50/50 dark:bg-transparent min-h-screen">
+      {/* Main Content - Handle flip using logical margin */}
+      <main className={cn(
+        "flex-1 p-8 bg-zinc-50/50 dark:bg-transparent min-h-screen transition-all duration-300",
+        lang === 'ar' ? "mr-64" : "ml-64"
+      )}>
         <div className="max-w-7xl mx-auto">
           {children}
         </div>
