@@ -445,23 +445,55 @@ export async function POST(req: NextRequest) {
       // START TASK HOOK
       if (data && data.startsWith("start_task_")) {
          const taskId = data.replace("start_task_", "");
+         const { data: taskData } = await supabaseAdmin.from("tasks").select("title, assigner:employees!assigned_by(telegram_user_id), assignee:employees!assigned_to(name, companies(bot_language))").eq("id", taskId).single();
+
          await supabaseAdmin.from("tasks").update({ status: "in_progress" }).eq("id", taskId);
          await ctx.answerCbQuery("Task marked as in progress!");
+
+         if (taskData) {
+             const assigneeAny: any = taskData.assignee;
+             const assigneeObj = Array.isArray(assigneeAny) ? assigneeAny[0] : assigneeAny;
+             const assignerAny: any = taskData.assigner;
+             const assignerObj = Array.isArray(assignerAny) ? assignerAny[0] : assignerAny;
+
+             if (assignerObj?.telegram_user_id) {
+                 const lang = assigneeObj?.companies?.bot_language || 'en';
+                 const msg = lang === 'ar' 
+                   ? `⏳ <b>بدأ العمل:</b>\n${assigneeObj?.name} بدأ الآن بتنفيذ المهمة:\n"${taskData.title}"`
+                   : `⏳ <b>Task Started:</b>\n${assigneeObj?.name} is now working on:\n"${taskData.title}"`;
+                 bot.telegram.sendMessage(assignerObj.telegram_user_id, msg, { parse_mode: "HTML" }).catch(()=>{});
+             }
+         }
+
          return ctx.editMessageReplyMarkup(Markup.inlineKeyboard([
              [Markup.button.callback("✅ Mark as Done", `task_done_${taskId}`)]
          ]).reply_markup);
       }
 
-         // COMPLETE TASK HOOK
+      // COMPLETE TASK HOOK
       if (data && data.startsWith("task_done_")) {
-        const taskId = data.replace("task_done_", "");
-        const { data: employee } = await supabaseAdmin.from("employees").select("id, companies(*)").eq("telegram_user_id", telegramUserId).single();
-        if(!employee) return;
-        
-        await supabaseAdmin.from("tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", taskId);
-        await ctx.answerCbQuery("Completed!");
-        
-        return ctx.editMessageText(`✅ <b>COMPLETED</b>`, { parse_mode: "HTML" });
+         const taskId = data.replace("task_done_", "");
+         const { data: taskData } = await supabaseAdmin.from("tasks").select("title, assigner:employees!assigned_by(telegram_user_id), assignee:employees!assigned_to(name, companies(bot_language))").eq("id", taskId).single();
+         
+         await supabaseAdmin.from("tasks").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", taskId);
+         await ctx.answerCbQuery("Completed!");
+         
+         if (taskData) {
+             const assigneeAny: any = taskData.assignee;
+             const assigneeObj = Array.isArray(assigneeAny) ? assigneeAny[0] : assigneeAny;
+             const assignerAny: any = taskData.assigner;
+             const assignerObj = Array.isArray(assignerAny) ? assignerAny[0] : assignerAny;
+
+             if (assignerObj?.telegram_user_id) {
+                 const lang = assigneeObj?.companies?.bot_language || 'en';
+                 const msg = lang === 'ar' 
+                   ? `✅ <b>مهمة منجزة:</b>\n${assigneeObj?.name} أتم بنجاح المهمة:\n"${taskData.title}"`
+                   : `✅ <b>Task Completed:</b>\n${assigneeObj?.name} has successfully finished:\n"${taskData.title}"`;
+                 bot.telegram.sendMessage(assignerObj.telegram_user_id, msg, { parse_mode: "HTML" }).catch(()=>{});
+             }
+         }
+
+         return ctx.editMessageText(`✅ <b>COMPLETED</b>`, { parse_mode: "HTML" });
       }
 
       // DEADLINE (CALENDAR) SELECTION HOOK
