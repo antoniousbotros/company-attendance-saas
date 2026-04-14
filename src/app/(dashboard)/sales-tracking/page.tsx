@@ -317,7 +317,14 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     const [requireNotes, setRequireNotes] = useState(team.require_notes ?? false);
 
     const handleAddField = async () => {
-        if (!newLabel.trim()) return;
+        if (!newLabel.trim()) {
+            alert("⚠️ يرجى إدخال اسم الحقل أولاً.");
+            return;
+        }
+        if (newType === 'select' && !newOptionsText.trim()) {
+            alert("⚠️ يرجى إدخال خيار واحد على الأقل، مفصولاً بفاصلة.");
+            return;
+        }
         
         try {
             const fieldOptions = newType === 'select' ? newOptionsText.split(',').map(s=>s.trim()).filter(Boolean) : [];
