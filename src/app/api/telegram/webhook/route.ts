@@ -541,7 +541,6 @@ export async function POST(req: NextRequest) {
                 assigned_by: sender.id,
                 assigned_to: matchedCoworker.id,
                 title: taskTitle,
-                deadline: null,
                 status: 'pending' // Initially pending but undeclared deadline
              }).select("id").single();
 
