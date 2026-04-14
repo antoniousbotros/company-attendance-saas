@@ -63,6 +63,13 @@ export default function SignupPage() {
        if (authError) {
          setErrorMsg(authError.message);
        } else if (authData.user) {
+          // Fire off custom Welcome Email via our internal logic leveraging EmailIT API
+          fetch("/api/email/welcome", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({ email: email.trim(), name: fullName })
+          }).catch(console.error);
+
           window.location.href = "/onboarding";
        }
     } catch (err: unknown) {

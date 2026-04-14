@@ -124,7 +124,7 @@ export default function LoginPage() {
                  <label className="text-sm font-bold text-[#111]">
                     {isRTL ? "كلمة المرور" : "Password"}
                  </label>
-                 <a href="#" className="text-sm font-bold text-[#ff5a00] hover:underline">
+                 <a href="/forgot-password" className="text-sm font-bold text-[#ff5a00] hover:underline">
                     {isRTL ? "هل نسيت كلمة المرور؟" : "Forgot password?"}
                  </a>
               </div>
