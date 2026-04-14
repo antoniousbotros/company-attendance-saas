@@ -47,6 +47,19 @@ export default function EmployeesPage() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [bulkDepartment, setBulkDepartment] = useState("");
 
+  const allAvailableDepartments = useMemo(() => {
+      const activeDepts = employees.map(e => e.department).filter(Boolean) as string[];
+      let configuredDepts: string[] = [];
+      if (Array.isArray(departmentsList)) {
+          configuredDepts = departmentsList;
+      } else if (typeof departmentsList === 'string') {
+          try {
+             configuredDepts = JSON.parse(departmentsList);
+          } catch(e) {}
+      }
+      return Array.from(new Set([...configuredDepts, ...activeDepts]));
+  }, [departmentsList, employees]);
+
 
   const [newEmployee, setNewEmployee] = useState({
     name: "",
@@ -287,7 +300,7 @@ export default function EmployeesPage() {
                     >
                       <option value="">{isRTL ? "--- اختر القسم ---" : "--- Select Dept ---"}</option>
                       <option value="UNASSIGN">{isRTL ? "إزالة التخصيص" : "Remove Dept"}</option>
-                      {departmentsList.map(d => (
+                      {allAvailableDepartments.map(d => (
                          <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
@@ -495,7 +508,7 @@ export default function EmployeesPage() {
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
                   {isRTL ? "القسم / التخصص (اختياري)" : "Department"}
                 </label>
-                {departmentsList.length > 0 ? (
+                {allAvailableDepartments.length > 0 ? (
                   <select
                     className="w-full h-12 px-4 py-0 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
                     value={newEmployee.department}
@@ -504,7 +517,7 @@ export default function EmployeesPage() {
                     }
                   >
                     <option value="">{isRTL ? "--- اختر تخصيص ---" : "--- Unassigned ---"}</option>
-                    {departmentsList.map(d => (
+                    {allAvailableDepartments.map(d => (
                        <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
@@ -645,7 +658,7 @@ export default function EmployeesPage() {
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
                   {isRTL ? "القسم / التخصص (اختياري)" : "Department"}
                 </label>
-                {departmentsList.length > 0 ? (
+                {allAvailableDepartments.length > 0 ? (
                   <select
                     className="w-full h-12 px-4 py-0 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
                     value={editingEmployee.department || ""}
@@ -654,7 +667,7 @@ export default function EmployeesPage() {
                     }
                   >
                     <option value="">{isRTL ? "--- اختر تخصيص ---" : "--- Unassigned ---"}</option>
-                    {departmentsList.map(d => (
+                    {allAvailableDepartments.map(d => (
                        <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
