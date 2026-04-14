@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ReceiptText, CalendarClock } from "lucide-react";
 import { PLANS, calculateExtraCosts } from "@/lib/billing";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [currency, setCurrency] = useState("EGP");
   const [employeeCount, setEmployeeCount] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
 
   // We fall back to a local generated trial if no backend payment system exists
   const [company, setCompany] = useState(() => {
@@ -38,8 +39,14 @@ export default function BillingPage() {
        const { data: comp } = await supabase.from("companies").select("id, currency").eq("owner_id", user.id).single();
        if (comp) {
           setCurrency(comp.currency || "EGP");
-          const { count } = await supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", comp.id);
-          setEmployeeCount(count || 0);
+          
+          const [empRes, txnRes] = await Promise.all([
+             supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", comp.id),
+             supabase.from("subscriptions").select("*").eq("company_id", comp.id).order('created_at', { ascending: false })
+          ]);
+          
+          setEmployeeCount(empRes.count || 0);
+          setTransactions(txnRes.data || []);
        }
        setLoading(false);
     }
@@ -67,100 +74,89 @@ export default function BillingPage() {
     employeeCount -
       (currentPlan.employeeLimit === Infinity ? employeeCount : currentPlan.employeeLimit)
   );
+  
   const limitLabel =
     currentPlan.employeeLimit === Infinity ? "∞" : currentPlan.employeeLimit;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <PageHeader
         title={t.billingTitle}
         subtitle={t.billingSubtitle}
         isRTL={isRTL}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
-        {/* Current plan */}
-        <SectionCard>
-          <div
-            className={cn(
-              "flex items-start justify-between mb-6",
-              isRTL && "flex-row-reverse"
-            )}
-          >
-            <div>
-              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider">
-                {t.currentPlan}
-              </p>
-              <p className="text-[32px] font-bold text-[#111] leading-tight tracking-tight mt-1">
-                {currentPlan.name}
-              </p>
-              <p className="text-sm text-[#6b7280] mt-1">
-                {currentPlan.price} {currency} / {isRTL ? "شهر" : "month"}
-              </p>
+      {/* 1. Limitations & Usage Metrics */}
+      <div>
+        <h2 className="text-lg font-bold text-[#111] mb-4 text-start">{isRTL ? "استخدام الباقة الحالية" : "Current Plan Limitations"}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          
+          <SectionCard className="md:col-span-1 bg-[#f9fafb]">
+            <div className={cn("flex flex-col text-start h-full justify-between")}>
+              <div>
+                <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
+                  {t.currentPlan}
+                </p>
+                <div className="flex items-center gap-3 mb-2">
+                  <p className="text-2xl font-black text-[#111] leading-none">
+                    {currentPlan.name}
+                  </p>
+                  <StatusPill
+                    label={company.subscription_status === "trialing" ? t.activeTrial : t.active}
+                    tone="success"
+                  />
+                </div>
+                <p className="text-xs font-bold text-[#6b7280]">
+                  {currentPlan.price} {currency} / {isRTL ? "شهر" : "mo"}
+                </p>
+              </div>
             </div>
-            <StatusPill
-              label={
-                company.subscription_status === "trialing"
-                  ? t.activeTrial
-                  : t.active
-              }
-              tone="success"
-            />
-          </div>
+          </SectionCard>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6 border-y border-[#f1f1f1]">
-            <div>
-              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-3">
-                {t.planDetails}
+          <SectionCard className="md:col-span-1">
+            <div className="text-start">
+              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
+                {t.totalEmployeesLabel}
               </p>
-              <ul className="space-y-2.5">
-                {currentPlan.features.map((f, i) => (
-                  <li
-                    key={i}
-                    className={cn(
-                      "flex items-center gap-2 text-sm text-[#4b5563]",
-                      isRTL && "flex-row-reverse"
-                    )}
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-[#1e8e3e] shrink-0" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-3">
-                {t.trialInfo}
-              </p>
-              <p className="text-sm text-[#4b5563]">
-                {t.trialEndsIn}{" "}
-                <span className="font-bold text-[#111]">
-                  {daysLeft} {t.days}
-                </span>
-                .
+              <p className="text-[28px] font-black text-[#111]">
+                {loading ? "..." : employeeCount} <span className="text-sm font-semibold text-[#9ca3af]">/ {limitLabel}</span>
               </p>
               <div className="w-full h-1.5 bg-[#f1f1f1] rounded-full mt-3 overflow-hidden">
                 <div
-                  className="h-full bg-[#ff5a00] transition-all"
-                  style={{ width: `${trialProgress}%` }}
+                  className={cn("h-full transition-all", employeeCount > (currentPlan.employeeLimit || 0) ? "bg-[#ef4444]" : "bg-[#1e8e3e]")}
+                  style={{ width: `${Math.min(100, (employeeCount / (currentPlan.employeeLimit === Infinity ? 1 : currentPlan.employeeLimit)) * 100)}%` }}
                 />
               </div>
-              <p className="text-xs text-[#9ca3af] mt-2">
-                {new Date(company.trial_ends_at).toLocaleDateString()}
-              </p>
             </div>
-          </div>
+          </SectionCard>
 
-          <div className="mt-6 border-t border-[#f1f1f1] pt-6 flex items-center justify-between gap-4">
-            <p className="text-sm text-[#6b7280] max-w-sm text-start">
-              {isRTL ? "الترقية متاحة لتحصل على ميزات أكبر لشركتك ورفع حدود الاستخدام." : "Upgrade to unlock enterprise features and raise your employee limits."}
-            </p>
-          </div>
-        </SectionCard>
+          <SectionCard className="md:col-span-1">
+            <div className="text-start">
+              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
+                {t.extraEmployees}
+              </p>
+              <p className="text-[28px] font-black text-[#b45309]">+{extraCount}</p>
+              <p className="text-xs text-[#9ca3af] mt-2 font-medium">{t.extraCost}</p>
+            </div>
+          </SectionCard>
+
+          <SectionCard className="md:col-span-1 bg-[#fff1e8] border-[#ffd4b8]">
+            <div className="text-start">
+              <p className="text-xs font-black text-[#ff5a00] uppercase tracking-wider mb-2">
+                {t.estimatedAddon}
+              </p>
+              <p className="text-[28px] font-black text-[#ff5a00]">
+                +{extraCost} {currency}
+              </p>
+              <p className="text-xs text-[#9ca3af] mt-2 font-medium">{t.nextBill}</p>
+            </div>
+          </SectionCard>
+
+        </div>
       </div>
 
-      {/* Available Plans */}
-      <div>
+      {/* 2. Available Plans */}
+      <div className="pt-4">
         <h2 className="text-lg font-bold text-[#111] mb-4 text-start">{isRTL ? "الباقات المتاحة للترقية" : "Available Plans"}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
@@ -200,59 +196,76 @@ export default function BillingPage() {
         </div>
       </div>
 
-      {/* Usage */}
-      <div className="mt-8">
-        <h2 className="text-lg font-bold text-[#111] mb-3 text-start">{t.usage}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SectionCard>
-            <div className="text-start">
-              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
-                {t.totalEmployeesLabel}
-              </p>
-              <p className="text-[28px] font-bold text-[#111]">
-                {loading ? "..." : employeeCount}
-              </p>
-              <p className="text-xs text-[#9ca3af] mt-1">
-                {t.planLimit}: {limitLabel}
-              </p>
-            </div>
-          </SectionCard>
-          <SectionCard>
-            <div className="text-start">
-              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
-                {t.extraEmployees}
-              </p>
-              <p className="text-[28px] font-bold text-[#b45309]">{extraCount}</p>
-              <p className="text-xs text-[#9ca3af] mt-1">{t.extraCost}</p>
-            </div>
-          </SectionCard>
-          <SectionCard className="bg-[#fff1e8] border-[#ffd4b8]">
-            <div className="text-start">
-              <p className="text-xs font-semibold text-[#ff5a00] uppercase tracking-wider mb-2">
-                {t.estimatedAddon}
-              </p>
-              <p className="text-[28px] font-bold text-[#ff5a00]">
-                +{extraCost} {currency}
-              </p>
-              <p className="text-xs text-[#9ca3af] mt-1">{t.nextBill}</p>
-            </div>
-          </SectionCard>
-        </div>
+      {/* 3. Transactions Record */}
+      <div className="pt-4">
+        <h2 className="text-lg font-bold text-[#111] mb-4 text-start flex items-center gap-2">
+          <ReceiptText className="w-5 h-5 text-[#ff5a00]"/> 
+          {isRTL ? "سجل المدفوعات" : "Transactions Record"}
+        </h2>
+        <SectionCard padding="none" className="overflow-hidden">
+          {loading ? (
+             <div className="p-8 text-center text-sm text-[#6b7280]">{isRTL ? "جاري التحميل..." : "Loading..."}</div>
+          ) : transactions.length === 0 ? (
+             <div className="p-12 text-center flex flex-col items-center">
+               <div className="w-12 h-12 bg-[#f9fafb] rounded-full flex items-center justify-center mb-3">
+                 <CalendarClock className="w-5 h-5 text-[#9ca3af]"/>
+               </div>
+               <p className="text-sm font-bold text-[#111]">{isRTL ? "لا توجد معاملات سابقة" : "No recent transactions"}</p>
+               <p className="text-xs text-[#6b7280] mt-1">{isRTL ? "ستظهر فواتيرك هنا بمجرد الترقية." : "Your invoices will appear here once you upgrade."}</p>
+             </div>
+          ) : (
+             <div className="overflow-x-auto">
+               <table className="w-full text-start">
+                 <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
+                   <tr>
+                     <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "التاريخ" : "Date"}</th>
+                     <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "المبلغ" : "Amount"}</th>
+                     <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "العملة" : "Currency"}</th>
+                     <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "الحالة" : "Status"}</th>
+                     <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "رقم المرجع" : "Ref ID"}</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-[#f1f1f1]">
+                   {transactions.map((tx) => (
+                     <tr key={tx.id} className="hover:bg-[#f9fafb] transition-colors">
+                       <td className="px-6 py-4 text-sm font-semibold text-[#111]">
+                         {new Date(tx.created_at).toLocaleDateString()}
+                       </td>
+                       <td className="px-6 py-4 text-sm font-black text-[#111]">{tx.amount}</td>
+                       <td className="px-6 py-4 text-sm font-semibold text-[#6b7280]">{tx.currency}</td>
+                       <td className="px-6 py-4">
+                         <StatusPill 
+                            label={tx.status} 
+                            tone={tx.status === 'succeeded' || tx.status === 'paid' ? 'success' : tx.status === 'pending' ? 'neutral' : 'danger'} 
+                         />
+                       </td>
+                       <td className="px-6 py-4 text-xs text-[#9ca3af] font-mono">
+                         {tx.stripe_id || tx.id.substring(0, 8) + '...'}
+                       </td>
+                     </tr>
+                   ))}
+                 </tbody>
+               </table>
+             </div>
+          )}
+        </SectionCard>
       </div>
 
       {/* Help */}
-      <HelpCard
-        title={t.needHelpTitle}
-        subtitle={t.needHelpSubtitle}
-        moreLabel={t.more}
-        isRTL={isRTL}
-        articles={[
-          { title: t.article4Title, description: t.article4Desc },
-          { title: t.article1Title, description: t.article1Desc },
-          { title: t.article2Title, description: t.article2Desc },
-          { title: t.article3Title, description: t.article3Desc },
-        ]}
-      />
+      <div className="pt-4">
+         <HelpCard
+           title={t.needHelpTitle}
+           subtitle={t.needHelpSubtitle}
+           moreLabel={t.more}
+           isRTL={isRTL}
+           articles={[
+             { title: t.article4Title, description: t.article4Desc },
+             { title: t.article1Title, description: t.article1Desc },
+             { title: t.article2Title, description: t.article2Desc },
+             { title: t.article3Title, description: t.article3Desc },
+           ]}
+         />
+      </div>
     </div>
   );
 }
