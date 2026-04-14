@@ -13,11 +13,12 @@ type Task = {
   title: string;
   description: string;
   link: string;
-  due_date: string;
-  status: "pending" | "late" | "completed";
+  deadline: string;
+  status: "pending" | "in_progress" | "late" | "completed";
   employee_submission?: string | null;
   created_at: string;
-  employees: { name: string };
+  assigned: { name: string };
+  assigner?: { name: string };
 };
 
 export default function TasksPage() {
@@ -33,8 +34,8 @@ export default function TasksPage() {
     title: "",
     description: "",
     link: "",
-    due_date: new Date().toISOString().split("T")[0],
-    employee_id: "",
+    deadline: new Date().toISOString().split("T")[0],
+    assigned_to: "",
     file: null as File | null,
   });
 
@@ -48,7 +49,11 @@ export default function TasksPage() {
     const { data: emps } = await supabase.from("employees").select("id, name").eq("company_id", company.id);
     if (emps) setEmployees(emps);
 
-    const { data: tsks } = await supabase.from("tasks").select("*, employees(name)").eq("company_id", company.id).order("created_at", { ascending: false });
+    const { data: tsks } = await supabase.from("tasks")
+        .select("*, assigned:employees!assigned_to(name), assigner:employees!assigned_by(name)")
+        .eq("company_id", company.id)
+        .order("created_at", { ascending: false });
+        
     if (tsks) setTasks(tsks as Task[]);
 
     setLoading(false);
@@ -58,13 +63,15 @@ export default function TasksPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.employee_id || !form.due_date) return alert(isRTL ? "يرجى ملء الحقول المطلوبة." : "Please fill required fields.");
+    if (!form.title || !form.assigned_to || !form.deadline) return alert(isRTL ? "يرجى ملء الحقول المطلوبة." : "Please fill required fields.");
     
     setIsUploading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setIsUploading(false); return; }
     const { data: company } = await supabase.from("companies").select("id").eq("owner_id", user.id).single();
     if (!company) { setIsUploading(false); alert("Company not found."); return; }
+
+    const { data: executer } = await supabase.from("employees").select("id").eq("company_id", company.id).limit(1).single();
 
     let finalLink = form.link;
 
@@ -79,11 +86,10 @@ export default function TasksPage() {
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${company.id}/tasks/${fileName}`;
       
-      const { data, error: uploadError } = await supabase.storage.from("task-attachments").upload(filePath, form.file);
+      const { error: uploadError } = await supabase.storage.from("task-attachments").upload(filePath, form.file);
       
       if (uploadError) {
          setIsUploading(false);
-         console.error(uploadError);
          alert(isRTL ? "فشل رفع الملف." : "File upload failed.");
          return;
       }
@@ -94,11 +100,12 @@ export default function TasksPage() {
 
     const { error } = await supabase.from("tasks").insert({
       company_id: company.id,
-      employee_id: form.employee_id,
+      assigned_to: form.assigned_to,
+      assigned_by: executer ? executer.id : null,
       title: form.title,
       description: form.description,
       link: finalLink,
-      due_date: form.due_date,
+      deadline: form.deadline,
       status: "pending"
     });
 
@@ -123,6 +130,22 @@ export default function TasksPage() {
         }
       />
 
+      {/* Basic Metrics Engine */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <SectionCard className="p-4 border-[#eeeeee]">
+              <h4 className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">{isRTL ? "إجمالي المهام" : "Total Tasks"}</h4>
+              <p className="text-2xl font-black text-[#111] mt-2">{tasks.length}</p>
+          </SectionCard>
+          <SectionCard className="p-4 border-[#eeeeee]">
+              <h4 className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">{isRTL ? "مفتوحة" : "Open"}</h4>
+              <p className="text-2xl font-black text-[#f59e0b] mt-2">{tasks.filter(t => ["pending", "in_progress"].includes(t.status)).length}</p>
+          </SectionCard>
+          <SectionCard className="p-4 border-[#eeeeee]">
+              <h4 className="text-xs font-bold text-[#6b7280] uppercase tracking-wider">{isRTL ? "مكتملة" : "Completed"}</h4>
+              <p className="text-2xl font-black text-[#10b981] mt-2">{tasks.filter(t => t.status === "completed").length}</p>
+          </SectionCard>
+      </div>
+
       {showForm && (
         <SectionCard className="border-[#ff5a00] ring-1 ring-[#ff5a00] bg-[#fff1e8]">
           <h3 className={cn("text-lg font-bold text-[#111] mb-4", isRTL && "text-end")}>{isRTL ? "تفاصيل المهمة الجديدة" : "New Task Details"}</h3>
@@ -130,14 +153,14 @@ export default function TasksPage() {
             <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isRTL && "text-end")}>
               <div>
                 <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "اسم الموظف *" : "Assign To *"}</label>
-                <select disabled={isUploading} value={form.employee_id} onChange={e => setForm({...form, employee_id: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50">
+                <select disabled={isUploading} value={form.assigned_to} onChange={e => setForm({...form, assigned_to: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50">
                   <option value="">{isRTL ? "اختر موظفاً" : "Select Employee"}</option>
                   {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "تاريخ الاستحقاق *" : "Due Date *"}</label>
-                <input disabled={isUploading} type="date" required value={form.due_date} onChange={e => setForm({...form, due_date: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50" />
+                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "تاريخ الاستحقاق *" : "Deadline *"}</label>
+                <input disabled={isUploading} type="date" required value={form.deadline} onChange={e => setForm({...form, deadline: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50" />
               </div>
             </div>
 
@@ -193,8 +216,8 @@ export default function TasksPage() {
           <h3 className="font-bold text-[#111] text-sm">{isRTL ? "سجل المهام" : "Task Board"}</h3>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-yellow-100 text-yellow-800">{isRTL ? "قيد الانتظار" : "Pending"}</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-blue-100 text-blue-800">{isRTL ? "قيد التنفيذ" : "In Prog."}</span>
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-green-100 text-green-800">{isRTL ? "مكتمل" : "Completed"}</span>
-            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-red-100 text-red-800">{isRTL ? "متأخر" : "Late"}</span>
           </div>
         </div>
 
@@ -202,22 +225,23 @@ export default function TasksPage() {
            <table className="w-full text-start">
              <thead>
                <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
-                 <th className="px-6 py-4 font-bold text-start w-[25%]">{isRTL ? "الموظف" : "Assignee"}</th>
-                 <th className="px-6 py-4 font-bold text-start w-[40%]">{isRTL ? "المهمة" : "Task"}</th>
-                 <th className="px-6 py-4 font-bold text-center w-[15%]">{isRTL ? "تاريخ الاستحقاق" : "Due Date"}</th>
+                 <th className="px-6 py-4 font-bold text-start w-[20%]">{isRTL ? "الموظف" : "Assignee"}</th>
+                 <th className="px-6 py-4 font-bold text-start w-[15%]">{isRTL ? "المُوكِل" : "Assigner"}</th>
+                 <th className="px-6 py-4 font-bold text-start w-[30%]">{isRTL ? "المهمة" : "Task"}</th>
+                 <th className="px-6 py-4 font-bold text-center w-[15%]">{isRTL ? "تاريخ الاستحقاق" : "Deadline"}</th>
                  <th className="px-6 py-4 font-bold text-end w-[20%]">{isRTL ? "الحالة" : "Status"}</th>
                </tr>
              </thead>
              <tbody>
                {loading ? (
                  <tr>
-                   <td colSpan={4} className="px-6 py-16 text-center">
+                   <td colSpan={5} className="px-6 py-16 text-center">
                      <div className="w-5 h-5 border-2 border-[#ff5a00] border-t-transparent rounded-full animate-spin mx-auto" />
                    </td>
                  </tr>
                ) : tasks.length === 0 ? (
                  <tr>
-                   <td colSpan={4} className="px-6 py-16 text-center">
+                   <td colSpan={5} className="px-6 py-16 text-center">
                      <ListTodo className="w-10 h-10 text-[#d1d5db] mx-auto mb-3" />
                      <p className="text-[#9ca3af] text-sm italic font-medium">{isRTL ? "لا توجد مهام مسجلة حالياً." : "No tasks assigned yet."}</p>
                    </td>
@@ -227,33 +251,27 @@ export default function TasksPage() {
                    <tr key={t.id} className="border-t border-[#f1f1f1] hover:bg-[#fafafa] transition-colors relative group">
                      <td className="px-6 py-4 text-start">
                        <div className="flex flex-col items-start gap-1">
-                         <span className="font-bold text-sm text-[#111]">{t.employees?.name}</span>
+                         <span className="font-bold text-sm text-[#111]">{t.assigned?.name}</span>
                        </div>
+                     </td>
+                     <td className="px-6 py-4 text-start">
+                       <span className="font-medium text-xs text-[#6b7280]">{t.assigner?.name || (isRTL ? "مدير النظام" : "Admin")}</span>
                      </td>
                      <td className="px-6 py-4 text-start">
                        <div className="flex flex-col items-start gap-1 max-w-sm">
                          <span className="font-bold text-[#111] text-sm">{t.title}</span>
                          {t.description && <span className="text-xs text-[#6b7280] truncate w-full">{t.description}</span>}
-                         {t.link && <a href={t.link} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#0284c7] hover:underline flex items-center gap-1 mt-1 bg-[#bae6fd]/30 px-2 py-1 border border-[#bae6fd] rounded"><LinkIcon className="w-3 h-3"/> {isRTL ? "افتح المستند المرفق" : "Open Attached Document"}</a>}
-                         {t.employee_submission && (
-                           <div className={cn("mt-2 p-2 rounded border border-[#bae6fd] bg-[#f0f9ff] text-[#0369a1] text-[11px] font-medium leading-relaxed w-full", isRTL && "text-end")}>
-                             <span className="font-bold opacity-80 block mb-0.5">{isRTL ? "ملاحظات الموظف / الرابط:" : "Employee's Note / Link:"}</span>
-                             {t.employee_submission.startsWith("http") ? (
-                               <a href={t.employee_submission} target="_blank" rel="noreferrer" className="underline hover:text-[#0284c7]">{t.employee_submission}</a>
-                             ) : (
-                               <span>{t.employee_submission}</span>
-                             )}
-                           </div>
-                         )}
+                         {t.link && <a href={t.link} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#0284c7] hover:underline flex items-center gap-1 mt-1 bg-[#bae6fd]/30 px-2 py-1 border border-[#bae6fd] rounded"><LinkIcon className="w-3 h-3"/> {isRTL ? "افتح المرفق" : "Attachment"}</a>}
                        </div>
                      </td>
                      <td className="px-6 py-4 text-center">
-                       <span className="text-xs font-semibold text-[#4b5563] flex items-center justify-center gap-1"><Calendar className="w-3 h-3"/> {t.due_date}</span>
+                       <span className="text-xs font-semibold text-[#4b5563] flex items-center justify-center gap-1"><Calendar className="w-3 h-3"/> {t.deadline}</span>
                      </td>
                      <td className="px-6 py-4 text-end">
                         <div className="flex justify-end">
                           {t.status === "completed" && <StatusPill label={isRTL ? "مكتمل" : "Completed"} tone="success" />}
                           {t.status === "pending" && <StatusPill label={isRTL ? "قيد الانتظار" : "Pending"} tone="warning" />}
+                          {t.status === "in_progress" && <StatusPill label={isRTL ? "قيد التنفيذ" : "In Progress"} tone="neutral" />}
                           {t.status === "late" && <StatusPill label={isRTL ? "متأخر" : "Late"} tone="danger" />}
                         </div>
                      </td>
