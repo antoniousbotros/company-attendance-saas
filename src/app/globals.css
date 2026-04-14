@@ -1,42 +1,62 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #09090b;
-  --card: #ffffff;
-  --card-foreground: #09090b;
-  --primary: #4f46e5;
-  --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #4f46e5;
-}
+/* ============================================================
+   SyncTime — Talabat-inspired design tokens
+   Light-only. Brand: talabat orange. Neutral grays + white cards.
+   ============================================================ */
 
-.dark {
-  --background: #09090b;
-  --foreground: #ffffff;
-  --card: #09090b;
-  --card-foreground: #ffffff;
-  --primary: #4f46e5;
+:root {
+  /* Surfaces */
+  --background: #f5f5f5;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --foreground: #111111;
+  --muted: #f1f1f1;
+  --muted-foreground: #6b7280;
+  --subtle: #9ca3af;
+
+  /* Brand — talabat orange */
+  --primary: #ff5a00;
+  --primary-hover: #e04f00;
   --primary-foreground: #ffffff;
-  --secondary: #18181b;
-  --secondary-foreground: #f4f4f5;
-  --muted: #18181b;
-  --muted-foreground: #a1a1aa;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #4f46e5;
+  --primary-soft: #fff1e8;
+  --primary-border: #ffd4b8;
+
+  /* Status */
+  --success: #1e8e3e;
+  --success-soft: #e6f6ec;
+  --warning: #b45309;
+  --warning-soft: #fdf4d8;
+  --danger: #b91c1c;
+  --danger-soft: #fef1f1;
+  --neutral-pill: #f1f1f1;
+  --neutral-pill-fg: #4b5563;
+
+  /* Structure */
+  --border: #eeeeee;
+  --border-strong: #e5e5e5;
+  --input: #f5f5f5;
+  --ring: #ff5a00;
+
+  /* Sidebar */
+  --sidebar-bg: #ffffff;
+  --sidebar-fg: #1a1a1a;
+  --sidebar-muted: #6b7280;
+  --sidebar-group: #9ca3af;
+  --sidebar-active: #ff5a00;
+  --sidebar-hover: #f5f5f5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-poppins), var(--font-cairo), ui-sans-serif, system-ui;
-  --font-arabic: var(--font-cairo), ui-sans-serif, system-ui;
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-border: var(--border);
+  /* Poppins everywhere by default; IBM Plex Sans Arabic auto-kicks in via fallback chain
+     when content is Arabic (the [dir="rtl"] rule below forces it explicitly). */
+  --font-sans: var(--font-poppins), var(--font-ibm-arabic), ui-sans-serif, system-ui;
+  --font-arabic: var(--font-ibm-arabic), var(--font-poppins), ui-sans-serif, system-ui;
 }
 
 body {
@@ -44,34 +64,45 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 [dir="rtl"], .rtl {
   font-family: var(--font-arabic);
 }
 
-/* Base Styles */
-* {
-  border-color: var(--border);
-}
-
-.glass {
-  background: rgba(var(--background), 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-}
-
-/* Custom Scrollbar */
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
-
 ::-webkit-scrollbar-track {
   background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #d4d4d4;
   border-radius: 10px;
+  border: 2px solid var(--background);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b5b5b5;
+}
+
+/* Utility classes for Talabat look */
+.tb-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.tb-pill-orange {
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+  background: #fff;
+  border-radius: 9999px;
+}
+
+.tb-pill-orange:hover {
+  background: var(--primary-soft);
 }

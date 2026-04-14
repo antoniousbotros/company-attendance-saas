@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import { Clock, Mail, Lock, ArrowRight, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/i18n";
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [lang, setLang] = useState<Language>("en");
-  const router = useRouter();
 
   useEffect(() => {
     const savedLang = (localStorage.getItem("lang") as Language) || "en";
@@ -53,9 +51,10 @@ export default function LoginPage() {
       } else {
         alert("Check your email for confirmation link.");
       }
-    } catch (err: any) {
-      console.error("System error:", err.message);
-      alert("System error: " + err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("System error:", message);
+      alert("System error: " + message);
     } finally {
       setLoading(false);
     }

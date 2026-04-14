@@ -1,156 +1,240 @@
 "use client";
 
-import React from "react";
-import { 
-  CreditCard, 
-  CheckCircle2, 
-  AlertCircle, 
-  ArrowUpRight,
-  TrendingUp,
-  Receipt
-} from "lucide-react";
+import React, { useState } from "react";
+import { CheckCircle2 } from "lucide-react";
 import { PLANS, calculateExtraCosts } from "@/lib/billing";
+import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
+import {
+  PageHeader,
+  SectionCard,
+  StatusPill,
+  PrimaryButton,
+  HelpCard,
+} from "@/app/components/talabat-ui";
 
 export default function BillingPage() {
-  // Mock data for demo
-  const company = {
-    plan_id: "growth",
-    subscription_status: "trialing",
-    trial_ends_at: new Date(Date.now() + 86400000 * 10).toISOString(),
-    employee_count: 55,
-  };
+  const { t, isRTL } = useLanguage();
+
+  // Mock data for demo — wire up once subscription queries land.
+  // Lazy initializer so Date.now() is called once at mount, not during render.
+  const [company] = useState(() => {
+    const trial_ends_at = new Date(Date.now() + 86400000 * 10).toISOString();
+    return {
+      plan_id: "growth",
+      subscription_status: "trialing",
+      trial_ends_at,
+      employee_count: 55,
+    };
+  });
+  const [daysLeft] = useState(() =>
+    Math.max(
+      0,
+      Math.ceil(
+        (new Date(company.trial_ends_at).getTime() - Date.now()) / 86400000
+      )
+    )
+  );
 
   const currentPlan = PLANS[company.plan_id as keyof typeof PLANS];
-  const extraCost = calculateExtraCosts(company.employee_count, company.plan_id);
+  const extraCost = calculateExtraCosts(
+    company.employee_count,
+    company.plan_id
+  );
+  const trialProgress = Math.min(100, ((14 - daysLeft) / 14) * 100);
+
+  const extraCount = Math.max(
+    0,
+    company.employee_count -
+      (currentPlan.employeeLimit === Infinity ? company.employee_count : currentPlan.employeeLimit)
+  );
+  const limitLabel =
+    currentPlan.employeeLimit === Infinity ? "∞" : currentPlan.employeeLimit;
 
   return (
-    <div className="space-y-8 pb-12">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Billing & Subscription</h1>
-        <p className="text-zinc-400 mt-2">Manage your subscription, plan, and payment methods.</p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title={t.billingTitle}
+        subtitle={t.billingSubtitle}
+        isRTL={isRTL}
+      />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Current Plan Summary */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-8 opacity-5">
-              <CreditCard className="w-32 h-32 text-indigo-500" />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Current plan */}
+        <SectionCard className="lg:col-span-2">
+          <div
+            className={cn(
+              "flex items-start justify-between mb-6",
+              isRTL && "flex-row-reverse"
+            )}
+          >
+            <div>
+              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider">
+                {t.currentPlan}
+              </p>
+              <p className="text-[32px] font-bold text-[#111] leading-tight tracking-tight mt-1">
+                {currentPlan.name}
+              </p>
+              <p className="text-sm text-[#6b7280] mt-1">
+                {currentPlan.price} EGP / month
+              </p>
             </div>
+            <StatusPill
+              label={
+                company.subscription_status === "trialing"
+                  ? t.activeTrial
+                  : t.active
+              }
+              tone="success"
+            />
+          </div>
 
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest">Current Plan</h2>
-                  <p className="text-4xl font-black mt-1 text-indigo-400">{currentPlan.name}</p>
-                </div>
-                <div className="px-4 py-2 bg-indigo-500/10 text-indigo-400 rounded-xl border border-indigo-500/20 flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="font-bold uppercase text-xs">Active Trial</span>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6 border-y border-[#f1f1f1]">
+            <div>
+              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-3">
+                {t.planDetails}
+              </p>
+              <ul className="space-y-2.5">
+                {currentPlan.features.map((f, i) => (
+                  <li
+                    key={i}
+                    className={cn(
+                      "flex items-center gap-2 text-sm text-[#4b5563]",
+                      isRTL && "flex-row-reverse"
+                    )}
+                  >
+                    <CheckCircle2 className="w-4 h-4 text-[#1e8e3e] shrink-0" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-3">
+                {t.trialInfo}
+              </p>
+              <p className="text-sm text-[#4b5563]">
+                {t.trialEndsIn}{" "}
+                <span className="font-bold text-[#111]">
+                  {daysLeft} {t.days}
+                </span>
+                .
+              </p>
+              <div className="w-full h-1.5 bg-[#f1f1f1] rounded-full mt-3 overflow-hidden">
+                <div
+                  className="h-full bg-[#ff5a00] transition-all"
+                  style={{ width: `${trialProgress}%` }}
+                />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-8 border-y border-zinc-800">
-                <div>
-                  <p className="text-xs text-zinc-500 font-bold uppercase mb-4">Plan Details</p>
-                  <ul className="space-y-3">
-                    {currentPlan.features.map((f, i) => (
-                      <li key={i} className="flex items-center gap-2 text-sm text-zinc-300">
-                        <CheckCircle2 className="w-4 h-4 text-zinc-600" />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <div>
-                  <p className="text-xs text-zinc-500 font-bold uppercase mb-4">Trial Information</p>
-                  <p className="text-zinc-300 text-sm mb-2">Your trial ends in <span className="text-white font-bold">10 days</span>.</p>
-                  <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full w-[70%]" />
-                  </div>
-                  <p className="text-[10px] text-zinc-600 mt-2 italic text-center text-rose-400 font-bold uppercase">
-                    Ends on {new Date(company.trial_ends_at).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-8 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <p className="text-zinc-500 text-sm max-w-sm">
-                  Upgrade to continue using premium features and increase your employee limit.
-                </p>
-                <button className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-3.5 rounded-2xl transition-all shadow-xl shadow-indigo-500/20">
-                  Upgrade Plan Now
-                </button>
-              </div>
+              <p className="text-xs text-[#9ca3af] mt-2">
+                {new Date(company.trial_ends_at).toLocaleDateString()}
+              </p>
             </div>
           </div>
 
-          {/* Usage Stats */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8">
-            <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-              <TrendingUp className="w-6 h-6 text-emerald-500" />
-              Usage & Scaling
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="p-6 bg-zinc-950 rounded-2xl border border-zinc-900">
-                <p className="text-xs font-bold text-zinc-600 uppercase mb-2">Total Employees</p>
-                <p className="text-3xl font-black">{company.employee_count}</p>
-                <p className="text-xs text-zinc-500 mt-1">Limit: {currentPlan.employeeLimit}</p>
-              </div>
-              <div className="p-6 bg-zinc-950 rounded-2xl border border-zinc-900 text-amber-500">
-                <p className="text-xs font-bold text-zinc-600 uppercase mb-2">Extra Employees</p>
-                <p className="text-3xl font-black">{Math.max(0, company.employee_count - currentPlan.employeeLimit)}</p>
-                <p className="text-xs text-zinc-500 mt-1">+5 EGP per employee</p>
-              </div>
-              <div className="p-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/10 text-indigo-400">
-                <p className="text-xs font-bold text-zinc-600 uppercase mb-2">Estimated Add-on</p>
-                <p className="text-3xl font-black">{extraCost} EGP</p>
-                <p className="text-xs text-zinc-500 mt-1">Next bill summary</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar: Invoices & Help */}
-        <div className="space-y-6">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-            <h4 className="font-bold flex items-center gap-2 mb-4">
-              <Receipt className="w-5 h-5 text-zinc-400" />
-              Recent Invoices
-            </h4>
-            <div className="space-y-4">
-              {[1, 2].map(i => (
-                <div key={i} className="flex items-center justify-between py-3 border-b border-zinc-800 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium">Inv #00{i}-24</p>
-                    <p className="text-xs text-zinc-500">Oct 12, 2023</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold">149 EGP</p>
-                    <p className="text-[10px] text-emerald-500 font-bold uppercase">Paid</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button className="w-full mt-4 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition-colors">
-              View All History
-            </button>
-          </div>
-
-          <div className="bg-indigo-600/10 border border-indigo-500/20 rounded-3xl p-6">
-            <AlertCircle className="w-8 h-8 text-indigo-400 mb-4" />
-            <h4 className="font-bold text-indigo-400 mb-2">Need help?</h4>
-            <p className="text-xs text-indigo-300/70 leading-relaxed">
-              If you have questions about your billing or need a custom enterprise plan, contact our support team.
+          <div
+            className={cn(
+              "mt-6 flex items-center justify-between gap-4",
+              isRTL && "flex-row-reverse"
+            )}
+          >
+            <p className="text-sm text-[#6b7280] max-w-sm">
+              Upgrade to continue using premium features and raise your
+              employee limit.
             </p>
-            <button className="mt-4 text-sm font-bold text-white underline decoration-indigo-400 hover:text-indigo-200">
-              Chat with Sales
-            </button>
+            <PrimaryButton>{t.upgradePlan}</PrimaryButton>
           </div>
+        </SectionCard>
+
+        {/* Invoices */}
+        <SectionCard>
+          <div
+            className={cn(
+              "flex items-center justify-between mb-4",
+              isRTL && "flex-row-reverse"
+            )}
+          >
+            <h3 className="text-sm font-bold text-[#111]">
+              {t.recentInvoices}
+            </h3>
+          </div>
+          <div className="divide-y divide-[#f1f1f1]">
+            {[1, 2].map((i) => (
+              <div
+                key={i}
+                className={cn(
+                  "flex items-center justify-between py-3",
+                  isRTL && "flex-row-reverse"
+                )}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[#111]">
+                    Inv #00{i}-24
+                  </p>
+                  <p className="text-xs text-[#9ca3af]">Oct 12, 2023</p>
+                </div>
+                <div className={cn("text-right", isRTL && "text-left")}>
+                  <p className="text-sm font-bold text-[#111]">
+                    {currentPlan.price} EGP
+                  </p>
+                  <StatusPill label={t.paid} tone="success" className="mt-1" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="mt-4 text-sm font-medium text-[#ff5a00] hover:underline">
+            {t.viewAllHistory}
+          </button>
+        </SectionCard>
+      </div>
+
+      {/* Usage */}
+      <div>
+        <h2 className="text-lg font-bold text-[#111] mb-3">{t.usage}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <SectionCard>
+            <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
+              {t.totalEmployeesLabel}
+            </p>
+            <p className="text-[28px] font-bold text-[#111]">
+              {company.employee_count}
+            </p>
+            <p className="text-xs text-[#9ca3af] mt-1">
+              {t.planLimit}: {limitLabel}
+            </p>
+          </SectionCard>
+          <SectionCard>
+            <p className="text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-2">
+              {t.extraEmployees}
+            </p>
+            <p className="text-[28px] font-bold text-[#b45309]">{extraCount}</p>
+            <p className="text-xs text-[#9ca3af] mt-1">{t.extraCost}</p>
+          </SectionCard>
+          <SectionCard className="bg-[#fff1e8] border-[#ffd4b8]">
+            <p className="text-xs font-semibold text-[#ff5a00] uppercase tracking-wider mb-2">
+              {t.estimatedAddon}
+            </p>
+            <p className="text-[28px] font-bold text-[#ff5a00]">
+              {extraCost} EGP
+            </p>
+            <p className="text-xs text-[#9ca3af] mt-1">{t.nextBill}</p>
+          </SectionCard>
         </div>
       </div>
+
+      {/* Help */}
+      <HelpCard
+        title={t.needHelpTitle}
+        subtitle={t.needHelpSubtitle}
+        moreLabel={t.more}
+        isRTL={isRTL}
+        articles={[
+          { title: t.article4Title, description: t.article4Desc },
+          { title: t.article1Title, description: t.article1Desc },
+          { title: t.article2Title, description: t.article2Desc },
+          { title: t.article3Title, description: t.article3Desc },
+        ]}
+      />
     </div>
   );
 }
