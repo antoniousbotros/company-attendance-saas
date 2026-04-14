@@ -34,7 +34,7 @@ export default function SignupPage() {
 
     if (authData.user) {
        // Auto-login or redirect to onboarding
-       router.push("/onboarding");
+       window.location.href = "/onboarding";
     }
   };
 

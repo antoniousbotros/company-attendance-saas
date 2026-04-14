@@ -47,9 +47,9 @@ export default function LoginPage() {
       if (error) {
         console.error("Login error:", error.message);
         alert(error.message);
-      } else if (data.session) {
+      } else if (data.session || data.user) {
         console.log("Login successful!");
-        router.push("/overview");
+        window.location.href = "/overview";
       } else {
         alert("Check your email for confirmation link.");
       }
