@@ -15,37 +15,32 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
   return R * c;
 }
 
-const getMainMenu = (enableGeofencing: boolean, lang: string = 'en') => {
-  if (lang === 'ar') {
-    if (enableGeofencing) {
-      return Markup.keyboard([
-        [Markup.button.locationRequest("📍 إرسال الموقع")],
-        ["📊 تقرير حضوري", "📝 مهامي"],
-        ["📌 مهمة جديدة", "📢 إعلانات الشركة"],
-        ["ℹ️ مساعدة"]
-      ]).resize();
-    }
+const getMainMenu = (company: any) => {
+  const lang = company?.bot_language || 'en';
+  const geofencing = company?.enable_geofencing;
+  const salesEnabled = company?.sales_tracking_enabled;
+
+  const row2 = lang === 'ar' ? ["📊 تقرير حضوري", "📝 مهامي"] : ["📊 My Attendance", "📝 My Tasks"];
+  const row3 = lang === 'ar' ? ["📌 مهمة جديدة", "📢 إعلانات الشركة"] : ["📌 New Task", "📢 Announcements"];
+  
+  const bottomRow = salesEnabled 
+    ? (lang === 'ar' ? ["📈 تقرير مبيعات", "ℹ️ مساعدة"] : ["📈 Submit Report", "ℹ️ Help"])
+    : (lang === 'ar' ? ["ℹ️ مساعدة"] : ["ℹ️ Help"]);
+
+  if (geofencing) {
     return Markup.keyboard([
-      ["✅ تسجيل حضور", "🚪 تسجيل انصراف"],
-      ["📊 تقرير حضوري", "📝 مهامي"],
-      ["📌 مهمة جديدة", "📢 إعلانات الشركة"],
-      ["ℹ️ مساعدة"]
+      [Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location (Check In / Out)")],
+      row2,
+      row3,
+      bottomRow
     ]).resize();
   }
 
-  if (enableGeofencing) {
-    return Markup.keyboard([
-      [Markup.button.locationRequest("📍 Send Location (Check In / Out)")],
-      ["📊 My Attendance", "📝 My Tasks"],
-      ["📌 New Task", "📢 Announcements"],
-      ["ℹ️ Help"]
-    ]).resize();
-  }
   return Markup.keyboard([
-    ["✅ Check In", "🚪 Check Out"],
-    ["📊 My Attendance", "📝 My Tasks"],
-    ["📌 New Task", "📢 Announcements"],
-    ["ℹ️ Help"]
+    lang === 'ar' ? ["✅ تسجيل حضور", "🚪 تسجيل انصراف"] : ["✅ Check In", "🚪 Check Out"],
+    row2,
+    row3,
+    bottomRow
   ]).resize();
 };
 
@@ -70,7 +65,7 @@ export async function POST(req: NextRequest) {
         const msg = lang === 'ar'
           ? `مرحباً بعودتك يا ${employee.name}! نحن سعداء بوجودك كفرد من عائلة ${employee.companies.name}.\n\nاستخدم الأزرار بالأسفل للتبديل بين خدمات يومي.`
           : `Welcome back, ${employee.name}! We are happy to have you as one of the ${employee.companies.name} family.\n\nUse the buttons below to log your status.`;
-        return ctx.reply(msg, getMainMenu(employee.companies.enable_geofencing, lang));
+        return ctx.reply(msg, getMainMenu(employee.companies));
       }
 
       return ctx.reply(
@@ -103,7 +98,7 @@ export async function POST(req: NextRequest) {
       const successMsg = lang === 'ar'
         ? `تم بنجاح! حسابك الآن مربوط بـ ${employee.companies.name}.`
         : `Success! Your account is now linked to ${employee.companies.name}.`;
-      return ctx.reply(successMsg, getMainMenu(employee.companies.enable_geofencing, lang));
+      return ctx.reply(successMsg, getMainMenu(employee.companies));
     });
 
     const processAttendance = async (ctx: any, employee: any, explicitlyLocation: boolean = false) => {
@@ -150,10 +145,53 @@ export async function POST(req: NextRequest) {
       return ctx.reply(lang === 'ar' ? "لقد أتممت ورديتك اليوم بالفعل!" : "You have already completed your shift today!");
     };
 
+    const runNextReportStep = async (ctx: any, employee: any, draftReport: any) => {
+        const lang = employee.companies.bot_language || 'en';
+        
+        // Get all custom fields
+        const { data: fields } = await supabaseAdmin.from("custom_fields").select("*").eq("team_id", draftReport.team_id).order("order_index", { ascending: true });
+        
+        // Get filled values
+        const { data: filledValues } = await supabaseAdmin.from("report_values").select("field_id").eq("report_id", draftReport.id);
+        const filledIds = filledValues?.map(v => v.field_id) || [];
+
+        // Find first unfilled field
+        const nextField = fields?.find(f => !filledIds.includes(f.id));
+
+        if (nextField) {
+            return ctx.reply(lang === 'ar'
+                ? `يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`
+                : `Please enter: ${nextField.label} (${nextField.field_type})\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`,
+                { reply_markup: { force_reply: true } }
+            );
+        }
+
+        // All fields filled, ask for notes
+        return ctx.reply(lang === 'ar' 
+            ? `أخيراً، أرسل أي ملاحظات لزيارتك (أو اكتب "لا يوجد"):\n\n[Report: ${draftReport.id.substring(0,8)}_notes]`
+            : `Finally, any notes regarding your visit (or type "None"):\n\n[Report: ${draftReport.id.substring(0,8)}_notes]`,
+            { reply_markup: { force_reply: true } }
+        );
+    };
+
     bot.on("location", async (ctx) => {
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).single();
       if (!employee) return;
       const company = (employee.companies as any);
+
+      // Check if location is intended for a Sales Draft
+      const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft").single();
+      if (draftReport && company.sales_tracking_enabled && !draftReport.location_lat) {
+          // Location for sales report! (Since location is step 1, if it has no lat/lng, it's pending it)
+          await supabaseAdmin.from("reports").update({ 
+             location_lat: ctx.message.location.latitude,
+             location_lng: ctx.message.location.longitude
+          }).eq("id", draftReport.id);
+          
+          return runNextReportStep(ctx, employee, draftReport);
+      }
+
+      // Fallback: Attendance flow
       if (company.enable_geofencing) {
         if (!company.office_lat || !company.office_lng) return;
         const dist = getDistance(ctx.message.location.latitude, ctx.message.location.longitude, company.office_lat, company.office_lng);
@@ -169,7 +207,7 @@ export async function POST(req: NextRequest) {
       if (!employee) return ctx.reply("Please /start and link your account first.");
       const lang = employee.companies.bot_language || 'en';
       if (employee.companies.enable_geofencing) {
-        return ctx.reply(lang === 'ar' ? "⚠️ يرجى إرسال الموقع '📍 إرسال الموقع'." : "⚠️ Please use the '📍 Send Location' button.", getMainMenu(true, lang));
+        return ctx.reply(lang === 'ar' ? "⚠️ يرجى إرسال الموقع '📍 إرسال الموقع'." : "⚠️ Please use the '📍 Send Location' button.", getMainMenu(employee.companies));
       }
       await processAttendance(ctx, employee);
     });
@@ -270,6 +308,43 @@ export async function POST(req: NextRequest) {
         const msg = `📌 <b>${task.title}</b>\n\n👤 ${lang === 'ar' ? 'بواسطة' : 'Assigned By'}: ${task.assigner?.name || 'Admin'}\n⏳ ${lang === 'ar' ? 'التسليم' : 'Deadline'}: ${task.deadline || 'N/A'}\n⚠️ ${lang === 'ar' ? 'الحالة' : 'Status'}: ${task.status.toUpperCase()}`;
         await ctx.replyWithHTML(msg, Markup.inlineKeyboard([buttons]));
       }
+    });
+
+    // SALES TRACKING HOOK
+    bot.hears(["📈 Submit Report", "📈 تقرير مبيعات"], async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).single();
+      if (!employee) return;
+      const lang = employee.companies.bot_language || 'en';
+
+      if (!employee.companies.sales_tracking_enabled) return;
+
+      // Ensure they belong to a team!
+      const { data: teamMember } = await supabaseAdmin.from("team_members").select("team_id").eq("employee_id", employee.id).single();
+      if (!teamMember) {
+         return ctx.reply(lang === 'ar' ? "❌ لست منضماً لأي فريق لتسجيل تقرير المبيعات." : "❌ You are not assigned to any sales team.", getMainMenu(employee.companies));
+      }
+
+      // Check if draft exists
+      let { data: draft } = await supabaseAdmin.from("reports").select("id").eq("employee_id", employee.id).eq("status", "draft").single();
+      
+      const today = new Date().toISOString().split("T")[0];
+
+      if (!draft) {
+          const { data: newDraft } = await supabaseAdmin.from("reports").insert({
+              company_id: employee.company_id,
+              team_id: teamMember.team_id,
+              employee_id: employee.id,
+              date: today,
+              status: 'draft'
+          }).select("id").single();
+          draft = newDraft;
+      }
+
+      return ctx.reply(lang === 'ar' 
+        ? "أهلاً بك!\nللبدء بتسجيل التقرير الميداني، يرجى إرسال موقعك الحالي أولاً 📍" 
+        : "Welcome!\nTo start tracking your field report, please send your current location 📍",
+        Markup.keyboard([[Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location")]]).resize()
+      );
     });
 
     bot.on("callback_query", async (ctx: any) => {
@@ -419,6 +494,52 @@ export async function POST(req: NextRequest) {
                : `Task title saved. When is the deadline? 👇`,
                Markup.inlineKeyboard(calButtons)
              );
+           }
+      }
+
+      // SALES REPORT FORM HOOK
+      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("[Report:")) {
+          const match = replyToMsg.text.match(/\[Report:\s*([a-f0-9]{8})_([a-f0-9]{8}|notes)\]/);
+          if (match) {
+             const shortReportId = match[1];
+             const targetFieldShort = match[2];
+             const inputValue = ctx.message.text.trim();
+             
+             const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
+             if(!employee) return;
+             const lang = (employee.companies as any).bot_language || 'en';
+
+             // Find the draft report
+             const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft");
+             const draftReport = reports?.find(r => r.id.startsWith(shortReportId));
+             
+             if (!draftReport) return ctx.reply(lang === 'ar' ? "❌ لم يتم العثور على المسودة، قد تكون أُكملت مسبقاً." : "❌ Report draft not found or already completed.");
+
+             if (targetFieldShort === "notes") {
+                 await supabaseAdmin.from("reports").update({ notes: inputValue, status: 'completed' }).eq("id", draftReport.id);
+                 return ctx.reply(lang === 'ar' ? "✅ تم تسجيل تقريرك الميداني بنجاح! شكراً لك." : "✅ Field report submitted successfully! Thank you.", getMainMenu(employee.companies));
+             }
+
+             // Find targeted field
+             const { data: fields } = await supabaseAdmin.from("custom_fields").select("id, field_type").eq("team_id", draftReport.team_id);
+             const matchedField = fields?.find(f => f.id.startsWith(targetFieldShort));
+
+             if (matchedField) {
+                 if (matchedField.field_type === 'number' && isNaN(Number(inputValue))) {
+                     return ctx.reply(lang === 'ar' 
+                        ? `❌ خطأ في الإدخال. الرجاء إدخال رقم صحيح:\n\n[Report: ${shortReportId}_${targetFieldShort}]` 
+                        : `❌ Invalid input. Please enter a number:\n\n[Report: ${shortReportId}_${targetFieldShort}]`,
+                        { reply_markup: { force_reply: true } }
+                     );
+                 }
+                 await supabaseAdmin.from("report_values").insert({
+                     report_id: draftReport.id,
+                     field_id: matchedField.id,
+                     value: inputValue
+                 });
+                 // Move to next step!
+                 return runNextReportStep(ctx, employee, draftReport);
+             }
           }
       }
 
@@ -426,7 +547,7 @@ export async function POST(req: NextRequest) {
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
       if (!employee) return;
       const lang = (employee.companies as any).bot_language || 'en';
-      ctx.reply(lang === 'ar' ? "استخدم الحوار أعلاه لتعيين المهام، أو الأزرار للحضور." : "Please use the inline dialog to assign tasks, or menu buttons for attendance.", getMainMenu(employee.companies.enable_geofencing, lang));
+      ctx.reply(lang === 'ar' ? "استخدم الحوار أعلاه لتعيين المهام، أو الأزرار للحضور." : "Please use the inline dialog to assign tasks, or menu buttons for attendance.", getMainMenu(employee.companies));
     });
 
     const body = await req.json();

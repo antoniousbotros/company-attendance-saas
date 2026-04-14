@@ -202,3 +202,66 @@ CREATE POLICY "Owners can manage announcements" ON public.announcements
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
+
+-- SALES TRACKING MODULE (FIELD TEAMS)
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS sales_tracking_enabled BOOLEAN DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS public.teams (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    leader_id UUID REFERENCES public.employees(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.team_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member', -- 'leader', 'member'
+    UNIQUE(team_id, employee_id)
+);
+
+CREATE TABLE IF NOT EXISTS public.custom_fields (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
+    label TEXT NOT NULL,
+    field_type TEXT NOT NULL DEFAULT 'text', -- 'number', 'text'
+    is_required BOOLEAN DEFAULT true,
+    order_index INTEGER DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS public.reports (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    location_lat DOUBLE PRECISION,
+    location_lng DOUBLE PRECISION,
+    notes TEXT,
+    status TEXT DEFAULT 'draft', -- 'draft', 'completed'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.report_values (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    report_id UUID NOT NULL REFERENCES public.reports(id) ON DELETE CASCADE,
+    field_id UUID NOT NULL REFERENCES public.custom_fields(id) ON DELETE CASCADE,
+    value TEXT NOT NULL,
+    UNIQUE(report_id, field_id)
+);
+
+ALTER TABLE public.teams ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owners can manage teams" ON public.teams;
+CREATE POLICY "Owners can manage teams" ON public.teams
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );
+
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owners can view reports" ON public.reports;
+CREATE POLICY "Owners can view reports" ON public.reports
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );

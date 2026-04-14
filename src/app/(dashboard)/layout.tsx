@@ -19,7 +19,8 @@ import {
   Globe,
   Banknote,
   ListTodo,
-  Megaphone
+  Megaphone,
+  LocateFixed
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
@@ -53,6 +54,7 @@ function useNav(): NavGroup[] {
         { name: t.employees, href: "/employees", icon: Users },
         { name: (t as any).tasks, href: "/tasks", icon: ListTodo },
         { name: isRTL ? "إعلانات الشركة" : "Announcements", href: "/announcements", icon: Megaphone },
+        { name: isRTL ? "التقارير الميدانية" : "Sales Tracking", href: "/sales-tracking", icon: LocateFixed },
         { name: (t as any).payroll, href: "/payroll", icon: CreditCard },
         { name: t.billing, href: "/billing", icon: CreditCard },
         { name: t.settings, href: "/settings", icon: SettingsIcon },
