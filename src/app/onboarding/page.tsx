@@ -19,6 +19,8 @@ export default function OnboardingPage() {
   const [companyName, setCompanyName] = useState("");
   const [employees, setEmployees] = useState([{ name: "", phone: "" }]);
   const [loading, setLoading] = useState(false);
+  const [telegramToken, setTelegramToken] = useState("");
+  const [botUsername, setBotUsername] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +62,50 @@ export default function OnboardingPage() {
     }
     setLoading(false);
     nextStep();
+  };
+
+  const connectBot = async () => {
+    if (!telegramToken.trim()) return alert("Please enter your Telegram Bot Token");
+    setLoading(true);
+    try {
+      // 1. Verify Bot Token
+      const res = await fetch(`https://api.telegram.org/bot${telegramToken.trim()}/getMe`);
+      const data = await res.json();
+      if (!data.ok) {
+        setLoading(false);
+        return alert("Invalid Bot Token. Please check and try again.");
+      }
+      
+      const botName = data.result.username;
+      
+      // 2. Register Webhook
+      const hookRes = await fetch("/api/telegram/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: telegramToken.trim() }),
+      });
+      const hookData = await hookRes.json();
+      if (!hookData.ok) {
+        console.error(hookData);
+        alert("Failed to register webhook. Make sure the token is correct.");
+      }
+      
+      // 3. Save to Supabase
+      const { data: company } = await supabase.from("companies").select("id").single();
+      if (company) {
+         await supabase.from("companies").update({ 
+            telegram_token: telegramToken.trim(),
+            bot_name: botName
+         }).eq("id", company.id);
+      }
+      
+      setBotUsername(botName);
+      setLoading(false);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message);
+      setLoading(false);
+    }
   };
 
   return (
@@ -179,32 +225,87 @@ export default function OnboardingPage() {
         )}
 
         {step === 3 && (
-          <div className="animate-in fade-in slide-in-from-right-4 duration-500 text-center">
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="w-16 h-16 bg-sky-500/10 rounded-2xl flex items-center justify-center text-sky-500 mb-8 mx-auto">
               <MessageCircle className="w-10 h-10" />
             </div>
-            <h1 className="text-3xl font-black mb-2">Connect Telegram Bot</h1>
-            <p className="text-zinc-500 mb-8">Scane the QR code or click the button below to start tracking.</p>
+            <h1 className="text-3xl font-black mb-2 text-center">Connect Telegram Bot</h1>
             
-            <div className="bg-white p-6 rounded-3xl inline-block mb-8">
-              <QrCode className="w-32 h-32 text-black" />
-            </div>
+            {!botUsername ? (
+              <>
+                 <p className="text-zinc-400 mb-6 text-center text-sm">Create your company's bot in 3 simple steps:</p>
+                 
+                 <div className="space-y-4 mb-8 bg-zinc-800/30 p-5 rounded-2xl border border-zinc-800 text-sm">
+                    <div className="flex gap-3">
+                      <span className="bg-sky-500/20 text-sky-400 w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">1</span>
+                      <p>Open <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="text-sky-400 font-bold hover:underline">@BotFather</a> on Telegram</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="bg-sky-500/20 text-sky-400 w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">2</span>
+                      <p>Send the message <code className="bg-zinc-800 px-1.5 py-0.5 rounded text-sky-300">/newbot</code> and follow the instructions to name it.</p>
+                    </div>
+                    <div className="flex gap-3">
+                      <span className="bg-sky-500/20 text-sky-400 w-6 h-6 rounded-full flex items-center justify-center shrink-0 font-bold">3</span>
+                      <p>Copy the <strong>HTTP API Token</strong> provided at the end and paste it below.</p>
+                    </div>
+                 </div>
 
-            <a 
-              href="https://t.me/your_bot_name" 
-              target="_blank"
-              className="w-full bg-sky-500 hover:bg-sky-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all mb-4"
-            >
-              Open Telegram Bot
-              <ExternalLink className="w-5 h-5" />
-            </a>
+                 <input 
+                    type="text" 
+                    value={telegramToken}
+                    onChange={(e) => setTelegramToken(e.target.value)}
+                    className="w-full bg-zinc-800/50 border border-zinc-700 rounded-2xl p-4 font-mono text-sm outline-none focus:border-sky-500 transition-all mb-6"
+                    placeholder="e.g. 1234567890:ABCdefGhIJKlmNoPQRstUVwxYz"
+                  />
+                  
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={nextStep}
+                      className="flex-1 bg-zinc-800 text-zinc-400 font-bold py-4 rounded-2xl hover:bg-zinc-700 hover:text-white transition-all"
+                    >
+                      Skip
+                    </button>
+                    <button 
+                      onClick={connectBot}
+                      disabled={loading || !telegramToken}
+                      className="flex-[2] bg-sky-500 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/20 disabled:opacity-50"
+                    >
+                      {loading ? "Connecting..." : "Connect Bot"}
+                      <ArrowRight className="w-5 h-5" />
+                    </button>
+                  </div>
+              </>
+            ) : (
+               <div className="text-center">
+                  <p className="text-emerald-400 font-bold mb-6 flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-6 h-6" /> Bot Connected Successfully!
+                  </p>
+                  <p className="text-zinc-400 mb-8 max-w-sm mx-auto">
+                    Your team can now scan this code or click the link to start using the system.
+                  </p>
+                  
+                  <div className="bg-white p-4 rounded-3xl inline-block mb-8">
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://t.me/${botUsername}`} alt="Bot QR" className="w-32 h-32" />
+                  </div>
 
-            <button 
-              onClick={nextStep}
-              className="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl hover:bg-zinc-700 transition-all"
-            >
-              I&apos;ve connected my account
-            </button>
+                  <a 
+                    href={`https://t.me/${botUsername}`} 
+                    target="_blank"
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white font-black py-4 rounded-2xl flex items-center justify-center gap-2 transition-all mb-4"
+                  >
+                    Open @{botUsername} Bot
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+
+                  <button 
+                    onClick={nextStep}
+                    className="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl hover:bg-zinc-700 transition-all"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5 ml-1" />
+                  </button>
+               </div>
+            )}
           </div>
         )}
       </div>

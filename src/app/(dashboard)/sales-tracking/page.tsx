@@ -44,7 +44,7 @@ export default function SalesTrackingPage() {
             await fetchAllData(company.id);
         } else {
             // Must be employee leader/member -> fetch from employees
-            const { data: emp } = await supabase.from("employees").select("company_id").eq("telegram_user_id", user.id).single();
+            const { data: emp } = await supabase.from("employees").select("company_id").eq("telegram_user_id", user.id).limit(1).single();
             // Typically web dashboard is for Admin, but if employees can login we fall back
             // Assuming Admin for MVP as requested ("Admin creates teams")
             if (emp) {
