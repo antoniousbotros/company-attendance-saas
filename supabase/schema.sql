@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS public.companies (
     late_penalty_per_minute DECIMAL DEFAULT 1.0,
     absence_penalty_per_day DECIMAL DEFAULT 1.0,
     overtime_enabled BOOLEAN DEFAULT false,
+    departments JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
