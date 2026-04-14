@@ -73,11 +73,13 @@ bot.hears("✅ Check In", async (ctx) => {
 
   const { data: employee } = await supabaseAdmin
     .from("employees")
-    .select("*")
+    .select("*, companies(*)")
     .eq("telegram_user_id", userId)
     .single();
 
   if (!employee) return ctx.reply("Please /start and link your account first.");
+
+  const company = employee.companies;
 
   // Check if already checked in today
   const { data: existing } = await supabaseAdmin
@@ -91,8 +93,21 @@ bot.hears("✅ Check In", async (ctx) => {
     return ctx.reply(`You already checked in today at ${new Date(existing.check_in).toLocaleTimeString()}.`);
   }
 
-  // Mark status (Late if after 10 AM)
-  const isLate = now.getHours() >= 10;
+  // Calculate Late Status based on Company Working Hours
+  let isLate = false;
+  if (company.work_start_time) {
+    const [startH, startM] = company.work_start_time.split(':').map(Number);
+    const thresholdMin = company.late_threshold || 15;
+    
+    // Create a date object for today at the start time
+    const workStart = new Date(now);
+    workStart.setHours(startH, startM + thresholdMin, 0, 0);
+
+    if (now > workStart) {
+      isLate = true;
+    }
+  }
+
   const status = isLate ? "late" : "present";
 
   const { error } = await supabaseAdmin
@@ -182,6 +197,10 @@ bot.hears("📊 My Attendance", async (ctx) => {
   });
 
   return ctx.replyWithMarkdown(message);
+});
+
+bot.on("text", (ctx) => {
+    ctx.reply("Please use the menu buttons to log your attendance.", mainMenu);
 });
 
 export async function POST(req: NextRequest) {
