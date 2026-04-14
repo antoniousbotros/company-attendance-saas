@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS public.employees (
     name TEXT NOT NULL,
     phone TEXT NOT NULL UNIQUE,
     telegram_user_id BIGINT UNIQUE,
+    department TEXT,
     invite_token UUID DEFAULT uuid_generate_v4(),
     -- Compensation & Rules
     base_salary DECIMAL DEFAULT 0,

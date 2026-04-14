@@ -18,6 +18,7 @@ type Employee = {
   name: string;
   phone: string;
   telegram_user_id?: string | null;
+  department?: string | null;
   base_salary?: number;
   salary_type?: string;
   working_hours_per_day?: number;
@@ -39,6 +40,7 @@ export default function EmployeesPage() {
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     phone: "",
+    department: "",
     base_salary: 0,
     salary_type: "monthly",
     working_hours_per_day: 8,
@@ -84,6 +86,7 @@ export default function EmployeesPage() {
     const { error } = await supabase.from("employees").insert({
       name: newEmployee.name.trim(),
       phone,
+      department: newEmployee.department.trim() || null,
       company_id: company.id,
       base_salary: newEmployee.base_salary,
       salary_type: newEmployee.salary_type,
@@ -99,6 +102,7 @@ export default function EmployeesPage() {
       setNewEmployee({ 
         name: "", 
         phone: "",
+        department: "",
         base_salary: 0,
         salary_type: "monthly",
         working_hours_per_day: 8,
@@ -116,6 +120,7 @@ export default function EmployeesPage() {
     const { error } = await supabase.from("employees").update({
       name: editingEmployee.name.trim(),
       phone,
+      department: editingEmployee.department?.trim() || null,
       base_salary: editingEmployee.base_salary,
       salary_type: editingEmployee.salary_type,
       working_hours_per_day: editingEmployee.working_hours_per_day,
@@ -151,6 +156,7 @@ export default function EmployeesPage() {
     return employees.filter(
       (e) =>
         e.name.toLowerCase().includes(q) ||
+        (e.department && e.department.toLowerCase().includes(q)) ||
         e.phone.includes(q)
     );
   }, [employees, query]);
@@ -227,7 +233,7 @@ export default function EmployeesPage() {
                         </div>
                         <div className="text-start max-w-[200px]">
                           <p className="text-sm font-bold text-[#111] truncate">{emp.name}</p>
-                          <p className="text-[10px] text-[#9ca3af] font-medium uppercase">{isRTL ? "موظف" : "Staff"}</p>
+                          <p className="text-[10px] text-[#9ca3af] font-bold uppercase tracking-wider">{emp.department || (isRTL ? "غير محدد التخصص" : "Unassigned Dept")}</p>
                         </div>
                       </div>
                     </td>
@@ -304,6 +310,20 @@ export default function EmployeesPage() {
                   value={newEmployee.name}
                   onChange={(e) =>
                     setNewEmployee({ ...newEmployee, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                  {isRTL ? "القسم / التخصص (اختياري)" : "Department"}
+                </label>
+                <input
+                  type="text"
+                  placeholder={isRTL ? "مثال: مهندس برمجيات، محاسب..." : "e.g., Software, Marketing..."}
+                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                  value={newEmployee.department}
+                  onChange={(e) =>
+                    setNewEmployee({ ...newEmployee, department: e.target.value })
                   }
                 />
               </div>
@@ -431,6 +451,19 @@ export default function EmployeesPage() {
                   value={editingEmployee.name}
                   onChange={(e) =>
                     setEditingEmployee({ ...editingEmployee, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
+                <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                  {isRTL ? "القسم / التخصص (اختياري)" : "Department"}
+                </label>
+                <input
+                  type="text"
+                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                  value={editingEmployee.department || ""}
+                  onChange={(e) =>
+                    setEditingEmployee({ ...editingEmployee, department: e.target.value })
                   }
                 />
               </div>
