@@ -158,7 +158,21 @@ export async function POST(req: NextRequest) {
         // Find first unfilled field
         const nextField = fields?.find(f => !filledIds.includes(f.id));
 
+        const { data: team } = await supabaseAdmin.from("teams").select("show_notes, require_notes").eq("id", draftReport.team_id).single();
+        
         if (nextField) {
+            if (nextField.field_type === 'select' && nextField.options && nextField.options.length > 0) {
+                // Generate Inline Keyboard
+                const optionButtons = nextField.options.map((opt: string, idx: number) => [
+                    Markup.button.callback(opt, `ropt_${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}_${idx}`)
+                ]);
+                return ctx.reply(lang === 'ar'
+                    ? `يرجى إختيار: ${nextField.label} 👇`
+                    : `Please select: ${nextField.label} 👇`,
+                    Markup.inlineKeyboard(optionButtons)
+                );
+            }
+            
             return ctx.reply(lang === 'ar'
                 ? `يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`
                 : `Please enter: ${nextField.label} (${nextField.field_type})\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`,
@@ -166,10 +180,15 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // All fields filled, ask for notes
+        // All fields filled, ask for notes if enabled
+        if (team && team.show_notes === false) {
+             await supabaseAdmin.from("reports").update({ status: 'completed' }).eq("id", draftReport.id);
+             return ctx.reply(lang === 'ar' ? "✅ تم تسجيل تقريرك الميداني بنجاح! شكراً لك." : "✅ Field report submitted successfully! Thank you.", getMainMenu((employee as any).companies));
+        }
+
         return ctx.reply(lang === 'ar' 
-            ? `أخيراً، أرسل أي ملاحظات لزيارتك (أو اكتب "لا يوجد"):\n\n[Report: ${draftReport.id.substring(0,8)}_notes]`
-            : `Finally, any notes regarding your visit (or type "None"):\n\n[Report: ${draftReport.id.substring(0,8)}_notes]`,
+            ? `📝 أخيراً، أرسل أي ملاحظات لزيارتك${team?.require_notes ? ' (إجباري)' : ' (أو أرسل "لا")'} 👇\n\n[Report: ${draftReport.id.substring(0,8)}_notes]`
+            : `📝 Finally, any notes regarding your visit${team?.require_notes ? ' (Required)' : ' (or type "no")'} 👇\n\n[Report: ${draftReport.id.substring(0,8)}_notes]`,
             { reply_markup: { force_reply: true } }
         );
     };
@@ -552,6 +571,46 @@ export async function POST(req: NextRequest) {
          }
          return;
       }
+      
+      // OPTION SELECT FOR FIELD REPORT
+      if (data && data.startsWith("ropt_")) {
+          const parts = data.split("_");
+          const shortReportId = parts[1];
+          const shortFieldId = parts[2];
+          const optIndex = parseInt(parts[3], 10);
+          
+          await ctx.answerCbQuery().catch(()=>{});
+          
+          const telegramUserId = ctx.callbackQuery.from.id;
+          const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
+          if(!employee) return;
+          const lang = (employee.companies as any).bot_language || 'en';
+
+          const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft");
+          const draftReport = reports?.find(r => r.id.startsWith(shortReportId));
+          if (!draftReport) {
+              return ctx.editMessageText(lang === 'ar' ? "❌ لم يتم العثور على المسودة." : "❌ Draft not found.").catch(()=>{});
+          }
+          
+          const { data: fields } = await supabaseAdmin.from("custom_fields").select("*").eq("team_id", draftReport.team_id);
+          const matchedField = fields?.find(f => f.id.startsWith(shortFieldId));
+          
+          if (matchedField && matchedField.options) {
+              const selectedValue = matchedField.options[optIndex];
+              
+              // Remove the keyboard inline buttons
+              await ctx.editMessageText(`✅ ${matchedField.label}: ${selectedValue}`).catch(()=>{});
+              
+              await supabaseAdmin.from("report_values").insert({
+                  report_id: draftReport.id,
+                  field_id: matchedField.id,
+                  value: selectedValue
+              });
+              
+              // Move to next step!
+              return runNextReportStep(ctx, employee, draftReport);
+          }
+      }
     });
 
     bot.on("text", async (ctx) => {
@@ -632,6 +691,16 @@ export async function POST(req: NextRequest) {
              if (!draftReport) return ctx.reply(lang === 'ar' ? "❌ لم يتم العثور على المسودة، قد تكون أُكملت مسبقاً." : "❌ Report draft not found or already completed.");
 
              if (targetFieldShort === "notes") {
+                 const { data: tm } = await supabaseAdmin.from("teams").select("require_notes").eq("id", draftReport.team_id).single();
+                 const noVariations = ["no", "none", "لا", "لا يوجد", "لايوجد"];
+                 if (tm?.require_notes && noVariations.includes(inputValue.toLowerCase())) {
+                     return ctx.reply(lang === 'ar' 
+                        ? `❌ الملاحظات إجبارية في هذا الفريق. يرجى توضيح رسالة حقيقية:\n\n[Report: ${shortReportId}_notes]` 
+                        : `❌ Notes are required for your team. Please elaborate:\n\n[Report: ${shortReportId}_notes]`,
+                        { reply_markup: { force_reply: true } }
+                     );
+                 }
+                 
                  await supabaseAdmin.from("reports").update({ notes: inputValue, status: 'completed' }).eq("id", draftReport.id);
                  return ctx.reply(lang === 'ar' ? "✅ تم تسجيل تقريرك الميداني بنجاح! شكراً لك." : "✅ Field report submitted successfully! Thank you.", getMainMenu(employee.companies));
              }

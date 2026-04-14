@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
 // Supabase generated types conceptually
-type Team = { id: string; name: string; leader_id: string | null };
-type Field = { id: string; team_id: string; label: string; field_type: string; order_index: number };
+type Team = { id: string; name: string; leader_id: string | null; show_notes?: boolean; require_notes?: boolean; };
+type Field = { id: string; team_id: string; label: string; field_type: string; order_index: number; options?: string[] };
 type Employee = { id: string; name: string };
 type TeamMember = { id: string; team_id: string; employee_id: string; role: string; employee_name?: string };
 type ReportObj = { id: string; employee_name: string; team_name: string; date: string; location_lat: number; location_lng: number; notes: string; values: Record<string, string> };
@@ -307,18 +307,25 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     const [localFields, setLocalFields] = useState<Field[]>(fields);
     const [localMembers, setLocalMembers] = useState<TeamMember[]>(members);
     const [newLabel, setNewLabel] = useState("");
-    const [newType, setNewType] = useState("number"); // number, text
+    const [newType, setNewType] = useState("number"); // number, text, select
+    const [newOptionsText, setNewOptionsText] = useState("");
     const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
     const [activeTab, setActiveTab] = useState<"fields"|"members">("fields");
+    
+    // Notes configuration state
+    const [showNotes, setShowNotes] = useState(team.show_notes ?? true);
+    const [requireNotes, setRequireNotes] = useState(team.require_notes ?? false);
 
     const handleAddField = async () => {
         if (!newLabel.trim()) return;
         
         try {
+            const fieldOptions = newType === 'select' ? newOptionsText.split(',').map(s=>s.trim()).filter(Boolean) : [];
             const { data, error } = await supabase.from("custom_fields").insert({
                 team_id: team.id,
                 label: newLabel,
                 field_type: newType,
+                options: fieldOptions,
                 order_index: localFields.length
             }).select().single();
             
@@ -333,6 +340,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                 setLocalFields(next);
                 onFieldsChange(next);
                 setNewLabel("");
+                setNewOptionsText("");
             }
         } catch (err) {
             console.error("Network or Syntax Error adding field:", err);
@@ -345,6 +353,12 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
         const next = localFields.filter(f => f.id !== id);
         setLocalFields(next);
         onFieldsChange(next);
+    };
+
+    const handleToggleNotesFlag = async (key: 'show_notes'|'require_notes', val: boolean) => {
+        await supabase.from("teams").update({ [key]: val }).eq("id", team.id);
+        if (key === 'show_notes') setShowNotes(val);
+        if (key === 'require_notes') setRequireNotes(val);
     };
 
     const handleAddMember = async () => {
@@ -413,41 +427,79 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                             </div>
 
                             {localFields.map((f, i) => (
-                                <div key={f.id} className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
-                                    <span className="font-medium text-gray-800 flex items-center gap-2">
-                                        <span className="text-gray-400 text-xs w-4">{i + 2}.</span> 
-                                        {f.label}
-                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-2">
-                                            {f.field_type === 'number' ? 'رقم' : 'نص'}
+                                <div key={f.id} className="flex flex-col gap-1 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="font-medium text-gray-800 flex items-center gap-2">
+                                            <span className="text-gray-400 text-xs w-4">{i + 2}.</span> 
+                                            {f.label}
+                                            <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-2">
+                                                {f.field_type === 'number' ? 'رقم' : f.field_type === 'select' ? 'خيارات متعددة' : 'نص'}
+                                            </span>
                                         </span>
-                                    </span>
-                                    <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors">
-                                        <Trash2 className="w-4 h-4"/>
-                                    </button>
+                                        <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors">
+                                            <Trash2 className="w-4 h-4"/>
+                                        </button>
+                                    </div>
+                                    {f.field_type === 'select' && f.options && f.options.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 pr-8">
+                                            {f.options.map(o => (
+                                                <span key={o} className="bg-gray-100 text-gray-500 text-[10px] px-2 py-0.5 rounded">{o}</span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
 
-                            <div className="flex items-center justify-between p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400">
-                                <input 
-                                    placeholder="اسم الحقل الجديد (مثال: عدد الزيارات)" 
-                                    className="bg-transparent border-none outline-none flex-1 font-medium"
-                                    value={newLabel} onChange={e => setNewLabel(e.target.value)}
-                                />
-                                <div className="flex items-center gap-2 border-r border-gray-200 pr-2 pb-[1px]">
-                                    <select className="bg-transparent text-xs outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
-                                        <option value="number">رقم</option>
-                                        <option value="text">نص سريع</option>
-                                    </select>
-                                    <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors" type="button">
-                                        <Plus className="w-4 h-4"/>
-                                    </button>
+                            <div className="flex flex-col p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 gap-2">
+                                <div className="flex items-center gap-2">
+                                    <input 
+                                        placeholder="اسم الحقل الجديد (مثال: عدد الزيارات)" 
+                                        className="bg-transparent border-none outline-none flex-1 font-medium"
+                                        value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                                    />
+                                    <div className="flex items-center gap-2 border-r border-gray-200 pr-2">
+                                        <select className="bg-transparent text-xs outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
+                                            <option value="number">رقم</option>
+                                            <option value="text">نص سريع</option>
+                                            <option value="select">خيارات اختيارية</option>
+                                        </select>
+                                        {newType !== 'select' && (
+                                            <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors" type="button">
+                                                <Plus className="w-4 h-4"/>
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
+                                {newType === 'select' && (
+                                    <div className="flex items-center gap-2 border-t border-gray-100 pt-2 pb-1">
+                                        <input 
+                                            placeholder="اكتب الخيارات وافصل بينها بفاصلة (,)" 
+                                            className="bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none flex-1 font-medium text-xs text-gray-800"
+                                            value={newOptionsText} onChange={e => setNewOptionsText(e.target.value)}
+                                        />
+                                        <button onClick={handleAddField} className="bg-black text-white px-3 py-1 rounded text-xs font-semibold hover:bg-gray-800 transition-colors" type="button">
+                                            إضافة
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             
-                            <div className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600 relative overflow-hidden mt-1 opacity-70">
-                                <div className="absolute inset-0 bg-gray-50/50 mix-blend-multiply pointer-events-none" />
-                                <span className="flex items-center gap-2 font-medium">الأخير. ملاحظات التقرير (اختياري)</span>
-                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">نهاية النموذج</span>
+                            <div className="flex flex-col gap-2 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600 mt-1">
+                                <div className="flex items-center justify-between">
+                                    <span className="flex items-center gap-2 font-medium">الأخير. ملاحظات التقرير</span>
+                                    <div className="flex items-center gap-4 text-xs font-bold">
+                                        <label className="flex items-center gap-1.5 cursor-pointer hover:text-black">
+                                            <input type="checkbox" className="accent-black" checked={showNotes} onChange={e => handleToggleNotesFlag('show_notes', e.target.checked)} />
+                                            إظهار الحقل
+                                        </label>
+                                        {showNotes && (
+                                            <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#ff5a00] text-gray-400">
+                                                <input type="checkbox" className="accent-[#ff5a00]" checked={requireNotes} onChange={e => handleToggleNotesFlag('require_notes', e.target.checked)} />
+                                                إجباري
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </>
                     )}

@@ -212,6 +212,8 @@ CREATE TABLE IF NOT EXISTS public.teams (
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     leader_id UUID REFERENCES public.employees(id) ON DELETE SET NULL,
+    show_notes BOOLEAN DEFAULT true,
+    require_notes BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -227,7 +229,8 @@ CREATE TABLE IF NOT EXISTS public.custom_fields (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
     label TEXT NOT NULL,
-    field_type TEXT NOT NULL DEFAULT 'text', -- 'number', 'text'
+    field_type TEXT NOT NULL DEFAULT 'text', -- 'number', 'text', 'select'
+    options JSONB DEFAULT '[]'::jsonb,
     is_required BOOLEAN DEFAULT true,
     order_index INTEGER DEFAULT 0
 );
