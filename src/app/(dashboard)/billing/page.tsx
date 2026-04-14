@@ -164,7 +164,7 @@ export default function BillingPage() {
         <h2 className="text-lg font-bold text-[#111] mb-4 text-start">{isRTL ? "الباقات المتاحة للترقية" : "Available Plans"}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { id: "starter", name: "Starter", arName: "أساسي", price: 149, limit: 10, features: ["Telegram Bot Access", "Daily Attendance Logs", "Simple Dashboard"], arFeatures: ["بوابة تليجرام", "سجلات يومية", "لوحة تحكم بسيطة"] },
+            { id: "starter", name: "Starter", arName: "أساسي", price: 49, limit: 10, features: ["Telegram Bot Access", "Daily Attendance Logs", "Simple Dashboard"], arFeatures: ["بوابة تليجرام", "سجلات يومية", "لوحة تحكم بسيطة"] },
             { id: "growth", name: "Growth", arName: "نمو", price: 499, limit: 50, popular: true, features: ["Everything in Starter", "Late Arrival Tracking", "CSV Export", "Team Notifications"], arFeatures: ["كل ميزات الأساسي", "نظام التأخيرات", "تصدير البيانات CSV", "إشعارات الفريق"] },
             { id: "pro", name: "Pro", arName: "احترافي", price: 899, limit: 150, features: ["Everything in Growth", "Advanced Analytics", "Employee Performance", "Multiple Admins"], arFeatures: ["كل ميزات النمو", "تحليلات متقدمة", "تقارير وتقييمات الموظفين", "مديرين متعددين"] },
             { id: "enterprise", name: "Enterprise", arName: "شركات الكبرى", price: "Custom", arPrice: "مخصص", limit: Infinity, features: ["Full Customization", "Dedicated Support", "API Access", "White-label Options"], arFeatures: ["تخصيص كامل", "دعم مخصص", "ربط API", "واجهة بعلامتك التجارية"] }

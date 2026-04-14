@@ -9,7 +9,7 @@ export interface Plan {
 export const PLANS: Record<string, Plan> = {
   starter: {
     name: "Starter",
-    price: 149,
+    price: 49,
     employeeLimit: 10,
     features: ["Attendance tracking", "Telegram bot", "Simple dashboard"],
   },
