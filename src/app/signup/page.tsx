@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
-import { Clock, Mail, Lock, ArrowRight, User, Chrome } from "lucide-react";
+import { Clock, Mail, Lock, ArrowRight, User, Globe } from "lucide-react";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -53,7 +53,7 @@ export default function SignupPage() {
 
         <div className="space-y-4">
           <button className="w-full bg-zinc-900 border border-zinc-800 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc-800 transition-all border-b-4 border-zinc-950 active:border-b-0 active:translate-y-1">
-            <Chrome className="w-5 h-5 text-indigo-400" />
+            <Globe className="w-5 h-5 text-indigo-400" />
             Continue with Google
           </button>
           

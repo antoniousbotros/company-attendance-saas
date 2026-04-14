@@ -1,5 +1,5 @@
 -- TABLES
-CREATE TABLE public.companies (
+CREATE TABLE IF NOT EXISTS public.companies (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     owner_id UUID NOT NULL REFERENCES auth.users(id),
@@ -11,7 +11,7 @@ CREATE TABLE public.companies (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE public.employees (
+CREATE TABLE IF NOT EXISTS public.employees (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE public.employees (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE TABLE public.attendance (
+CREATE TABLE IF NOT EXISTS public.attendance (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
     employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
@@ -52,8 +52,7 @@ CREATE POLICY "Owners can view attendance of their company" ON public.attendance
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
 
--- SUBSCRIPTIONS TABLE
-CREATE TABLE public.subscriptions (
+CREATE TABLE IF NOT EXISTS public.subscriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID REFERENCES public.companies(id),
     stripe_id TEXT,
@@ -83,6 +82,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW 
+  WHEN (NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'on_auth_user_created'))
+  EXECUTE PROCEDURE public.handle_new_user();
+
+-- For triggers, it's safer to drop and create
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
