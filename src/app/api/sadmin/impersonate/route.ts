@@ -24,11 +24,13 @@ export async function POST(req: NextRequest) {
     // 2. Generate a magic link for this user
     // This allows the Super Admin to click the link and instantly be logged in as them
     // Redirects to /overview
+    const baseUrl = process.env.NODE_ENV === "production" ? "https://yawmy.app" : "http://localhost:3000";
+    
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "magiclink",
       email: user.email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/overview`
+        redirectTo: `${baseUrl}/overview`
       }
     });
 
