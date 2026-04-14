@@ -10,7 +10,7 @@ type Team = { id: string; name: string; leader_id: string | null; show_notes?: b
 type Field = { id: string; team_id: string; label: string; field_type: string; order_index: number; options?: string[] };
 type Employee = { id: string; name: string };
 type TeamMember = { id: string; team_id: string; employee_id: string; role: string; employee_name?: string };
-type ReportObj = { id: string; employee_name: string; team_name: string; date: string; location_lat: number; location_lng: number; notes: string; values: Record<string, string> };
+type ReportObj = { id: string; employee_name: string; team_name: string; team_id?: string; date: string; created_at: string; location_lat: number; location_lng: number; notes: string; values: Record<string, string> };
 
 export default function SalesTrackingPage() {
     const [activeTab, setActiveTab] = useState<"reports"|"settings">("reports");
@@ -61,10 +61,10 @@ export default function SalesTrackingPage() {
             supabase.from("teams").select("*").eq("company_id", cid),
             supabase.from("custom_fields").select("*, teams!inner(company_id)").eq("teams.company_id", cid),
             supabase.from("reports").select(`
-                id, date, location_lat, location_lng, notes, status,
+                id, date, created_at, location_lat, location_lng, notes, status, team_id,
                 employees(name), teams(name),
                 report_values(field_id, value)
-            `).eq("company_id", cid).eq("status", "completed").order("date", { ascending: false }).limit(100),
+            `).eq("company_id", cid).eq("status", "completed").order("created_at", { ascending: false }).limit(1000),
             supabase.from("employees").select("id, name").eq("company_id", cid),
             supabase.from("team_members").select("id, team_id, employee_id, role, employees!inner(name, company_id)").eq("employees.company_id", cid)
         ]);
@@ -89,7 +89,9 @@ export default function SalesTrackingPage() {
                     id: r.id,
                     employee_name: r.employees?.name || 'Unknown',
                     team_name: r.teams?.name || 'Unknown',
+                    team_id: r.team_id,
                     date: r.date,
+                    created_at: r.created_at,
                     location_lat: r.location_lat,
                     location_lng: r.location_lng,
                     notes: r.notes || '',
@@ -140,7 +142,7 @@ export default function SalesTrackingPage() {
             )}
 
             {activeTab === "reports" && (
-                <ReportsView reports={reports} fields={fields} />
+                <ReportsView reports={reports} fields={fields} teams={teams} employees={employees} />
             )}
 
             {activeTab === "settings" && isAdmin && (
@@ -160,75 +162,132 @@ export default function SalesTrackingPage() {
 // SUB COMPONENTS
 // ----------------------------------------------------
 
-function ReportsView({ reports, fields }: { reports: ReportObj[], fields: Field[] }) {
-    // Quick summarize all unique fields dynamically based on current reports dataset to create table headers.
+function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj[], fields: Field[], teams: Team[], employees: Employee[] }) {
+    const [filterTeam, setFilterTeam] = useState("");
+    const [filterEmployee, setFilterEmployee] = useState("");
+    const [filterDateFrom, setFilterDateFrom] = useState("");
+    const [filterDateTo, setFilterDateTo] = useState("");
+
     const dynamicFieldIds = Array.from(new Set(reports.flatMap(r => Object.keys(r.values))));
 
+    const filteredReports = reports.filter(r => {
+        if (filterTeam && r.team_id !== filterTeam) return false;
+        if (filterEmployee && r.employee_name !== filterEmployee) return false;
+        if (filterDateFrom && new Date(r.date) < new Date(filterDateFrom)) return false;
+        if (filterDateTo && new Date(r.date) > new Date(filterDateTo)) return false;
+        return true;
+    });
+
     return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                <h3 className="font-bold text-gray-800">أحدث التقارير الميدانية</h3>
-                <span className="bg-orange-50 text-[#ff5a00] text-xs font-bold px-3 py-1 rounded-full w-fit">
-                    {reports.length} تقارير
-                </span>
+        <div className="space-y-4">
+            {/* Filters */}
+            <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
+                <div className="flex-1 min-w-[200px]">
+                    <label className="block text-xs text-gray-500 mb-1">الفريق</label>
+                    <select 
+                        value={filterTeam} onChange={e => setFilterTeam(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                    >
+                        <option value="">الكل</option>
+                        {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                    </select>
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                    <label className="block text-xs text-gray-500 mb-1">الموظف</label>
+                    <select 
+                        value={filterEmployee} onChange={e => setFilterEmployee(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                    >
+                        <option value="">الكل</option>
+                        {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
+                    </select>
+                </div>
+                <div className="flex-1 min-w-[150px]">
+                    <label className="block text-xs text-gray-500 mb-1">من تاريخ</label>
+                    <input 
+                        type="date" 
+                        value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                    />
+                </div>
+                <div className="flex-1 min-w-[150px]">
+                    <label className="block text-xs text-gray-500 mb-1">إلى تاريخ</label>
+                    <input 
+                        type="date" 
+                        value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
+                    />
+                </div>
             </div>
-            
-            <div className="overflow-x-auto w-full">
-                <table className="w-full text-right">
-                    <thead>
-                        <tr className="bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100">
-                            <th className="px-5 py-4 w-32">التاريخ</th>
-                            <th className="px-5 py-4 w-48">الموظف</th>
-                            <th className="px-5 py-4 w-32">الفريق</th>
-                            {dynamicFieldIds.map(fid => {
-                                const fl = fields.find(f => f.id === fid)?.label || "قيمة ديناميكية";
-                                return <th key={fid} className="px-5 py-4">{fl}</th>
-                            })}
-                            <th className="px-5 py-4">الملاحظات</th>
-                            <th className="px-5 py-4 w-32 text-center">الموقع الجغرافي</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm font-medium text-gray-700 divide-y divide-gray-50">
-                        {reports.length === 0 ? (
-                            <tr>
-                                <td colSpan={6 + dynamicFieldIds.length} className="text-center py-12 text-gray-400">
-                                    لا توجد تقارير مدخلة حتى الآن.
-                                </td>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-bold text-gray-800">أحدث التقارير الميدانية</h3>
+                    <span className="bg-orange-50 text-[#ff5a00] text-xs font-bold px-3 py-1 rounded-full w-fit">
+                        {filteredReports.length} تقارير
+                    </span>
+                </div>
+                
+                <div className="overflow-x-auto w-full">
+                    <table className="w-full text-right">
+                        <thead>
+                            <tr className="bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100">
+                                <th className="px-5 py-4 w-32">التاريخ والوقت</th>
+                                <th className="px-5 py-4 w-48">الموظف</th>
+                                <th className="px-5 py-4 w-32">الفريق</th>
+                                {dynamicFieldIds.map(fid => {
+                                    const fl = fields.find(f => f.id === fid)?.label || "قيمة ديناميكية";
+                                    return <th key={fid} className="px-5 py-4">{fl}</th>
+                                })}
+                                <th className="px-5 py-4">الملاحظات</th>
+                                <th className="px-5 py-4 w-32 text-center">الموقع الجغرافي</th>
                             </tr>
-                        ) : reports.map(r => (
-                            <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-5 py-3 text-gray-500">{new Date(r.date).toLocaleDateString("en-GB")}</td>
-                                <td className="px-5 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
-                                            {r.employee_name.charAt(0)}
+                        </thead>
+                        <tbody className="text-sm font-medium text-gray-700 divide-y divide-gray-50">
+                            {filteredReports.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6 + dynamicFieldIds.length} className="text-center py-12 text-gray-400">
+                                        لا توجد تقارير مطابقة.
+                                    </td>
+                                </tr>
+                            ) : filteredReports.map(r => (
+                                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
+                                    <td className="px-5 py-3 text-gray-500">
+                                        <div>{new Date(r.date).toLocaleDateString("en-GB")}</div>
+                                        <div className="text-xs text-gray-400 font-mono mt-0.5">{new Date(r.created_at).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", hour12: true })}</div>
+                                    </td>
+                                    <td className="px-5 py-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                                                {r.employee_name.charAt(0)}
+                                            </div>
+                                            {r.employee_name}
                                         </div>
-                                        {r.employee_name}
-                                    </div>
-                                </td>
-                                <td className="px-5 py-3">
-                                    <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
-                                </td>
-                                {dynamicFieldIds.map(fid => (
-                                    <td key={fid} className="px-5 py-3 bg-blue-50/20">{r.values[fid] || "-"}</td>
-                                ))}
-                                <td className="px-5 py-3 text-gray-500 max-w-[200px] truncate" title={r.notes}>{r.notes || "-"}</td>
-                                <td className="px-5 py-3 text-center">
-                                    {r.location_lat ? (
-                                        <a 
-                                            href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
-                                            target="_blank" rel="noopener noreferrer"
-                                            className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                                            title="عرض الموقع على الخريطة"
-                                        >
-                                            <MapPin className="w-4 h-4" />
-                                        </a>
-                                    ) : <span className="text-gray-300">-</span>}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                    </td>
+                                    <td className="px-5 py-3">
+                                        <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
+                                    </td>
+                                    {dynamicFieldIds.map(fid => (
+                                        <td key={fid} className="px-5 py-3 bg-blue-50/20">{r.values[fid] || "-"}</td>
+                                    ))}
+                                    <td className="px-5 py-3 text-gray-500 max-w-[200px] truncate" title={r.notes}>{r.notes || "-"}</td>
+                                    <td className="px-5 py-3 text-center">
+                                        {r.location_lat ? (
+                                            <a 
+                                                href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
+                                                target="_blank" rel="noopener noreferrer"
+                                                className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                                title="عرض الموقع على الخريطة"
+                                            >
+                                                <MapPin className="w-4 h-4" />
+                                            </a>
+                                        ) : <span className="text-gray-300">-</span>}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
