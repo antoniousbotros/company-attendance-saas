@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS public.companies (
     onboarding_step INTEGER DEFAULT 1,
     trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '14 days'),
     current_period_end TIMESTAMP WITH TIME ZONE,
+    telegram_token TEXT,
+    bot_name TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
