@@ -1,117 +1,242 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Clock, Mail, Lock, ArrowRight, User, Globe } from "lucide-react";
+import { Clock, Mail, Lock, ArrowRight, User, Languages } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { type Language } from "@/lib/i18n";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lang, setLang] = useState<Language>("en");
+
+  useEffect(() => {
+    const savedLang = (localStorage.getItem("lang") as Language) || "en";
+    setLang(savedLang);
+    document.documentElement.setAttribute("dir", savedLang === "ar" ? "rtl" : "ltr");
+  }, []);
+
+  const toggleLang = () => {
+    const newLang = lang === "en" ? "ar" : "en";
+    setLang(newLang);
+    localStorage.setItem("lang", newLang);
+    document.documentElement.setAttribute("dir", newLang === "ar" ? "rtl" : "ltr");
+  };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    const { data: authData, error: authError } = await supabase.auth.signUp({ 
-      email, 
-      password,
-      options: {
-        data: {
-          full_name: fullName
-        }
-      }
-    });
+    try {
+      if (!supabase) throw new Error("Supabase client not initialized");
 
-    if (authError) {
-      alert(authError.message);
+       const { data: authData, error: authError } = await supabase.auth.signUp({ 
+         email: email.trim(), 
+         password,
+         options: {
+           data: {
+             full_name: fullName
+           }
+         }
+       });
+
+       if (authError) {
+         alert(authError.message);
+       } else if (authData.user) {
+          window.location.href = "/onboarding";
+       }
+    } catch (err: unknown) {
+      alert("System error: " + (err instanceof Error ? err.message : String(err)));
+    } finally {
       setLoading(false);
-      return;
-    }
-
-    if (authData.user) {
-       // Auto-login or redirect to onboarding
-       window.location.href = "/onboarding";
     }
   };
 
+  const isRTL = lang === 'ar';
+
   return (
-    <div className="min-h-screen bg-[#09090b] flex items-center justify-center p-4 selection:bg-indigo-500/30">
-      <div className="w-full max-w-[420px] space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="text-center space-y-3">
-          <div className="w-20 h-20 bg-indigo-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(79,70,229,0.3)] animate-pulse">
-            <Clock className="w-12 h-12 text-white" />
-          </div>
-          <h1 className="text-4xl font-black tracking-tight text-white">
-            ابدأ في أقل من دقيقة
-          </h1>
-          <p className="text-zinc-500 text-lg">بدون أجهزة — كله من موبايلك</p>
-        </div>
+    <div className="min-h-screen w-full flex font-sans bg-white selection:bg-[#ff5a00]/30 transition-colors duration-500">
+       
+      {/* LEFT PANE - Form Content */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative z-10 transition-all duration-500 bg-white shadow-xl shadow-black/5">
+        
+        {/* Lang Switcher Absolute Corner */}
+        <button 
+          type="button"
+          onClick={toggleLang}
+          className={cn("absolute top-8 flex items-center gap-2 bg-[#f9fafb] text-[#6b7280] border border-[#eeeeee] px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#f5f5f5] hover:text-[#111] transition-all", isRTL ? "left-8" : "right-8")}
+        >
+          <Languages className="w-4 h-4" />
+          {lang === "en" ? "العربية" : "English"}
+        </button>
 
-        <div className="space-y-4">
-          <button className="w-full bg-zinc-900 border border-zinc-800 text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-3 hover:bg-zinc-800 transition-all border-b-4 border-zinc-950 active:border-b-0 active:translate-y-1">
-            <Globe className="w-5 h-5 text-indigo-400" />
-            Continue with Google
-          </button>
+        <div className="w-full max-w-[420px] space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
           
-          <div className="flex items-center gap-4 py-2">
-            <div className="h-[1px] flex-1 bg-zinc-800" />
-            <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest">Or with email</span>
-            <div className="h-[1px] flex-1 bg-zinc-800" />
+          {/* Logo Brand Header */}
+          <div className="flex flex-col items-start space-y-6">
+             <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#ff5a00] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff5a00]/30">
+                  <Clock className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-black tracking-tighter text-[#111]">Yawmy {isRTL && "يومي"}</span>
+             </div>
+            
+            <div className="space-y-2">
+               <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111]">
+                 {isRTL ? "ابدأ اليوم مجاناً" : "Get Started Now"}
+               </h1>
+               <p className="text-[#6b7280] font-bold text-lg">
+                 {isRTL ? "قم بإنشاء حسابك لإدارة فريق عملك" : "Create your account to manage your workforce"}
+               </p>
+            </div>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-4">
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
-              <input 
-                type="text" 
-                placeholder="Full Name" 
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600"
-                required
-              />
+          <form onSubmit={handleSignup} className="space-y-6">
+            
+            <div className="space-y-2 font-sans">
+              <label className="text-sm font-bold text-[#111] block mb-1">
+                 {isRTL ? "الاسم الكامل" : "Name"}
+              </label>
+              <div className="relative group">
+                <div className={cn(
+                  "absolute inset-y-0 flex items-center pointer-events-none text-[#9ca3af] transition-colors group-focus-within:text-[#ff5a00]",
+                  isRTL ? "right-4" : "left-4"
+                )}>
+                  <User className="w-5 h-5" />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder={isRTL ? "اسمك الكامل" : "Mina Botros"}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  className={cn(
+                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
+                  )}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="relative group">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
-              <input 
-                type="email" 
-                placeholder="Email address" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600"
-                required
-              />
+            <div className="space-y-2 font-sans">
+              <label className="text-sm font-bold text-[#111] block mb-1">
+                 {isRTL ? "البريد الإلكتروني" : "Email address"}
+              </label>
+              <div className="relative group">
+                <div className={cn(
+                  "absolute inset-y-0 flex items-center pointer-events-none text-[#9ca3af] transition-colors group-focus-within:text-[#ff5a00]",
+                  isRTL ? "right-4" : "left-4"
+                )}>
+                  <Mail className="w-5 h-5" />
+                </div>
+                <input 
+                  type="email" 
+                  placeholder={isRTL ? "name@company.com" : "name@company.com"}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={cn(
+                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
+                  )}
+                  required
+                />
+              </div>
             </div>
 
-            <div className="relative group">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
-              <input 
-                type="password" 
-                placeholder="Password" 
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl py-4 pl-12 pr-4 text-white focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600"
-                required
-              />
+            <div className="space-y-2 font-sans">
+              <label className="text-sm font-bold text-[#111] block mb-1">
+                 {isRTL ? "كلمة المرور" : "Password"}
+              </label>
+              <div className="relative group">
+                <div className={cn(
+                  "absolute inset-y-0 flex items-center pointer-events-none text-[#9ca3af] transition-colors group-focus-within:text-[#ff5a00]",
+                  isRTL ? "right-4" : "left-4"
+                )}>
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input 
+                  type="password" 
+                  placeholder={isRTL ? "٨ أحرف على الأقل" : "min 8 characters"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={cn(
+                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
+                  )}
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2 pt-2">
+               <input type="checkbox" required className="w-4 h-4 rounded text-[#ff5a00] ring-[#ff5a00] focus:ring-[#ff5a00] border-[#eeeeee] accent-[#ff5a00]" />
+               <span className="text-[#6b7280] font-bold text-sm">
+                  {isRTL ? "أوافق على " : "I agree to the "}
+                  <a href="#" className="text-[#111] underline hover:text-[#ff5a00]">{isRTL ? "الشروط والخصوصية" : "Terms & Privacy"}</a>
+               </span>
             </div>
 
             <button 
+              type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 text-white font-black py-5 rounded-2xl hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-2xl shadow-indigo-500/20 text-lg mt-4"
+              className="w-full bg-[#ff5a00] text-white font-black py-4 rounded-xl hover:bg-[#e04f00] hover:scale-[1.01] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-xl shadow-[#ff5a00]/20 mt-4"
             >
-              {loading ? "Creating your workspace..." : "ابدأ مجانًا"}
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  {isRTL ? "جاري إنشاء حسابك..." : "Processing..."}
+                </span>
+              ) : (
+                <>
+                  {isRTL ? "إنشاء الحساب" : "Create Account"}
+                </>
+              )}
             </button>
           </form>
-        </div>
 
-        <p className="text-center text-zinc-500 text-sm">
-          Already have an account? <a href="/login" className="text-indigo-400 font-bold hover:underline">Sign In</a>
-        </p>
+          <div className="text-left pt-2">
+            <p className="text-[#6b7280] text-sm font-bold">
+              {isRTL ? "لديك حساب بالفعل؟" : "Have an account?"} <a href="/login" className="text-[#ff5a00] hover:underline font-black px-1">{isRTL ? "تسجيل الدخول" : "Sign in"}</a>
+            </p>
+          </div>
+          
+          <div className="pt-20 lg:hidden">
+             <p className="text-[#9ca3af] font-bold text-xs text-center">© 2026 Yawmy Platform. All rights reserved.</p>
+          </div>
+        </div>
       </div>
+
+      {/* RIGHT PANE - Visual Board (Exactly mirrors Login component for UX consistency) */}
+      <div className="hidden lg:flex w-1/2 bg-[#ff5a00] relative overflow-hidden flex-col items-center justify-center p-12 transition-all duration-500">
+         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.03]"></div>
+         <div className="absolute inset-0 bg-gradient-to-br from-[#ff5a00] to-[#e04f00]"></div>
+         
+         <div className="relative z-10 w-full max-w-lg space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+            <div className="space-y-4">
+               <h2 className="text-5xl font-black text-white leading-tight">
+                  {isRTL ? "أسهل طريقة لإدارة فريقك ورواتبك" : "The simplest way to manage your workforce"}
+               </h2>
+               <p className="text-lg text-white/80 font-bold">
+                  {isRTL 
+                   ? "منصة متكاملة تدعم تليجرام، وتغنيك عن أجهزة البصمة المزعجة." 
+                   : "An all-in-one Telegram-powered platform replacing messy physical biometrics."}
+               </p>
+            </div>
+
+            <div className="relative group perspective">
+               <div className="absolute inset-0 bg-white/20 blur-2xl rounded-3xl transform group-hover:scale-105 transition-all duration-700"></div>
+               <img src="https://media.discordapp.net/attachments/1231649964593414235/1231650073699844096/telegram_mockup.png" alt="App Preview" className="relative drop-shadow-2xl rounded-2xl transform rotate-[2deg] group-hover:rotate-0 transition-transform duration-700 border-4 border-white/10" onError={(e) => (e.currentTarget.style.display = 'none')} />
+            </div>
+
+            <div className="pt-12 text-center text-white/50 text-sm font-bold flex items-center justify-center gap-8 opacity-60">
+               <span className="tracking-widest uppercase">Trusted By Leading SaaS</span>
+            </div>
+         </div>
+      </div>
+
     </div>
   );
 }
