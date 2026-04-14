@@ -209,8 +209,25 @@ export async function POST(req: NextRequest) {
       return ctx.replyWithMarkdown(message);
     });
 
-    bot.on("text", (ctx) => {
-        ctx.reply("Please use the menu buttons to log your attendance.", mainMenu);
+    bot.on("text", async (ctx) => {
+      const telegramUserId = ctx.from.id;
+      
+      const { data: employee } = await supabaseAdmin
+        .from("employees")
+        .select("id")
+        .eq("telegram_user_id", telegramUserId)
+        .single();
+
+      if (!employee) {
+        return ctx.reply(
+          "⚠️ For security reasons, we do not accept manually typed phone numbers.\n\nPlease tap the '📱 Share Contact' button at the bottom of your screen to verify your identity.",
+          Markup.keyboard([
+            Markup.button.contactRequest("📱 Share Contact")
+          ]).oneTime().resize()
+        );
+      }
+
+      ctx.reply("Please use the menu buttons to log your attendance.", mainMenu);
     });
 
     const body = await req.json();
