@@ -159,7 +159,7 @@ export default function ReportsPage() {
          if (anomalies.length > 0) {
             setAnomalyResult(anomalies.map(([name, c]) => `${name}: ${c.late} Lates, ${c.absent} Absences`).join("\n"));
          } else {
-            setAnomalyResult(isRTL ? "لا توجد أي شذوذ هذا الشهر. الأداء ممتاز!" : "No anomalies detected this month. Great performance!");
+            setAnomalyResult(isRTL ? "لا توجد أي مخالفات هذا الشهر. الأداء ممتاز!" : "No violations detected this month. Great performance!");
          }
        } else {
          setAnomalyResult(isRTL ? "لا توجد بيانات كافية للتحليل." : "Not enough data to analyze.");
