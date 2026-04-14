@@ -24,7 +24,7 @@ const getMainMenu = (company: any) => {
   const row3 = lang === 'ar' ? ["📌 مهمة جديدة", "📢 إعلانات الشركة"] : ["📌 New Task", "📢 Announcements"];
   
   const bottomRow = salesEnabled 
-    ? (lang === 'ar' ? ["📈 تقرير مبيعات", "ℹ️ مساعدة"] : ["📈 Submit Report", "ℹ️ Help"])
+    ? (lang === 'ar' ? ["📈 تقرير مبيعات", "📊 تقارير فريقي", "ℹ️ مساعدة"] : ["📈 Submit Report", "📊 Team Reports", "ℹ️ Help"])
     : (lang === 'ar' ? ["ℹ️ مساعدة"] : ["ℹ️ Help"]);
 
   if (geofencing) {
@@ -311,6 +311,72 @@ export async function POST(req: NextRequest) {
         const msg = `📌 <b>${task.title}</b>\n\n👤 ${lang === 'ar' ? 'بواسطة' : 'Assigned By'}: ${task.assigner?.name || 'Admin'}\n⏳ ${lang === 'ar' ? 'التسليم' : 'Deadline'}: ${task.deadline || 'N/A'}\n⚠️ ${lang === 'ar' ? 'الحالة' : 'Status'}: ${task.status.toUpperCase()}`;
         await ctx.replyWithHTML(msg, Markup.inlineKeyboard([buttons]));
       }
+    });
+
+    // TEAM LEADER REPORTS HOOK
+    bot.hears(["📊 Team Reports", "📊 تقارير فريقي"], async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).single();
+      if (!employee) return;
+      const lang = employee.companies.bot_language || 'en';
+
+      if (!employee.companies.sales_tracking_enabled) return;
+
+      // 1. Is user a leader?
+      const { data: membership } = await supabaseAdmin.from("team_members").select("team_id, role, teams(name)").eq("employee_id", employee.id).single();
+      
+      if (!membership || membership.role !== 'leader') {
+         return ctx.reply(lang === 'ar' ? "❌ هذا الأمر مخصص لمشرفي الفرق فقط." : "❌ Only Team Leaders can access this.");
+      }
+
+      const teamsData: any = membership.teams;
+      const teamName = (Array.isArray(teamsData) ? teamsData[0]?.name : teamsData?.name) || "Team";
+
+      // 2. Fetch reports for this team_id
+      const { data: reports } = await supabaseAdmin.from("reports").select(`
+          id, date, created_at, location_lat, location_lng, notes,
+          employees(name),
+          report_values(field_id, value)
+      `).eq("team_id", membership.team_id).eq("status", "completed").order("created_at", { ascending: false }).limit(200);
+
+      if (!reports || reports.length === 0) {
+         return ctx.reply(lang === 'ar' ? "لم يقم فريقك بإدراج أي تقارير بعد." : "Your team hasn't submitted any reports yet.");
+      }
+
+      // 3. Fetch custom fields mapped for this team
+      const { data: fields } = await supabaseAdmin.from("custom_fields").select("id, label").eq("team_id", membership.team_id).order("order_index", { ascending: true });
+      
+      // 4. Construct CSV Structure
+      const fieldHeaders = fields ? fields.map(f => `"${f.label.replace(/"/g, '""')}"`) : [];
+      let csvContent = `\uFEFFDate,Time,Employee,${fieldHeaders.join(",")},Notes,LocationLink\n`; // Add BOM for excel Arabic support
+
+      reports.forEach((r: any) => {
+          const d = new Date(r.created_at);
+          const dateStr = d.toLocaleDateString('en-GB');
+          const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          const empData: any = r.employees;
+          const rawName = Array.isArray(empData) ? empData[0]?.name : empData?.name;
+          const empName = `"${(rawName || 'Unknown').replace(/"/g, '""')}"`;
+          
+          const valsMap: Record<string, string> = {};
+          if (r.report_values) {
+              r.report_values.forEach((v: any) => { valsMap[v.field_id] = v.value; });
+          }
+
+          const fieldVals = fields ? fields.map(f => {
+              const val = valsMap[f.id] || "";
+              return `"${val.replace(/"/g, '""')}"`;
+          }) : [];
+
+          const notes = `"${(r.notes || "").replace(/"/g, '""')}"`;
+          const mapLink = r.location_lat ? `"https://www.google.com/maps?q=${r.location_lat},${r.location_lng}"` : '""';
+
+          csvContent += `${dateStr},${timeStr},${empName},${fieldVals.join(",")},${notes},${mapLink}\n`;
+      });
+
+      const buffer = Buffer.from(csvContent, "utf8");
+      
+      await ctx.reply(lang === 'ar' ? `📊 تم سحب ${reports.length} تقارير من فريق ${teamName}. يتم توليد الملف...` : `📊 Fetched ${reports.length} reports for ${teamName}. Generating file...`);
+      return ctx.replyWithDocument({ source: buffer, filename: `Team_Reports_${new Date().toISOString().split("T")[0]}.csv` });
     });
 
     // SALES TRACKING HOOK
