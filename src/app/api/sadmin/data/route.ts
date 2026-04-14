@@ -19,13 +19,23 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error;
 
-    // Enhance with Emails
+    // Enhance with Emails safely
     const enhancedCompanies = await Promise.all(
        companies.map(async (c) => {
-          const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(c.owner_id);
+          let email = "Unknown";
+          if (c.owner_id) {
+             try {
+               const { data, error } = await supabaseAdmin.auth.admin.getUserById(c.owner_id);
+               if (data && data.user && data.user.email) {
+                 email = data.user.email;
+               }
+             } catch (err) {
+               console.error("Failed to fetch user:", c.owner_id, err);
+             }
+          }
           return {
              ...c,
-             ownerData: { email: user?.email }
+             ownerData: { email }
           }
        })
     );
