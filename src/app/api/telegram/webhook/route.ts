@@ -278,15 +278,17 @@ export async function POST(req: NextRequest) {
       
       // TASK ASSIGNMENT HOOK (Step 1 -> 2)
       if (data && data.startsWith("assign_task_to_")) {
-        const assigneeId = data.replace("assign_task_to_", "");
+        const assigneeFullId = data.replace("assign_task_to_", "");
+        const shortRef = assigneeFullId.substring(0, 8); // Extremely slim UUID footprint
+
         const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
         if(!employee) return;
         const lang = (employee.companies as any).bot_language || 'en';
 
         await ctx.answerCbQuery();
         return ctx.reply(lang === 'ar' 
-          ? `يرجى الرد على هذه الرسالة بوصف المهمة المطلوبة:\n\n[Assignee UUID: ${assigneeId}]`
-          : `Please reply directly to this message with the Task Title/Description:\n\n[Assignee UUID: ${assigneeId}]`, 
+          ? `يرجى الرد على هذه الرسالة بوصف المهمة المطلوبة:\n\n[Ref: ${shortRef}]`
+          : `Please reply directly to this message with the Task Title/Description:\n\n[Ref: ${shortRef}]`, 
           { reply_markup: { force_reply: true } }
         );
       }
@@ -301,7 +303,7 @@ export async function POST(req: NextRequest) {
          ]).reply_markup);
       }
 
-      // COMPLETE TASK HOOK
+         // COMPLETE TASK HOOK
       if (data && data.startsWith("task_done_")) {
         const taskId = data.replace("task_done_", "");
         const { data: employee } = await supabaseAdmin.from("employees").select("id, companies(*)").eq("telegram_user_id", telegramUserId).single();
@@ -312,6 +314,53 @@ export async function POST(req: NextRequest) {
         
         return ctx.editMessageText(`✅ <b>COMPLETED</b>`, { parse_mode: "HTML" });
       }
+
+      // DEADLINE (CALENDAR) SELECTION HOOK
+      if (data && data.startsWith("tdate_")) {
+         await ctx.answerCbQuery();
+         const parts = data.split("_");
+         const shortTaskId = parts[1];
+         const offset = parts[2];
+         
+         const { data: executer } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
+         if(!executer) return;
+         const lang = (executer.companies as any).bot_language || 'en';
+
+         // Find the exact task by its UUID short-ref
+         const { data: matchedTasks } = await supabaseAdmin.from("tasks").select("id, assigned_to, title, deadline").eq("assigned_by", executer.id).order("created_at", { ascending: false }).limit(20);
+         const targetTask = matchedTasks?.find(t => t.id.startsWith(shortTaskId));
+         if (!targetTask) return ctx.editMessageText(lang === 'ar' ? "❌ لم يتم العثور على المهمة." : "❌ Task not found.");
+
+         let deadlineObj = null;
+         if (offset !== "skip") {
+             const days = parseInt(offset);
+             const d = new Date();
+             d.setDate(d.getDate() + days);
+             deadlineObj = d.toISOString().split("T")[0];
+         }
+
+         await supabaseAdmin.from("tasks").update({ deadline: deadlineObj }).eq("id", targetTask.id);
+         await ctx.editMessageText(lang === 'ar' ? `✅ تم تحديد التسليم: ${deadlineObj || 'بدون موعد'}` : `✅ Deadline set to: ${deadlineObj || 'Skip'}`);
+
+         // Ping Assignee Now!
+         const { data: targetEmployee } = await supabaseAdmin.from("employees").select("telegram_user_id").eq("id", targetTask.assigned_to).single();
+         if (targetEmployee && targetEmployee.telegram_user_id) {
+            const notifyMsg = lang === 'ar' 
+              ? `🔔 <b>مهمة جديدة أُسندت إليك!</b>\n\n👤 بواسطة: ${executer.name}\n📌 المهمة: ${targetTask.title}\n⏳ التسليم: ${deadlineObj || 'غير محدد'}`
+              : `🔔 <b>New Task Assigned!</b>\n\n👤 By: ${executer.name}\n📌 Task: ${targetTask.title}\n⏳ Deadline: ${deadlineObj || 'N/A'}`;
+            
+            await bot.telegram.sendMessage(targetEmployee.telegram_user_id, notifyMsg, {
+               parse_mode: "HTML",
+               reply_markup: {
+                  inline_keyboard: [[
+                     Markup.button.callback(lang === 'ar' ? "⏳ قيد التنفيذ" : "⏳ Start Progress", `start_task_${targetTask.id}`),
+                     Markup.button.callback(lang === 'ar' ? "✅ تم الإنجاز" : "✅ Mark as Done", `task_done_${targetTask.id}`)
+                  ]]
+               }
+            }).catch(e => console.error("Could not notify assigned user:", e));
+         }
+         return;
+      }
     });
 
     bot.on("text", async (ctx) => {
@@ -319,74 +368,57 @@ export async function POST(req: NextRequest) {
       const replyToMsg = ctx.message.reply_to_message;
       
       // TASK ASSIGNMENT HOOK (Step 2 -> 3)
-      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("[Assignee UUID:")) {
-          const match = replyToMsg.text.match(/\[Assignee UUID:\s*([a-f0-9\-]{36})\]/);
+      // TASK ASSIGNMENT HOOK (Drafting Phase)
+      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("[Ref:")) {
+          const match = replyToMsg.text.match(/\[Ref:\s*([a-f0-9]{8})\]/);
           if (match) {
-             const assigneeId = match[1];
+             const shortRef = match[1];
              const taskTitle = ctx.message.text.trim();
-             const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
-             if(!employee) return;
-             const lang = (employee.companies as any).bot_language || 'en';
+             const { data: sender } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
+             if(!sender) return;
+             const lang = (sender.companies as any).bot_language || 'en';
 
-             return ctx.reply(lang === 'ar'
-               ? `ممتاز. قم بالرد على هذه الرسالة بتاريخ التسليم بصيغة (YYYY-MM-DD) أو اكتب "لا" لتخطي التسليم.\n\n[Draft Assignee: ${assigneeId}]\n[Draft Title: ${taskTitle}]`
-               : `Great. Reply to this exact message with a Deadline (YYYY-MM-DD) or type "Skip".\n\n[Draft Assignee: ${assigneeId}]\n[Draft Title: ${taskTitle}]`,
-               { reply_markup: { force_reply: true } }
-             );
-          }
-      }
+             // Reverse lookup the assignee using the Short Ref
+             const { data: coworkers } = await supabaseAdmin.from("employees").select("id").eq("company_id", sender.company_id);
+             const matchedCoworker = coworkers?.find(c => c.id.startsWith(shortRef));
 
-      // TASK ASSIGNMENT HOOK (Step 3 -> Commit)
-      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("[Draft Assignee:")) {
-          const assigneeMatch = replyToMsg.text.match(/\[Draft Assignee:\s*([a-f0-9\-]{36})\]/);
-          const titleMatch = replyToMsg.text.match(/\[Draft Title:\s*(.*?)\]/);
-          
-          if (assigneeMatch && titleMatch) {
-             const assigneeId = assigneeMatch[1];
-             const taskTitle = titleMatch[1];
-             const text = ctx.message.text.trim().toLowerCase();
-             const deadline = (text === "skip" || text === "لا" || text === "no") ? null : ctx.message.text.trim();
+             if (!matchedCoworker) {
+                return ctx.reply(lang === 'ar' ? "❌ لم نتمكن من العثور على الموظف الهدف." : "❌ Could not verify assignee identity.");
+             }
 
-             const { data: executer } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
-             if(!executer) return;
-             const lang = (executer.companies as any).bot_language || 'en';
-
-             // Insert the task
-             const { data: inserted, error: taskError } = await supabaseAdmin.from("tasks").insert({
-                company_id: executer.company_id,
-                assigned_by: executer.id,
-                assigned_to: assigneeId,
+             // Immediately stage the task in the database
+             const { data: insertedTask } = await supabaseAdmin.from("tasks").insert({
+                company_id: sender.company_id,
+                assigned_by: sender.id,
+                assigned_to: matchedCoworker.id,
                 title: taskTitle,
-                deadline: deadline || null,
-                status: 'pending'
+                deadline: null,
+                status: 'pending' // Initially pending but undeclared deadline
              }).select("id").single();
 
-             if (taskError) {
-                console.error("Task Insert Error:", taskError);
-                return ctx.reply(lang === 'ar' ? "تعذر إنشاء المهمة. راجع تنسيق التاريخ (مثال: 2026-10-15)." : "Failed to create task. Check date format format (YYYY-MM-DD).");
+             if (!insertedTask) {
+                return ctx.reply(lang === 'ar' ? "❌ حدث خطأ داخلي. أعد المحاولة." : "❌ Internal error creating task.");
              }
 
-             // Successfully created! Notify the executer 
-             await ctx.reply(lang === 'ar' ? `✅ تم إرسال المهمة بنجاح!` : `✅ Task successfully assigned!`);
+             // Inline Keyboard for Deadline (Clean UX)
+             const shortTaskId = insertedTask.id.substring(0, 8);
+             
+             const calButtons = [
+                 [
+                   Markup.button.callback(lang === 'ar' ? "📅 اليوم" : "📅 Today", `tdate_${shortTaskId}_0`),
+                   Markup.button.callback(lang === 'ar' ? "📅 غداً" : "📅 Tomorrow", `tdate_${shortTaskId}_1`),
+                   Markup.button.callback(lang === 'ar' ? "📅 الأسبوع القادم" : "📅 Next Week", `tdate_${shortTaskId}_7`)
+                 ],
+                 [
+                   Markup.button.callback(lang === 'ar' ? "⏭️ بدون تحديد موعد (تخطي)" : "⏭️ Skip Deadline", `tdate_${shortTaskId}_skip`)
+                 ]
+             ];
 
-             // Ping the Assignee dynamically!
-             const { data: targetEmployee } = await supabaseAdmin.from("employees").select("telegram_user_id").eq("id", assigneeId).single();
-             if (targetEmployee && targetEmployee.telegram_user_id) {
-                const notifyMsg = lang === 'ar' 
-                  ? `🔔 <b>مهمة جديدة أُسندت إليك!</b>\n\n👤 بواسطة: ${executer.name}\n📌 المهمة: ${taskTitle}\n⏳ التسليم: ${deadline || 'غير محدد'}`
-                  : `🔔 <b>New Task Assigned!</b>\n\n👤 By: ${executer.name}\n📌 Task: ${taskTitle}\n⏳ Deadline: ${deadline || 'N/A'}`;
-                
-                await bot.telegram.sendMessage(targetEmployee.telegram_user_id, notifyMsg, {
-                   parse_mode: "HTML",
-                   reply_markup: {
-                      inline_keyboard: [[
-                         Markup.button.callback(lang === 'ar' ? "⏳ قيد التنفيذ" : "⏳ Start Progress", `start_task_${inserted.id}`),
-                         Markup.button.callback(lang === 'ar' ? "✅ تم الإنجاز" : "✅ Mark as Done", `task_done_${inserted.id}`)
-                      ]]
-                   }
-                }).catch(e => console.error("Could not notify assigned user:", e));
-             }
-             return;
+             return ctx.reply(lang === 'ar'
+               ? `تم حفظ المهمة. متى يجب تحديد التسليم؟ 👇`
+               : `Task title saved. When is the deadline? 👇`,
+               Markup.inlineKeyboard(calButtons)
+             );
           }
       }
 
