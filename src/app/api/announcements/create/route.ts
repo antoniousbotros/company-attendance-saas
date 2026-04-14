@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     if (token && telegramIdsToNotify.length > 0) {
        const bot = new Telegraf(token);
        const alertMsg = lang === 'ar'
-         ? `📢 <b>تعميم جديد!</b>\n\n<b>${title}</b>\n\n${message}`
+         ? `📢 <b>إعلان جديد!</b>\n\n<b>${title}</b>\n\n${message}`
          : `📢 <b>New Announcement!</b>\n\n<b>${title}</b>\n\n${message}`;
 
        // De-duplicate array

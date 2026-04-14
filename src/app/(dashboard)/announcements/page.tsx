@@ -30,6 +30,7 @@ export default function AnnouncementsPage() {
   // Form State
   const [showForm, setShowForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
     message: "",
@@ -78,28 +79,39 @@ export default function AnnouncementsPage() {
     const { data: executer } = await supabase.from("employees").select("id").eq("company_id", company.id).limit(1).single();
 
     try {
-       const res = await fetch("/api/announcements/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-             company_id: company.id,
-             created_by: executer ? executer.id : null,
+       if (editId) {
+          // UPDATE MODE
+          const { error } = await supabase.from("announcements").update({
              title: form.title,
              message: form.message,
-             target_type: form.target_type,
-             targets: form.selectedTargets,
              expire_at: form.expire_at
-          })
-       });
-
-       if (!res.ok) throw new Error("Failed to create via API");
+          }).eq("id", editId);
+          if (error) throw error;
+       } else {
+          // CREATE MODE
+          const res = await fetch("/api/announcements/create", {
+             method: "POST",
+             headers: { "Content-Type": "application/json" },
+             body: JSON.stringify({
+                company_id: company.id,
+                created_by: executer ? executer.id : null,
+                title: form.title,
+                message: form.message,
+                target_type: form.target_type,
+                targets: form.selectedTargets,
+                expire_at: form.expire_at
+             })
+          });
+          if (!res.ok) throw new Error("Failed to create via API");
+       }
        
        setShowForm(false);
+       setEditId(null);
        setForm({ ...form, title: "", message: "", target_type: "all", selectedTargets: [] });
        loadData();
     } catch (err) {
        console.error(err);
-       alert(isRTL ? "فشل إنشاء التعميم." : "Failed to create announcement.");
+       alert(isRTL ? "فشل حفظ العملية." : "Failed to save announcement.");
     }
     setIsSubmitting(false);
   };
@@ -111,6 +123,28 @@ export default function AnnouncementsPage() {
       });
   };
 
+  const startEdit = (a: Announcement) => {
+      setForm({
+          title: a.title,
+          message: a.message,
+          target_type: a.target_type,
+          expire_at: a.expire_at.split("T")[0],
+          selectedTargets: a.targets.map(t => t.department || t.employee_id).filter(Boolean) as string[]
+      });
+      setEditId(a.id);
+      setShowForm(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const toggleStatus = async (a: Announcement) => {
+      const confirmed = window.confirm(isRTL ? "هل أنت متأكد من تغيير حالة الإعلان؟" : "Are you sure you want to toggle this announcement?");
+      if (!confirmed) return;
+      try {
+          await supabase.from("announcements").update({ is_active: !a.is_active }).eq("id", a.id);
+          loadData();
+      } catch(e) { console.error(e); }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
@@ -118,7 +152,13 @@ export default function AnnouncementsPage() {
         subtitle={isRTL ? "إرسال قرارات إدارية وتنبيهات فورية لموظفيك عبر تليجرام" : "Broadcast company updates instantly via Telegram"}
         isRTL={isRTL}
         action={
-          <PrimaryButton disabled={isSubmitting} icon={Plus} onClick={() => setShowForm(!showForm)}>
+          <PrimaryButton disabled={isSubmitting} icon={Plus} onClick={() => {
+            if (showForm) {
+               setEditId(null);
+               setForm({ ...form, title: "", message: "", target_type: "all", selectedTargets: []});
+            }
+            setShowForm(!showForm);
+          }}>
             {showForm ? (isRTL ? "إلغاء" : "Cancel") : (isRTL ? "إضافة إعلان" : "New Announcement")}
           </PrimaryButton>
         }
@@ -128,7 +168,7 @@ export default function AnnouncementsPage() {
         <SectionCard className="border-[#ff5a00] ring-1 ring-[#ff5a00] bg-[#fff1e8]">
           <h3 className={cn("text-lg font-bold text-[#111] mb-4 flex items-center gap-2", isRTL && "justify-end")}>
             <Megaphone className="w-5 h-5 text-[#ff5a00]" />
-            {isRTL ? "نشر إعلان جديد" : "Broadcast New Announcement"}
+            {editId ? (isRTL ? "تعديل الإعلان" : "Edit Announcement") : (isRTL ? "نشر إعلان جديد" : "Broadcast New Announcement")}
           </h3>
           <form onSubmit={handleCreate} className="space-y-6">
             
@@ -148,8 +188,9 @@ export default function AnnouncementsPage() {
                 <textarea disabled={isSubmitting} rows={4} required dir="auto" placeholder={isRTL ? "اكتب تفاصيل القرار أو التنبيه هنا..." : "Type the announcement details..."} value={form.message} onChange={e => setForm({...form, message: e.target.value})} className="w-full p-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50 resize-y" />
             </div>
 
-            <div className={cn("p-4 bg-white rounded-xl border border-[#ffd4b8]", isRTL && "text-end")}>
+            <div className={cn("p-4 bg-white rounded-xl border border-[#ffd4b8]", isRTL && "text-end", editId && "opacity-50 pointer-events-none")}>
                 <label className="block text-xs font-bold text-[#6b7280] mb-3">{isRTL ? "الجهة المستهدفة *" : "Target Audience *"}</label>
+                {editId && <p className="text-[#b91c1c] text-xs mb-3">{isRTL ? "لا يمكن تعديل المستهدفين لإعلان تم نشره بالفعل." : "You cannot modify targets of an already broadcasted announcement."}</p>}
                 <div className={cn("flex flex-wrap gap-3", isRTL && "justify-end")}>
                    <label className="flex items-center gap-2 cursor-pointer bg-[#f9fafb] px-4 py-2 rounded-lg border border-[#eeeeee] hover:bg-[#f1f1f1] transition-colors">
                       <input type="radio" className="accent-[#ff5a00]" name="target" checked={form.target_type === "all"} onChange={() => setForm({...form, target_type: "all", selectedTargets: []})} />
@@ -195,10 +236,10 @@ export default function AnnouncementsPage() {
 
             <div className={cn("flex items-center pt-2 gap-4", isRTL && "justify-end flex-row-reverse")}>
               <PrimaryButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (isRTL ? "جاري الإرسال عبر تليجرام..." : "Broadcasting via Telegram...") : (isRTL ? "نشر الإعلان" : "Send Announcement")}
+                {isSubmitting ? (isRTL ? "جاري الحفظ..." : "Processing...") : editId ? (isRTL ? "تحديث الإعلان" : "Update Announcement") : (isRTL ? "نشر الإعلان" : "Send Announcement")}
               </PrimaryButton>
               <p className="text-xs font-bold text-[#9ca3af]">
-                 {isRTL ? "سيتم إرسال التنبيه فوراً كرسالة بوش للبوت." : "Will instantly push Telegram alerts to targets."}
+                 {editId ? (isRTL ? "لن يتم إعادة إرسال تنبيه في تليجرام." : "Will not resend push notifications.") : (isRTL ? "سيتم إرسال التنبيه فوراً كرسالة بوش للبوت." : "Will instantly push Telegram alerts to targets.")}
               </p>
             </div>
           </form>
@@ -281,6 +322,14 @@ export default function AnnouncementsPage() {
                                  {isRTL ? "منتهي / غير نشط" : "Expired"}
                               </div>
                           )}
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => startEdit(a)} className="text-[11px] font-bold text-[#ff5a00] bg-[#fff1e8] px-2 py-1 rounded hover:bg-[#ff5a00] hover:text-white transition-colors">
+                                  {isRTL ? "تعديل" : "Edit"}
+                              </button>
+                              <button onClick={() => toggleStatus(a)} className={cn("text-[11px] font-bold px-2 py-1 rounded transition-colors", a.is_active ? "text-[#b91c1c] bg-[#fee2e2] hover:bg-[#fecaca]" : "text-[#16a34a] bg-[#dcfce7] hover:bg-[#bbf7d0]")}>
+                                  {a.is_active ? (isRTL ? "إيقاف" : "Disable") : (isRTL ? "تفعيل" : "Enable")}
+                              </button>
+                          </div>
                         </div>
                      </td>
                    </tr>
