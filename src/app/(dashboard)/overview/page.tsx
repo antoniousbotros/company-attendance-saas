@@ -10,8 +10,10 @@ import {
   BarChart3
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/LanguageContext";
 
 export default function OverviewPage() {
+  const { t, isRTL } = useLanguage();
   const [data, setData] = useState({
     total: 0,
     present: 0,
@@ -45,44 +47,44 @@ export default function OverviewPage() {
 
   const stats = [
     { 
-      name: "Total Employees", 
+      name: t.totalEmployees, 
       value: data.total.toString(), 
       icon: Users,
       color: "bg-blue-500/10 text-blue-500 shadow-blue-500/20",
-      change: "Active in system",
+      change: isRTL ? "نشط في النظام" : "Active in system",
       trend: "neutral"
     },
     { 
-      name: "Present Today", 
+      name: t.presentToday, 
       value: data.present.toString(), 
       icon: UserCheck, 
       color: "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/20",
-      change: `${data.total ? Math.round((data.present/data.total)*100) : 0}% attendance`,
+      change: `${data.total ? Math.round((data.present/data.total)*100) : 0}%`,
       trend: "up"
     },
     { 
-      name: "Late Arrivals", 
+      name: t.lateArrivals, 
       value: data.late.toString(), 
       icon: Clock, 
       color: "bg-amber-500/10 text-amber-500 shadow-amber-500/20",
-      change: "Marked as late",
+      change: isRTL ? "مسجل متأخر" : "Marked as late",
       trend: "down"
     },
     { 
-      name: "Absent", 
+      name: t.absent, 
       value: data.absent.toString(), 
       icon: UserMinus, 
       color: "bg-rose-500/10 text-rose-500 shadow-rose-500/20",
-      change: "Pending log",
+      change: isRTL ? "في انتظار الدخول" : "Pending log",
       trend: "neutral"
     },
   ];
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-black tracking-tight">Dashboard Overview</h1>
-        <p className="text-zinc-500 mt-2 font-medium">Welcome back! Here's what's happening today.</p>
+      <div className={isRTL ? "text-right" : "text-left"}>
+        <h1 className="text-3xl font-black tracking-tight">{t.welcome}</h1>
+        <p className="text-zinc-500 mt-2 font-medium">{t.todayStatus}</p>
       </div>
 
       {/* Stats Grid */}
@@ -109,10 +111,12 @@ export default function OverviewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] p-8 shadow-sm shadow-zinc-200/50 dark:shadow-none">
-          <h2 className="text-xl font-black mb-8">Recent Check-ins</h2>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-xl font-black">{t.recentCheckins}</h2>
+          </div>
           <div className="space-y-8">
             {data.recent.length === 0 ? (
-              <p className="text-zinc-400 italic font-medium">No check-ins yet today.</p>
+              <p className="text-zinc-400 italic font-medium">{isRTL ? "لا توجد تسجيلات اليوم بعد." : "No check-ins yet today."}</p>
             ) : data.recent.map((log: any) => (
               <div key={log.id} className="flex items-center gap-5 group">
                 <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-lg text-indigo-500 uppercase transition-all group-hover:bg-indigo-600 group-hover:text-white">
@@ -120,7 +124,9 @@ export default function OverviewPage() {
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-lg">{log.employees?.name}</p>
-                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">{log.status}</p>
+                  <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                    {log.status === 'present' ? (isRTL ? 'حاضر' : 'Present') : (isRTL ? 'متأخر' : 'Late')}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-black text-indigo-600 dark:text-emerald-500">
@@ -137,7 +143,9 @@ export default function OverviewPage() {
           <div className="w-20 h-20 rounded-full bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center">
             <BarChart3 className="w-10 h-10 opacity-20" />
           </div>
-          <p className="font-bold text-sm uppercase tracking-widest opacity-50 text-center"> Attendance trends visualization <br/> will appear here</p>
+          <p className="font-bold text-sm uppercase tracking-widest opacity-50 text-center"> 
+            {isRTL ? "سيتم عرض رسم بياني لاتجاهات الحضور هنا" : "Attendance trends visualization will appear here"}
+          </p>
         </div>
       </div>
     </div>
