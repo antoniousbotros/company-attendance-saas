@@ -2,15 +2,22 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Clock, Mail, Lock, ArrowRight, User, Languages } from "lucide-react";
+import { Clock, Mail, Lock, User, Languages, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Language } from "@/lib/i18n";
+import { countryCodes } from "@/lib/countryCodes";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [countryCode, setCountryCode] = useState("+20");
+  const [phone, setPhone] = useState("");
+  
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  
   const [lang, setLang] = useState<Language>("en");
 
   useEffect(() => {
@@ -28,28 +35,38 @@ export default function SignupPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg("");
+    
+    if (password !== confirmPassword) {
+       setErrorMsg(isRTL ? "كلمتا المرور غير متطابقتين" : "Passwords do not match");
+       return;
+    }
+    
     setLoading(true);
     
     try {
       if (!supabase) throw new Error("Supabase client not initialized");
+
+       const fullPhone = `${countryCode}${phone.startsWith('0') ? phone.substring(1) : phone}`;
 
        const { data: authData, error: authError } = await supabase.auth.signUp({ 
          email: email.trim(), 
          password,
          options: {
            data: {
-             full_name: fullName
+             full_name: fullName,
+             phone: fullPhone
            }
          }
        });
 
        if (authError) {
-         alert(authError.message);
+         setErrorMsg(authError.message);
        } else if (authData.user) {
           window.location.href = "/onboarding";
        }
     } catch (err: unknown) {
-      alert("System error: " + (err instanceof Error ? err.message : String(err)));
+      setErrorMsg("System error: " + (err instanceof Error ? err.message : String(err)));
     } finally {
       setLoading(false);
     }
@@ -61,7 +78,7 @@ export default function SignupPage() {
     <div className="min-h-screen w-full flex font-sans bg-white selection:bg-[#ff5a00]/30 transition-colors duration-500">
        
       {/* LEFT PANE - Form Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative z-10 transition-all duration-500 bg-white shadow-xl shadow-black/5">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative z-10 transition-all duration-500 bg-white shadow-xl shadow-black/5 overflow-y-auto">
         
         {/* Lang Switcher Absolute Corner */}
         <button 
@@ -73,7 +90,7 @@ export default function SignupPage() {
           {lang === "en" ? "العربية" : "English"}
         </button>
 
-        <div className="w-full max-w-[420px] space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="w-full max-w-[420px] space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700 py-12">
           
           {/* Logo Brand Header */}
           <div className="flex flex-col items-start space-y-6">
@@ -94,11 +111,17 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-6">
+          <form onSubmit={handleSignup} className="space-y-5">
             
-            <div className="space-y-2 font-sans">
+            {errorMsg && (
+               <div className="bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca] p-4 rounded-xl text-sm font-bold animate-in fade-in">
+                  {errorMsg}
+               </div>
+            )}
+
+            <div className="space-y-1.5 font-sans">
               <label className="text-sm font-bold text-[#111] block mb-1">
-                 {isRTL ? "الاسم الكامل" : "Name"}
+                 {isRTL ? "الاسم الكامل" : "Full Name"}
               </label>
               <div className="relative group">
                 <div className={cn(
@@ -121,7 +144,49 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div className="space-y-2 font-sans">
+            <div className="space-y-1.5 font-sans">
+              <label className="text-sm font-bold text-[#111] block mb-1">
+                 {isRTL ? "رقم الهاتف" : "Phone Number"}
+              </label>
+              <div 
+                 className={cn(
+                    "flex bg-white border border-[#eeeeee] rounded-xl focus-within:border-[#ff5a00] focus-within:ring-1 focus-within:ring-[#ff5a00] transition-all shadow-sm items-center",
+                    isRTL ? "flex-row" : "flex-row" // Visual standard: country code on left globally, or match RTL
+                    // Actually, let's strictly put it left in English, right in Arabic
+                 )}
+                 style={{ flexDirection: isRTL ? 'row-reverse' : 'row' }}
+              >
+                  <select 
+                     value={countryCode} 
+                     onChange={e => setCountryCode(e.target.value)} 
+                     className={cn(
+                        "appearance-none bg-transparent outline-none py-3.5 text-[#111] font-bold text-center cursor-pointer min-w-[80px]",
+                        isRTL ? "border-l border-[#eeeeee]" : "border-r border-[#eeeeee]"
+                     )}
+                     dir="ltr"
+                  >
+                     {countryCodes.map(c => (
+                        <option key={c.iso} value={c.code}>{c.iso} {c.code}</option>
+                     ))}
+                  </select>
+                  <div className="relative flex-1 group">
+                     {/* No icon for phone to keep it clean alongside the dropdown */}
+                     <input 
+                        type="tel" 
+                        placeholder={isRTL ? "رقم المحمول" : "Mobile number"}
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className={cn(
+                           "w-full bg-transparent outline-none py-3.5 placeholder:text-[#9ca3af] font-bold text-[#111]",
+                           isRTL ? "text-right pr-4 pl-4" : "text-left pl-4 pr-4"
+                        )}
+                        required
+                     />
+                  </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 font-sans">
               <label className="text-sm font-bold text-[#111] block mb-1">
                  {isRTL ? "البريد الإلكتروني" : "Email address"}
               </label>
@@ -146,7 +211,7 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div className="space-y-2 font-sans">
+            <div className="space-y-1.5 font-sans">
               <label className="text-sm font-bold text-[#111] block mb-1">
                  {isRTL ? "كلمة المرور" : "Password"}
               </label>
@@ -162,6 +227,31 @@ export default function SignupPage() {
                   placeholder={isRTL ? "٨ أحرف على الأقل" : "min 8 characters"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className={cn(
+                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
+                  )}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5 font-sans">
+              <label className="text-sm font-bold text-[#111] block mb-1">
+                 {isRTL ? "تأكيد كلمة المرور" : "Confirm Password"}
+              </label>
+              <div className="relative group">
+                <div className={cn(
+                  "absolute inset-y-0 flex items-center pointer-events-none text-[#9ca3af] transition-colors group-focus-within:text-[#ff5a00]",
+                  isRTL ? "right-4" : "left-4"
+                )}>
+                  <Lock className="w-5 h-5" />
+                </div>
+                <input 
+                  type="password" 
+                  placeholder={isRTL ? "أعد كتابة كلمة المرور" : "Re-enter password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className={cn(
                     "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
@@ -197,15 +287,12 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <div className="text-left pt-2">
+          <div className="text-left pt-2 pb-12">
             <p className="text-[#6b7280] text-sm font-bold">
               {isRTL ? "لديك حساب بالفعل؟" : "Have an account?"} <a href="/login" className="text-[#ff5a00] hover:underline font-black px-1">{isRTL ? "تسجيل الدخول" : "Sign in"}</a>
             </p>
           </div>
           
-          <div className="pt-20 lg:hidden">
-             <p className="text-[#9ca3af] font-bold text-xs text-center">© 2026 Yawmy Platform. All rights reserved.</p>
-          </div>
         </div>
       </div>
 
