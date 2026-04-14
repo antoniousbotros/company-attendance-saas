@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import {
   FileSpreadsheet,
   Download,
@@ -97,6 +98,75 @@ function MetricBox({
 
 export default function ReportsPage() {
   const { t, isRTL } = useLanguage();
+  const [stats, setStats] = useState({
+    avgHours: "0.0h",
+    onTimeRate: "0%",
+    workingDays: "0d",
+    activeEmployees: "0",
+    loading: true
+  });
+
+  useEffect(() => {
+    async function loadStats() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: company } = await supabase.from("companies").select("id").eq("owner_id", user.id).single();
+      if (!company) {
+         setStats(s => ({ ...s, loading: false }));
+         return;
+      }
+
+      const companyId = company.id;
+
+      // 1. Employees count
+      const { count: empCount } = await supabase
+        .from("employees")
+        .select("*", { count: "exact", head: true })
+        .eq("company_id", companyId);
+
+      // 2. Attendance Stats (current month)
+      const currentMonthStr = new Date().toISOString().slice(0, 7);
+      const { data: attendance } = await supabase.from("attendance")
+        .select("working_hours, status, date")
+        .eq("company_id", companyId)
+        .like("date", `${currentMonthStr}-%`);
+
+      let totalHours = 0;
+      let presentCounts = 0;
+      let lateCounts = 0;
+      const uniqueDays = new Set<string>();
+
+      if (attendance && attendance.length > 0) {
+         attendance.forEach(r => {
+           totalHours += Number(r.working_hours || 0);
+           if (r.status === 'present') presentCounts++;
+           if (r.status === 'late') lateCounts++;
+           uniqueDays.add(r.date);
+         });
+
+         const totalEntries = presentCounts + lateCounts;
+         const onTimeP = totalEntries > 0 ? Math.round((presentCounts / totalEntries) * 100) : 0;
+         const avgH = totalEntries > 0 ? (totalHours / totalEntries).toFixed(1) : "0.0";
+
+         setStats({
+           avgHours: `${avgH}h`,
+           onTimeRate: `${onTimeP}%`,
+           workingDays: `${uniqueDays.size}d`,
+           activeEmployees: `${empCount || 0}`,
+           loading: false
+         });
+      } else {
+         setStats({
+           avgHours: "0.0h",
+           onTimeRate: "0%",
+           workingDays: "0d",
+           activeEmployees: `${empCount || 0}`,
+           loading: false
+         });
+      }
+    }
+    loadStats();
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -131,13 +201,13 @@ export default function ReportsPage() {
 
       <SectionCard padding="lg">
         <h3 className="text-sm font-bold text-[#111] mb-6">
-          {t.teamPerformance}
+          {t.teamPerformance} {stats.loading && <span className="opacity-50 text-xs">(Loading...)</span>}
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          <MetricBox label={t.avgHoursPerDay} value="7.8h" delta="+4%" up />
-          <MetricBox label={t.onTimeRate} value="92%" delta="-2%" up={false} />
-          <MetricBox label={t.workingDays} value="22d" />
-          <MetricBox label={t.activeEmployees} value="24" />
+          <MetricBox label={t.avgHoursPerDay} value={stats.avgHours} />
+          <MetricBox label={t.onTimeRate} value={stats.onTimeRate} />
+          <MetricBox label={t.workingDays} value={stats.workingDays} />
+          <MetricBox label={t.activeEmployees} value={stats.activeEmployees} />
         </div>
       </SectionCard>
 
