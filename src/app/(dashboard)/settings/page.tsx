@@ -91,7 +91,8 @@ export default function SettingsPage() {
     overtime_enabled: false,
     currency: "EGP",
     half_day_enabled: false,
-    half_day_hours: 4.0
+    half_day_hours: 4.0,
+    sales_tracking_enabled: false
   });
   const [message, setMessage] = useState<{
     type: "success" | "error" | "";
@@ -131,7 +132,8 @@ export default function SettingsPage() {
           overtime_enabled: !!data.overtime_enabled,
           currency: data.currency || "EGP",
           half_day_enabled: !!data.half_day_enabled,
-          half_day_hours: data.half_day_hours || 4.0
+          half_day_hours: data.half_day_hours || 4.0,
+          sales_tracking_enabled: !!data.sales_tracking_enabled
         });
       }
       setLoading(false);
@@ -168,7 +170,8 @@ export default function SettingsPage() {
         overtime_enabled: formData.overtime_enabled,
         currency: formData.currency,
         half_day_enabled: formData.half_day_enabled,
-        half_day_hours: formData.half_day_hours
+        half_day_hours: formData.half_day_hours,
+        sales_tracking_enabled: formData.sales_tracking_enabled
       })
       .eq("owner_id", user?.id);
 
@@ -533,6 +536,29 @@ export default function SettingsPage() {
                 placeholder="200"
               />
             </Field>
+          </div>
+        </SectionCard>
+
+        {/* Sales Tracking Toggle */}
+        <SectionCard>
+          <div className="flex items-start justify-between">
+            <SectionHeader
+              icon={MapPin}
+              title={isRTL ? "التقارير الميدانية والمبيعات" : "Sales & Field Reports"}
+              subtitle={isRTL ? "تفعيل نظام التقارير الميدانية للفرق داخل البوت" : "Enable field tracking and reporting inside the Telegram Bot"}
+            />
+            <label className="flex items-center cursor-pointer mt-1">
+              <div className="relative">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={formData.sales_tracking_enabled}
+                  onChange={(e) => setFormData({ ...formData, sales_tracking_enabled: e.target.checked })}
+                />
+                <div className={cn("block w-14 h-8 rounded-full transition-colors", formData.sales_tracking_enabled ? "bg-[#1e8e3e]" : "bg-[#e5e7eb]")}></div>
+                <div className={cn("dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform", formData.sales_tracking_enabled && "transform translate-x-6")}></div>
+              </div>
+            </label>
           </div>
         </SectionCard>
 
