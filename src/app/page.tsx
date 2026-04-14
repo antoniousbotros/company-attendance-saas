@@ -21,7 +21,7 @@ export default function LandingPage() {
             <a href="#features" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Features</a>
             <a href="#pricing" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Pricing</a>
             <Link href="/login" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">Sign In</Link>
-            <Link href="/login" className="bg-white text-black px-5 py-2.5 rounded-xl font-bold hover:bg-zinc-200 transition-all text-sm">
+            <Link href="/signup" className="bg-white text-black px-5 py-2.5 rounded-xl font-bold hover:bg-zinc-200 transition-all text-sm">
               Start Free Trial
             </Link>
           </div>
@@ -46,7 +46,7 @@ export default function LandingPage() {
               تتبع حضور موظفيك من خلال تليجرام مباشرة. لا داعي لأجهزة البصمة المكلفة، موبايل الموظف هو جهازه.
             </p>
             <div className="flex flex-col md:flex-row items-center justify-center gap-4">
-              <Link href="/login" className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-5 rounded-2xl text-lg shadow-2xl shadow-indigo-500/30 flex items-center justify-center gap-2 group">
+              <Link href="/signup" className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-black px-10 py-5 rounded-2xl text-lg shadow-2xl shadow-indigo-500/30 flex items-center justify-center gap-2 group">
                 ابدأ تجربتك المجانية
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>

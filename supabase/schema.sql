@@ -67,3 +67,21 @@ CREATE POLICY "Owners can view their own subscriptions" ON public.subscriptions
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
+
+-- ONBOARDING TRIGGER
+-- This function creates a company record automatically when a user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user() 
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.companies (name, owner_id)
+  VALUES (
+    COALESCE(new.raw_user_meta_data->>'company_name', 'My Company'),
+    new.id
+  );
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
