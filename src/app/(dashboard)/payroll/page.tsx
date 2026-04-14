@@ -194,13 +194,13 @@ export default function PayrollPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-start">
             <thead>
               <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
-                <th className={cn("px-6 py-4 font-bold", isRTL ? "text-right" : "text-left")}>{isRTL ? "الموظف" : "Employee"}</th>
-                <th className={cn("px-6 py-4 font-bold text-center")}>{isRTL ? "أيام العمل" : "Present / Absent"}</th>
-                <th className={cn("px-6 py-4 font-bold text-center")}>{isRTL ? "التأخير والإضافي" : "Late / Overtime"}</th>
-                <th className={cn("px-6 py-4 font-bold", isRTL ? "text-left" : "text-right")}>{isRTL ? "الصافي" : "Final Net Pay"}</th>
+                <th className="px-6 py-4 font-bold text-start w-[30%]">{isRTL ? "الموظف" : "Employee"}</th>
+                <th className="px-6 py-4 font-bold text-center w-[25%]">{isRTL ? "أيام العمل" : "Present / Absent"}</th>
+                <th className="px-6 py-4 font-bold text-center w-[25%]">{isRTL ? "التأخير والإضافي" : "Late / Overtime"}</th>
+                <th className="px-6 py-4 font-bold text-end w-[20%]">{isRTL ? "الصافي" : "Final Net Pay"}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,10 +222,10 @@ export default function PayrollPage() {
               ) : (
                 records.map((r) => (
                   <tr key={r.id} className="border-t border-[#f1f1f1] hover:bg-[#fafafa] transition-colors relative group">
-                    <td className="px-6 py-4">
-                      <div className={cn("flex flex-col gap-1", isRTL ? "items-end" : "items-start")}>
+                    <td className="px-6 py-4 text-start">
+                      <div className="flex flex-col gap-1 items-start">
                         <span className="font-bold text-sm text-[#111]">{r.employees?.name}</span>
-                        <span className="text-[10px] text-[#6b7280] bg-[#eeeeee] px-2 py-0.5 rounded-full font-bold uppercase">{r.employees?.salary_type}</span>
+                        <span className="text-[10px] text-[#6b7280] bg-[#eeeeee] px-2 py-0.5 rounded-full font-bold uppercase w-fit">{r.employees?.salary_type}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -258,10 +258,12 @@ export default function PayrollPage() {
                         </div>
                       </div>
                     </td>
-                    <td className={cn("px-6 py-4", isRTL ? "text-left" : "text-right")}>
+                    <td className="px-6 py-4 text-end">
                       <div className="flex flex-col items-end gap-1">
-                        <span className="text-lg font-black text-[#111] tracking-tight">{Number(r.final_salary).toLocaleString()} {currency}</span>
-                        <div className="flex items-center gap-2 group-hover:opacity-100 opacity-60 transition-opacity">
+                        <span dir="ltr" className="text-lg font-black text-[#111] tracking-tight flex items-center gap-1 justify-end w-full">
+                           {currency} {Number(r.final_salary).toLocaleString()}
+                        </span>
+                        <div dir="ltr" className="flex items-center justify-end w-full gap-2 group-hover:opacity-100 opacity-60 transition-opacity">
                            <span className="text-[10px] text-[#dc2626] font-bold tracking-wider">-{Number(r.deductions).toLocaleString()}</span>
                            <span className="text-[10px] text-[#166534] font-bold tracking-wider">+{Number(r.bonuses).toLocaleString()}</span>
                         </div>
