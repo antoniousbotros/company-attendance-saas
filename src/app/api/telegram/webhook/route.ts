@@ -470,7 +470,7 @@ export async function POST(req: NextRequest) {
              }
 
              // Immediately stage the task in the database
-             const { data: insertedTask } = await supabaseAdmin.from("tasks").insert({
+             const { data: insertedTask, error } = await supabaseAdmin.from("tasks").insert({
                 company_id: sender.company_id,
                 assigned_by: sender.id,
                 assigned_to: matchedCoworker.id,
@@ -479,8 +479,9 @@ export async function POST(req: NextRequest) {
                 status: 'pending' // Initially pending but undeclared deadline
              }).select("id").single();
 
-             if (!insertedTask) {
-                return ctx.reply(lang === 'ar' ? "❌ حدث خطأ داخلي. أعد المحاولة." : "❌ Internal error creating task.");
+             if (error || !insertedTask) {
+                console.error("TASK_INSERT_ERROR", error);
+                return ctx.reply(lang === 'ar' ? `❌ حدث خطأ داخلي. أعد المحاولة.\n(Error: ${error?.message || 'unknown'})` : `❌ Internal error creating task.\n(Error: ${error?.message || 'unknown'})`);
              }
 
              // Inline Keyboard for Deadline (Clean UX)
