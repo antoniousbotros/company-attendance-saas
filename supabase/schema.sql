@@ -39,14 +39,20 @@ ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.employees ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attendance ENABLE ROW LEVEL SECURITY;
 
+-- Companies
+DROP POLICY IF EXISTS "Owners can view their own company" ON public.companies;
 CREATE POLICY "Owners can view their own company" ON public.companies 
     FOR ALL USING (auth.uid() = owner_id);
 
+-- Employees
+DROP POLICY IF EXISTS "Owners can view employees of their company" ON public.employees;
 CREATE POLICY "Owners can view employees of their company" ON public.employees 
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
 
+-- Attendance
+DROP POLICY IF EXISTS "Owners can view attendance of their company" ON public.attendance;
 CREATE POLICY "Owners can view attendance of their company" ON public.attendance 
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
@@ -63,6 +69,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
 );
 
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owners can view their own subscriptions" ON public.subscriptions;
 CREATE POLICY "Owners can view their own subscriptions" ON public.subscriptions 
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
@@ -81,12 +88,6 @@ BEGIN
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW 
-  WHEN (NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'on_auth_user_created'))
-  EXECUTE PROCEDURE public.handle_new_user();
 
 -- For triggers, it's safer to drop and create
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;

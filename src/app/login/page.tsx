@@ -74,7 +74,7 @@ export default function LoginPage() {
 
         <div className="text-center">
           <p className="text-zinc-500 text-sm">
-            Don't have an account? <a href="#" className="text-indigo-400 font-semibold hover:underline">Register your company</a>
+            Don't have an account? <a href="/signup" className="text-indigo-400 font-semibold hover:underline">Register your company</a>
           </p>
         </div>
       </div>
