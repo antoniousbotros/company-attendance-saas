@@ -13,16 +13,28 @@ import Link from "next/link";
 import { Calendar, ChevronDown, FileText, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/* --------------------------------- Logo --------------------------------- */
+import { supabase } from "@/lib/supabase";
 
 export function BrandLogo() {
+  const [name, setName] = React.useState("SyncTime");
+
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+       if (user) {
+          supabase.from("companies").select("name").eq("owner_id", user.id).single().then(({ data }) => {
+             if (data && (data as any).name) setName((data as any).name);
+          });
+       }
+    });
+  }, []);
+
   return (
     <div className="flex items-center gap-1 select-none">
-      <span className="bg-[#ff5a00] text-white font-extrabold text-[13px] leading-none px-2 py-1 rounded-[4px] tracking-tight">
-        SyncTime
-      </span>
       <span className="bg-[#1a1a1a] text-white font-extrabold text-[13px] leading-none px-2 py-1 rounded-[4px] tracking-tight">
         admin
+      </span>
+      <span className="bg-[#ff5a00] text-white font-extrabold text-[13px] leading-none px-2 py-1 rounded-[4px] tracking-tight truncate max-w-[140px]">
+        {name}
       </span>
     </div>
   );
