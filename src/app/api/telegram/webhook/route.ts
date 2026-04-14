@@ -92,7 +92,11 @@ export async function POST(req: NextRequest) {
       const fullPhone = contact.phone_number.replace(/\D/g, "");
       const last9digits = fullPhone.slice(-9);
 
-      const { data: employees, error } = await supabaseAdmin.from("employees").select("*, companies(*)").ilike("phone", `%${last9digits}`);
+      const { data: employees, error } = await supabaseAdmin.from("employees")
+        .select("*, companies(*)")
+        .ilike("phone", `%${last9digits}`)
+        .eq("company_id", currentCompanyId);
+      
       const employee = employees?.[0];
 
       if (error || !employee) {
