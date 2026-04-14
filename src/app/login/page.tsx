@@ -31,22 +31,43 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Attempting login for:", email);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (!error) {
-      router.push("/overview");
-    } else {
-      alert(error.message);
+    
+    try {
+      if (!supabase) {
+        throw new Error("Supabase client not initialized");
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: email.trim(), 
+        password: password 
+      });
+
+      if (error) {
+        console.error("Login error:", error.message);
+        alert(error.message);
+      } else if (data.session) {
+        console.log("Login successful!");
+        router.push("/overview");
+      } else {
+        alert("Check your email for confirmation link.");
+      }
+    } catch (err: any) {
+      console.error("System error:", err.message);
+      alert("System error: " + err.message);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       {/* Lang Switcher floating */}
       <button 
+        type="button"
         onClick={toggleLang}
-        className="fixed top-8 right-8 flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-bold text-sm hover:bg-border transition-all"
+        className="fixed top-8 right-8 flex items-center gap-2 bg-secondary text-secondary-foreground px-4 py-2 rounded-xl font-bold text-sm hover:bg-border transition-all z-50"
       >
         <Languages className="w-4 h-4" />
         {lang === "en" ? "العربية" : "English"}
@@ -62,9 +83,12 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 font-sans">
             <div className="relative group">
-              <div className="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-zinc-500 transition-colors group-focus-within:text-indigo-500">
+              <div className={cn(
+                "absolute inset-y-0 flex items-center pointer-events-none text-zinc-500 transition-colors group-focus-within:text-indigo-500",
+                lang === 'ar' ? "right-4" : "left-4"
+              )}>
                 <Mail className="w-5 h-5" />
               </div>
               <input 
@@ -72,15 +96,21 @@ export default function LoginPage() {
                 placeholder="Email Address" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-2xl py-3.5 ps-12 pe-4 focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600 font-bold"
+                className={cn(
+                  "w-full bg-secondary border border-border rounded-2xl py-3.5 focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600 font-bold",
+                  lang === 'ar' ? "pr-12 pl-4" : "pl-12 pr-4"
+                )}
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="space-y-1.5 font-sans">
             <div className="relative group">
-              <div className="absolute inset-y-0 start-0 ps-4 flex items-center pointer-events-none text-zinc-500 transition-colors group-focus-within:text-indigo-500">
+              <div className={cn(
+                "absolute inset-y-0 flex items-center pointer-events-none text-zinc-500 transition-colors group-focus-within:text-indigo-500",
+                lang === 'ar' ? "right-4" : "left-4"
+              )}>
                 <Lock className="w-5 h-5" />
               </div>
               <input 
@@ -88,24 +118,37 @@ export default function LoginPage() {
                 placeholder="Password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-secondary border border-border rounded-2xl py-3.5 ps-12 pe-4 focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600 font-bold"
+                className={cn(
+                  "w-full bg-secondary border border-border rounded-2xl py-3.5 focus:border-indigo-500 outline-none transition-all placeholder:text-zinc-600 font-bold",
+                  lang === 'ar' ? "pr-12 pl-4" : "pl-12 pr-4"
+                )}
                 required
               />
             </div>
           </div>
 
           <button 
+            type="submit"
             disabled={loading}
-            className="w-full bg-foreground text-background font-black py-4 rounded-2xl hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-xl"
+            className="w-full bg-foreground text-background font-black py-4 rounded-2xl hover:scale-[1.02] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-xl relative overflow-hidden h-14"
           >
-            {loading ? "..." : "Sign In"}
-            <ArrowRight className={cn("w-5 h-5 group-hover:translate-x-1 transition-transform", lang === 'ar' && "rotate-180")} />
+            {loading ? (
+              <span className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                Processing...
+              </span>
+            ) : (
+              <>
+                Sign In
+                <ArrowRight className={cn("w-5 h-5 group-hover:translate-x-1 transition-transform", lang === 'ar' && "rotate-180")} />
+              </>
+            )}
           </button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center pt-4">
           <p className="text-zinc-500 text-sm font-bold">
-            {t.noAccount} <a href="/signup" className="text-indigo-600 hover:underline">{t.registerCompany}</a>
+            {t.noAccount} <a href="/signup" className="text-indigo-600 hover:underline font-black">{t.registerCompany}</a>
           </p>
         </div>
       </div>
