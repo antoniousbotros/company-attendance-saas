@@ -25,7 +25,7 @@ const getMainMenu = (company: any) => {
   const row3 = lang === 'ar' ? ["📌 مهمة جديدة", "📢 إعلانات الشركة"] : ["📌 New Task", "📢 Announcements"];
   
   const bottomRow = salesEnabled 
-    ? (lang === 'ar' ? ["📈 تقرير مبيعات", "📊 تقارير فريقي", "ℹ️ مساعدة"] : ["📈 Submit Report", "📊 Team Reports", "ℹ️ Help"])
+    ? (lang === 'ar' ? ["📈 تقرير مبيعات", "📂 تقاريري", "📊 تقارير فريقي"] : ["📈 Submit Report", "📂 My Reports", "📊 Team Reports"])
     : (lang === 'ar' ? ["ℹ️ مساعدة"] : ["ℹ️ Help"]);
 
   if (geofencing) {
@@ -443,6 +443,97 @@ export async function POST(req: NextRequest) {
       
       await ctx.reply(lang === 'ar' ? `📊 تم سحب ${reports.length} تقارير من فريق ${teamName}. يتم توليد الملف...` : `📊 Fetched ${reports.length} reports for ${teamName}. Generating file...`);
       return ctx.replyWithDocument({ source: Buffer.from(buffer), filename: `Team_Reports_${new Date().toISOString().split("T")[0]}.xlsx` });
+    });
+
+    // MY REPORTS HOOK
+    bot.hears(["📂 My Reports", "📂 تقاريري"], async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
+      if (!employee) return;
+      const lang = employee.companies.bot_language || 'en';
+
+      if (!employee.companies.sales_tracking_enabled) return;
+
+      const { data: membership } = await supabaseAdmin.from("team_members").select("team_id, teams(name)").eq("employee_id", employee.id).single();
+      
+      if (!membership) {
+         return ctx.reply(lang === 'ar' ? "❌ لست منضماً لأي فريق." : "❌ You are not assigned to any team.");
+      }
+
+      // 2. Fetch reports for this specific employee
+      const { data: reports } = await supabaseAdmin.from("reports").select(`
+          id, date, created_at, location_lat, location_lng, notes,
+          report_values(field_id, value)
+      `).eq("employee_id", employee.id).eq("status", "completed").order("created_at", { ascending: false }).limit(200);
+
+      if (!reports || reports.length === 0) {
+         return ctx.reply(lang === 'ar' ? "لم تقم بإدراج أي تقارير بعد." : "You haven't submitted any reports yet.");
+      }
+
+      // 3. Fetch custom fields mapped for this team
+      const { data: fields } = await supabaseAdmin.from("custom_fields").select("id, label").eq("team_id", membership.team_id).order("order_index", { ascending: true });
+      
+      // 4. Construct Excel Structure
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('My Reports', { views: [{ rightToLeft: lang === 'ar' }] });
+
+      const columns = [
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Time', key: 'time', width: 12 },
+      ];
+      
+      if (fields) {
+        fields.forEach(f => columns.push({ header: f.label, key: f.id, width: 20 }));
+      }
+      columns.push({ header: 'Notes', key: 'notes', width: 40 });
+      columns.push({ header: 'Location Link', key: 'location', width: 30 });
+
+      worksheet.columns = columns;
+
+      // Style Header
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { name: 'Arial', family: 4, size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+      reports.forEach((r: any) => {
+          const d = new Date(r.created_at);
+          const dateStr = d.toLocaleDateString('en-GB');
+          const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          
+          const valsMap: Record<string, string> = {};
+          if (r.report_values) {
+              r.report_values.forEach((v: any) => { valsMap[v.field_id] = v.value; });
+          }
+
+          const rowData: any = {
+             date: dateStr,
+             time: timeStr,
+             notes: r.notes || "",
+          };
+
+          if (fields) {
+             fields.forEach(f => {
+                rowData[f.id] = valsMap[f.id] || "";
+             });
+          }
+
+          const mapLink = r.location_lat ? `https://www.google.com/maps?q=${r.location_lat},${r.location_lng}` : "";
+          
+          const row = worksheet.addRow(rowData);
+          row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          
+          if (mapLink) {
+             row.getCell('location').value = { text: 'View Map', hyperlink: mapLink };
+             row.getCell('location').font = { color: { argb: 'FF0563C1' }, underline: true };
+          } else {
+             row.getCell('location').value = "-";
+          }
+      });
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      await ctx.reply(lang === 'ar' ? `📊 تم سحب ${reports.length} تقارير خاصة بك. يتم توليد الملف...` : `📊 Fetched your ${reports.length} reports. Generating file...`);
+      return ctx.replyWithDocument({ source: Buffer.from(buffer), filename: `My_Reports_${new Date().toISOString().split("T")[0]}.xlsx` });
     });
 
     // SALES TRACKING HOOK
