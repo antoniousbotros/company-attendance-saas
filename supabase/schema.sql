@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS public.companies (
     work_start_time TIME DEFAULT '09:00',
     work_end_time TIME DEFAULT '17:00',
     late_threshold INTEGER DEFAULT 15,
+    office_lat DOUBLE PRECISION,
+    office_lng DOUBLE PRECISION,
+    office_radius INTEGER DEFAULT 200,
+    enable_geofencing BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

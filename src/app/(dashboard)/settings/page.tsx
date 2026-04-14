@@ -9,7 +9,8 @@ import {
   AlertCircle,
   ShieldCheck,
   Clock,
-  Timer
+  Timer,
+  MapPin
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -73,7 +74,11 @@ export default function SettingsPage() {
     bot_name: "",
     work_start_time: "09:00",
     work_end_time: "17:00",
-    late_threshold: 15
+    late_threshold: 15,
+    office_lat: "",
+    office_lng: "",
+    office_radius: 200,
+    enable_geofencing: false
   });
   const [message, setMessage] = useState<{
     type: "success" | "error" | "";
@@ -101,7 +106,11 @@ export default function SettingsPage() {
           bot_name: data.bot_name || "",
           work_start_time: data.work_start_time || "09:00",
           work_end_time: data.work_end_time || "17:00",
-          late_threshold: data.late_threshold || 15
+          late_threshold: data.late_threshold || 15,
+          office_lat: data.office_lat ? String(data.office_lat) : "",
+          office_lng: data.office_lng ? String(data.office_lng) : "",
+          office_radius: data.office_radius || 200,
+          enable_geofencing: !!data.enable_geofencing
         });
       }
       setLoading(false);
@@ -126,7 +135,11 @@ export default function SettingsPage() {
         bot_name: formData.bot_name,
         work_start_time: formData.work_start_time,
         work_end_time: formData.work_end_time,
-        late_threshold: formData.late_threshold
+        late_threshold: formData.late_threshold,
+        office_lat: formData.office_lat ? parseFloat(formData.office_lat) : null,
+        office_lng: formData.office_lng ? parseFloat(formData.office_lng) : null,
+        office_radius: formData.office_radius,
+        enable_geofencing: formData.enable_geofencing
       })
       .eq("owner_id", user?.id);
 
@@ -259,6 +272,62 @@ export default function SettingsPage() {
                   className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
                 />
               </div>
+            </Field>
+          </div>
+        </SectionCard>
+
+        {/* Location Verification (Geofencing) */}
+        <SectionCard>
+          <div className="flex items-start justify-between mb-6">
+            <SectionHeader
+              icon={MapPin}
+              title={isRTL ? "التحقق من الموقع (GPS)" : "Location Verification (GPS)"}
+              subtitle={isRTL ? "إلزام الموظفين بتسجيل الدخول من مقر العمل" : "Force employees to check in from the office"}
+            />
+            <label className="flex items-center cursor-pointer">
+              <div className="relative">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={formData.enable_geofencing}
+                  onChange={(e) => setFormData({ ...formData, enable_geofencing: e.target.checked })}
+                />
+                <div className={cn("block w-14 h-8 rounded-full transition-colors", formData.enable_geofencing ? "bg-[#1e8e3e]" : "bg-[#e5e7eb]")}></div>
+                <div className={cn("dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform", formData.enable_geofencing && "transform translate-x-6")}></div>
+              </div>
+            </label>
+          </div>
+          
+          <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-8 transition-opacity", !formData.enable_geofencing && "opacity-50 pointer-events-none")}>
+            <Field label={isRTL ? "خط العرض (Latitude)" : "Latitude"}>
+              <input
+                type="text"
+                value={formData.office_lat}
+                onChange={(e) => setFormData({ ...formData, office_lat: e.target.value })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors font-mono"
+                placeholder="29.9792"
+              />
+            </Field>
+            <Field label={isRTL ? "خط الطول (Longitude)" : "Longitude"}>
+              <input
+                type="text"
+                value={formData.office_lng}
+                onChange={(e) => setFormData({ ...formData, office_lng: e.target.value })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors font-mono"
+                placeholder="31.1342"
+              />
+            </Field>
+            <Field 
+              label={isRTL ? "النطاق المسموح (بالمتر)" : "Allowed Radius (Meters)"} 
+              hint={isRTL ? "المسافة المسموح بها حول المقر" : "Distance allowed around office"}
+            >
+              <input
+                type="number"
+                value={formData.office_radius}
+                onChange={(e) => setFormData({ ...formData, office_radius: parseInt(e.target.value) })}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                placeholder="200"
+              />
             </Field>
           </div>
         </SectionCard>
