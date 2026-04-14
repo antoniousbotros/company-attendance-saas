@@ -37,6 +37,12 @@ export default function EmployeesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  
+  // Department State
+  const [activeTab, setActiveTab] = useState<'employees' | 'departments'>('employees');
+  const [departmentsList, setDepartmentsList] = useState<string[]>([]);
+  const [newDepartment, setNewDepartment] = useState("");
+
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     phone: "",
@@ -57,9 +63,12 @@ export default function EmployeesPage() {
   };
 
   const fetchCompany = async () => {
-    const { data: company } = await supabase.from("companies").select("bot_name").single();
-    if (company?.bot_name) {
-      setBotName(company.bot_name.replace("@", ""));
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: company } = await supabase.from("companies").select("id, bot_name, departments").eq("owner_id", user.id).single();
+    if (company) {
+      setBotName(company.bot_name?.replace("@", "") || "");
+      setDepartmentsList(company.departments || []);
     }
   };
 
@@ -143,6 +152,35 @@ export default function EmployeesPage() {
     fetchEmployees();
   };
 
+  const handleSaveDepartment = async () => {
+     if (!newDepartment.trim()) return;
+     const updatedList = [...new Set([...departmentsList, newDepartment.trim()])];
+     setSaving(true);
+     const { data: { user } } = await supabase.auth.getUser();
+     if(user) {
+         const { data: company } = await supabase.from("companies").select("id").eq("owner_id", user.id).single();
+         if (company) {
+             await supabase.from("companies").update({ departments: updatedList }).eq("id", company.id);
+             setDepartmentsList(updatedList);
+             setNewDepartment("");
+         }
+     }
+     setSaving(false);
+  };
+
+  const handleRemoveDepartment = async (dept: string) => {
+     if(!confirm(isRTL ? "هل تريد مسح هذا القسم؟ لن يتم حذفه من الموظفين الحاليين." : "Remove this department? Employees currently in it will not be affected.")) return;
+     const updatedList = departmentsList.filter(d => d !== dept);
+     const { data: { user } } = await supabase.auth.getUser();
+     if(user) {
+         const { data: company } = await supabase.from("companies").select("id").eq("owner_id", user.id).single();
+         if (company) {
+             await supabase.from("companies").update({ departments: updatedList }).eq("id", company.id);
+             setDepartmentsList(updatedList);
+         }
+     }
+  };
+
   const copyInviteLink = (empId: string) => {
     const link = `https://t.me/${botName || 'YawmyBot'}`;
     navigator.clipboard.writeText(link);
@@ -161,6 +199,16 @@ export default function EmployeesPage() {
     );
   }, [employees, query]);
 
+  const groupedEmployees = useMemo(() => {
+     const groups: Record<string, Employee[]> = {};
+     filtered.forEach(e => {
+         const dept = e.department || (isRTL ? "غير محدد التخصص" : "Unassigned");
+         if (!groups[dept]) groups[dept] = [];
+         groups[dept].push(e);
+     });
+     return groups;
+  }, [filtered, isRTL]);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
@@ -177,51 +225,63 @@ export default function EmployeesPage() {
         }
       />
 
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-3",
-          isRTL && "flex-row-reverse"
-        )}
-      >
-        <SearchField
-          placeholder={isRTL ? "بحث عن موظف..." : "Search employees..."}
-          value={query}
-          onChange={setQuery}
-        />
+      <div className={cn("flex items-center gap-6 border-b border-[#eeeeee] mb-6", isRTL && "flex-row-reverse")}>
+         <button onClick={() => setActiveTab('employees')} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", activeTab === 'employees' ? "border-[#ff5a00] text-[#ff5a00]" : "border-transparent text-[#6b7280] hover:text-[#111]")}>
+            {isRTL ? "فريق العمل" : "Employees"}
+         </button>
+         <button onClick={() => setActiveTab('departments')} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", activeTab === 'departments' ? "border-[#ff5a00] text-[#ff5a00]" : "border-transparent text-[#6b7280] hover:text-[#111]")}>
+            {isRTL ? "إدارة الأقسام" : "Departments"}
+         </button>
       </div>
 
-      <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-start">
-            <thead>
-              <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
-                <th className="px-6 py-5 font-bold text-start w-[30%]">
-                  {isRTL ? "الموظف" : "Employee"}
-                </th>
-                <th className="px-6 py-5 font-bold text-start w-[20%]">{isRTL ? "رقم الهاتف" : "Phone"}</th>
-                <th className="px-6 py-5 font-bold text-start w-[25%]">
-                  {isRTL ? "حالة الربط" : "Status"}
-                </th>
-                <th className="px-6 py-5 font-bold text-end w-[25%]">
-                  {isRTL ? "الإجراءات" : "Actions"}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center">
-                    <div className="w-5 h-5 border-2 border-[#ff5a00] border-t-transparent rounded-full animate-spin mx-auto" />
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-6 py-16 text-center text-[#9ca3af] text-sm italic">
-                    {isRTL ? "لا يوجد موظفين حالياً" : "No employees added yet."}
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((emp) => (
+      {activeTab === 'employees' ? (
+        <>
+          <div className={cn("flex flex-wrap items-center gap-3", isRTL && "flex-row-reverse")}>
+            <SearchField
+              placeholder={isRTL ? "بحث عن موظف..." : "Search employees..."}
+              value={query}
+              onChange={setQuery}
+            />
+          </div>
+
+          <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
+            <div className="overflow-x-auto">
+              <table className="w-full text-start">
+                <thead>
+                  <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
+                    <th className={cn("px-6 py-5 font-bold w-[30%]", isRTL ? "text-right" : "text-left")}>
+                      {isRTL ? "الموظف" : "Employee"}
+                    </th>
+                    <th className={cn("px-6 py-5 font-bold w-[20%]", isRTL ? "text-right" : "text-left")}>{isRTL ? "رقم الهاتف" : "Phone"}</th>
+                    <th className={cn("px-6 py-5 font-bold w-[25%]", isRTL ? "text-right" : "text-left")}>{isRTL ? "حالة الربط" : "Status"}</th>
+                    <th className={cn("px-6 py-5 font-bold w-[25%]", isRTL ? "text-left" : "text-right")}>
+                      {isRTL ? "الإجراءات" : "Actions"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-16 text-center">
+                        <div className="w-5 h-5 border-2 border-[#ff5a00] border-t-transparent rounded-full animate-spin mx-auto" />
+                      </td>
+                    </tr>
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-16 text-center text-[#9ca3af] text-sm italic">
+                        {isRTL ? "لا يوجد موظفين حالياً" : "No employees added yet."}
+                      </td>
+                    </tr>
+                  ) : (
+                    Object.entries(groupedEmployees).map(([dept, emps]) => (
+                      <React.Fragment key={dept}>
+                        <tr className="bg-[#f9fafb] border-y border-[#eeeeee]">
+                           <td colSpan={4} className={cn("px-6 py-3", isRTL ? "text-right" : "text-left")}>
+                               <span className="text-xs font-bold text-[#6b7280]">{dept}</span>
+                               <span className="mx-2 text-[10px] bg-white border border-[#eeeeee] rounded-full px-2 py-0.5 text-[#111]">{emps.length}</span>
+                           </td>
+                        </tr>
+                        {emps.map((emp) => (
                   <tr
                     key={emp.id}
                     className="border-t border-[#f1f1f1] hover:bg-[#fafafa] transition-colors group"
@@ -277,12 +337,52 @@ export default function EmployeesPage() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ))}
+              </React.Fragment>
+            ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </SectionCard>
+        </>
+      ) : (
+        <div className="max-w-2xl space-y-6 animate-in slide-in-from-bottom-2 duration-500">
+           <SectionCard className="border-[#eeeeee]">
+               <div className={cn("mb-6", isRTL && "text-end")}>
+                  <h3 className="text-sm font-bold text-[#111] mb-1">{isRTL ? "إضافة قسم جديد" : "Add New Department"}</h3>
+                  <p className="text-xs text-[#6b7280]">{isRTL ? "أضف الأقسام ليتمكن التيم من التصنيف على أساسها." : "Add departments to group your team effectively."}</p>
+               </div>
+               
+               <div className={cn("flex flex-wrap gap-3 mb-8", isRTL && "flex-row-reverse")}>
+                  <input value={newDepartment} onChange={e=>setNewDepartment(e.target.value)} type="text" className={cn("flex-1 h-11 px-4 rounded-xl border border-[#eeeeee] text-sm font-bold outline-none focus:border-[#ff5a00] transition-colors", isRTL && "text-right")} placeholder={isRTL ? "مثال: قسم المبيعات، المحاسبة..." : "Sales, HR..."} />
+                  <PrimaryButton disabled={saving} onClick={handleSaveDepartment} className="px-8 h-11 bg-[#111] border-transparent hover:bg-black text-white">
+                     {saving ? "..." : (isRTL ? "إضافة القسم" : "Add")}
+                  </PrimaryButton>
+               </div>
+               
+               <div className="space-y-3">
+                  {departmentsList.length === 0 ? (
+                     <div className="p-6 text-center bg-[#f9fafb] border border-[#eeeeee] rounded-xl border-dashed">
+                       <p className="text-sm text-[#9ca3af] font-bold italic">{isRTL ? "لا توجد أقسام مسجلة." : "No departments added yet."}</p>
+                     </div>
+                  ) : departmentsList.map(dept => (
+                     <div key={dept} className={cn("flex items-center justify-between p-4 bg-[#f9fafb] border border-[#eeeeee] rounded-xl hover:bg-white transition-colors group space-x-reverse", isRTL && "flex-row-reverse")}>
+                         <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs ring-1 ring-indigo-100/50">
+                                {dept.substring(0, 1)}
+                             </div>
+                             <span className="font-bold text-sm text-[#111]">{dept}</span>
+                         </div>
+                         <button onClick={() => handleRemoveDepartment(dept)} className="p-2 text-[#9ca3af] hover:text-[#b91c1c] hover:bg-[#fef1f1] rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+                            <Trash2 className="w-4 h-4" />
+                         </button>
+                     </div>
+                  ))}
+               </div>
+           </SectionCard>
         </div>
-      </SectionCard>
+      )}
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
@@ -313,19 +413,28 @@ export default function EmployeesPage() {
                   }
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 align-end">
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
                   {isRTL ? "القسم / التخصص (اختياري)" : "Department"}
                 </label>
-                <input
-                  type="text"
-                  placeholder={isRTL ? "مثال: مهندس برمجيات، محاسب..." : "e.g., Software, Marketing..."}
-                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
-                  value={newEmployee.department}
-                  onChange={(e) =>
-                    setNewEmployee({ ...newEmployee, department: e.target.value })
-                  }
-                />
+                {departmentsList.length > 0 ? (
+                  <select
+                    className="w-full h-12 px-4 py-0 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                    value={newEmployee.department}
+                    onChange={(e) =>
+                      setNewEmployee({ ...newEmployee, department: e.target.value })
+                    }
+                  >
+                    <option value="">{isRTL ? "--- اختر تخصيص ---" : "--- Unassigned ---"}</option>
+                    {departmentsList.map(d => (
+                       <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full h-12 px-4 rounded-xl bg-[#fff1e8] border border-[#ffd4b8] text-[#ff5a00] flex items-center text-xs font-bold leading-tight">
+                     {isRTL ? "يرجى إضافة أقسام أولاً من تبويب الأقسام." : "Please create departments first."}
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
@@ -454,18 +563,28 @@ export default function EmployeesPage() {
                   }
                 />
               </div>
-              <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
+              <div className="space-y-1.5 align-end" dir={isRTL ? "rtl" : "ltr"}>
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
                   {isRTL ? "القسم / التخصص (اختياري)" : "Department"}
                 </label>
-                <input
-                  type="text"
-                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
-                  value={editingEmployee.department || ""}
-                  onChange={(e) =>
-                    setEditingEmployee({ ...editingEmployee, department: e.target.value })
-                  }
-                />
+                {departmentsList.length > 0 ? (
+                  <select
+                    className="w-full h-12 px-4 py-0 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                    value={editingEmployee.department || ""}
+                    onChange={(e) =>
+                      setEditingEmployee({ ...editingEmployee, department: e.target.value })
+                    }
+                  >
+                    <option value="">{isRTL ? "--- اختر تخصيص ---" : "--- Unassigned ---"}</option>
+                    {departmentsList.map(d => (
+                       <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="w-full h-12 px-4 rounded-xl bg-[#fff1e8] border border-[#ffd4b8] text-[#ff5a00] flex items-center text-xs font-bold leading-tight">
+                     {isRTL ? "يرجى إضافة أقسام أولاً من تبويب الأقسام." : "Please create departments first."}
+                  </div>
+                )}
               </div>
               <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
