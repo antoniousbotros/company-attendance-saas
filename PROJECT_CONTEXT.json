@@ -1,0 +1,33 @@
+{
+  "project_name": "SyncTime SaaS Attendance",
+  "version": "1.0.0",
+  "stack": {
+    "frontend": "Next.js 16 (App Router)",
+    "backend": "Node.js (Serverless API)",
+    "database": "Supabase (PostgreSQL)",
+    "hosting": "Vercel"
+  },
+  "architecture": {
+    "type": "Monolith (Full-stack Next.js)",
+    "multi_tenant": true,
+    "onboarding_flow": "3-step wizard",
+    "bot_provider": "Telegram Telegraf"
+  },
+  "critical_modules": [
+    "src/app/api/telegram/webhook",
+    "src/lib/billing",
+    "src/middleware.ts",
+    "src/lib/supabase"
+  ],
+  "sensitive_areas": [
+    "auth",
+    "billing",
+    "RLS_Policies",
+    "Telegram_Webhook"
+  ],
+  "monetization": {
+    "currency": "EGP",
+    "plans": ["starter", "growth", "pro", "enterprise"],
+    "usage_based": true
+  }
+}
