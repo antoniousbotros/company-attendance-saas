@@ -123,7 +123,11 @@ export default function EmployeesPage() {
 
     setSaving(false);
     if (error) {
-      alert(error.message);
+      if (error.message.includes("employees_phone_key") || error.code === "23505") {
+          alert(isRTL ? "⚠️ رقم الهاتف هذا مسجل بالفعل لموظف آخر." : "⚠️ This phone number is already registered to another employee.");
+      } else {
+          alert(error.message);
+      }
     } else {
       setShowAddModal(false);
       setNewEmployee({ 
@@ -156,7 +160,11 @@ export default function EmployeesPage() {
 
     setSaving(false);
     if (error) {
-      alert(error.message);
+      if (error.message.includes("employees_phone_key") || error.code === "23505") {
+          alert(isRTL ? "⚠️ رقم الهاتف هذا مسجل بالفعل لموظف آخر." : "⚠️ This phone number is already registered to another employee.");
+      } else {
+          alert(error.message);
+      }
     } else {
       setShowEditModal(false);
       setEditingEmployee(null);
