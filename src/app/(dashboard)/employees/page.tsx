@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, X, Send, Copy, Check } from "lucide-react";
+import { Plus, Trash2, X, Send, Copy, Check, Pencil } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,10 @@ type Employee = {
   name: string;
   phone: string;
   telegram_user_id?: string | null;
+  base_salary?: number;
+  salary_type?: string;
+  working_hours_per_day?: number;
+  overtime_rate?: number;
   created_at?: string;
 };
 
@@ -30,6 +34,8 @@ export default function EmployeesPage() {
   const [query, setQuery] = useState("");
   const [botName, setBotName] = useState("");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmployee, setNewEmployee] = useState({
     name: "",
     phone: "",
@@ -98,6 +104,30 @@ export default function EmployeesPage() {
         working_hours_per_day: 8,
         overtime_rate: 1.5
       });
+      fetchEmployees();
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEmployee || !editingEmployee.name.trim() || !editingEmployee.phone.trim()) return;
+    setSaving(true);
+    const phone = editingEmployee.phone.replace(/\D/g, "");
+
+    const { error } = await supabase.from("employees").update({
+      name: editingEmployee.name.trim(),
+      phone,
+      base_salary: editingEmployee.base_salary,
+      salary_type: editingEmployee.salary_type,
+      working_hours_per_day: editingEmployee.working_hours_per_day,
+      overtime_rate: editingEmployee.overtime_rate,
+    }).eq("id", editingEmployee.id);
+
+    setSaving(false);
+    if (error) {
+      alert(error.message);
+    } else {
+      setShowEditModal(false);
+      setEditingEmployee(null);
       fetchEmployees();
     }
   };
@@ -226,6 +256,12 @@ export default function EmployeesPage() {
                             {copiedId === emp.id ? (isRTL ? "تم النسخ" : "Copied") : (isRTL ? "نسخ الرابط" : "Invite")}
                           </button>
                         )}
+                        <button
+                          onClick={() => { setEditingEmployee(emp); setShowEditModal(true); }}
+                          className="p-2 rounded-lg text-[#6b7280] hover:text-[#0284c7] hover:bg-[#f0f9ff] transition-all opacity-0 group-hover:opacity-100"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDelete(emp.id)}
                           className="p-2 rounded-lg text-[#6b7280] hover:text-[#b91c1c] hover:bg-[#fef1f1] transition-all opacity-0 group-hover:opacity-100"
@@ -363,6 +399,125 @@ export default function EmployeesPage() {
               </button>
               <PrimaryButton onClick={handleAddEmployee} disabled={saving} className="px-8 h-11 bg-[#ff5a00] hover:bg-[#e65100]">
                 {saving ? "..." : (isRTL ? "حفظ البيانات" : "Save Employee")}
+              </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && editingEmployee && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-md border border-[#eeeeee] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f1f1f1]">
+              <h2 className="text-lg font-bold text-[#111]">{isRTL ? "تعديل بيانات الموظف" : "Edit Employee"}</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 rounded-lg text-[#6b7280] hover:text-[#111] hover:bg-[#f5f5f5] transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className={cn("px-6 py-8 space-y-6 max-h-[70vh] overflow-y-auto", isRTL && "text-right")}>
+              <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
+                <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                  {isRTL ? "الاسم الرباعي" : "Full Name"}
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                  value={editingEmployee.name}
+                  onChange={(e) =>
+                    setEditingEmployee({ ...editingEmployee, name: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
+                <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                  {isRTL ? "رقم الهاتف (الواتساب)" : "WhatsApp Number"}
+                </label>
+                <input
+                  type="text"
+                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-mono font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                  value={editingEmployee.phone}
+                  onChange={(e) =>
+                    setEditingEmployee({ ...editingEmployee, phone: e.target.value })
+                  }
+                />
+              </div>
+              
+              <div className="pt-4 border-t border-[#eeeeee] space-y-6 text-start" dir={isRTL ? "rtl" : "ltr"}>
+                <h3 className="text-sm font-bold text-[#111]">{isRTL ? "بيانات الرواتب والموارد البشرية" : "Payroll & HR Data"}</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "نظام الراتب" : "Salary Type"}
+                    </label>
+                    <select
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={editingEmployee.salary_type || "monthly"}
+                      onChange={(e) => setEditingEmployee({ ...editingEmployee, salary_type: e.target.value })}
+                    >
+                      <option value="monthly">{isRTL ? "شهري" : "Monthly"}</option>
+                      <option value="daily">{isRTL ? "يومي" : "Daily"}</option>
+                      <option value="hourly">{isRTL ? "بالساعة" : "Hourly"}</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "الراتب الأساسي" : "Base Salary"}
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={editingEmployee.base_salary || 0}
+                      onChange={(e) => setEditingEmployee({ ...editingEmployee, base_salary: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "ساعات العمل يومياً" : "Daily Hours"}
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={editingEmployee.working_hours_per_day || 0}
+                      onChange={(e) => setEditingEmployee({ ...editingEmployee, working_hours_per_day: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                      {isRTL ? "مضاعف الإضافي" : "Overtime Rate"}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                      value={editingEmployee.overtime_rate || 0}
+                      onChange={(e) => setEditingEmployee({ ...editingEmployee, overtime_rate: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 px-6 py-5 border-t border-[#f1f1f1] bg-[#f9fafb]">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-sm font-bold text-[#6b7280] hover:text-[#111] px-4 transition-colors"
+              >
+                {t.cancel}
+              </button>
+              <PrimaryButton onClick={handleSaveEdit} disabled={saving} className="px-8 h-11 bg-[#ff5a00] hover:bg-[#e65100]">
+                {saving ? "..." : (isRTL ? "حفظ التعديلات" : "Save Changes")}
               </PrimaryButton>
             </div>
           </div>
