@@ -42,6 +42,11 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState<'employees' | 'departments'>('employees');
   const [departmentsList, setDepartmentsList] = useState<string[]>([]);
   const [newDepartment, setNewDepartment] = useState("");
+  
+  // Bulk Assign State
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [bulkDepartment, setBulkDepartment] = useState("");
+
 
   const [newEmployee, setNewEmployee] = useState({
     name: "",
@@ -181,6 +186,29 @@ export default function EmployeesPage() {
      }
   };
 
+  const handleBulkAssign = async () => {
+    if (selectedEmployeeIds.length === 0 || !bulkDepartment) return;
+    setSaving(true);
+    
+    // Explicit null when UNASSIGN selected so that it triggers clearing the department
+    const targetDept = bulkDepartment === "UNASSIGN" ? null : bulkDepartment;
+
+    const { error } = await supabase
+      .from("employees")
+      .update({ department: targetDept })
+      .in("id", selectedEmployeeIds);
+
+    if (error) {
+       alert(error.message);
+    } else {
+       setSelectedEmployeeIds([]);
+       setBulkDepartment("");
+       fetchEmployees();
+    }
+    setSaving(false);
+  };
+
+
   const copyInviteLink = (empId: string) => {
     const link = `https://t.me/${botName || 'YawmyBot'}`;
     navigator.clipboard.writeText(link);
@@ -245,11 +273,50 @@ export default function EmployeesPage() {
           </div>
 
           <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
+            {selectedEmployeeIds.length > 0 && (
+              <div className={cn("p-4 bg-[#fff1e8] border-b border-[#ffd4b8] flex items-center justify-between", isRTL && "flex-row-reverse")}>
+                 <div className={cn("flex items-center gap-2 text-[#ff5a00] font-bold text-sm", isRTL && "flex-row-reverse")}>
+                   <span>{isRTL ? "محدد:" : "Selected:"}</span>
+                   <span>{selectedEmployeeIds.length}</span>
+                 </div>
+                 <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                    <select
+                      className="h-10 px-4 rounded-lg bg-white border border-[#ffd4b8] text-sm text-[#111] font-bold outline-none"
+                      value={bulkDepartment}
+                      onChange={(e) => setBulkDepartment(e.target.value)}
+                    >
+                      <option value="">{isRTL ? "--- اختر القسم ---" : "--- Select Dept ---"}</option>
+                      <option value="UNASSIGN">{isRTL ? "إزالة التخصيص" : "Remove Dept"}</option>
+                      {departmentsList.map(d => (
+                         <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                    <PrimaryButton 
+                      disabled={!bulkDepartment || saving} 
+                      onClick={handleBulkAssign}
+                      className="h-10 px-6 bg-[#ff5a00]"
+                    >
+                      {saving ? "..." : (isRTL ? "تطبيق" : "Apply")}
+                    </PrimaryButton>
+                 </div>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="w-full text-start">
                 <thead>
                   <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
-                    <th className={cn("px-6 py-5 font-bold w-[30%]", isRTL ? "text-right" : "text-left")}>
+                    <th className="px-6 py-5 w-12 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-[#eeeeee] accent-[#ff5a00]" 
+                        checked={selectedEmployeeIds.length === filtered.length && filtered.length > 0}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedEmployeeIds(filtered.map(emp => emp.id));
+                          else setSelectedEmployeeIds([]);
+                        }}
+                      />
+                    </th>
+                    <th className={cn("px-4 py-5 font-bold w-[30%]", isRTL ? "text-right" : "text-left")}>
                       {isRTL ? "الموظف" : "Employee"}
                     </th>
                     <th className={cn("px-6 py-5 font-bold w-[20%]", isRTL ? "text-right" : "text-left")}>{isRTL ? "رقم الهاتف" : "Phone"}</th>
@@ -276,7 +343,7 @@ export default function EmployeesPage() {
                     Object.entries(groupedEmployees).map(([dept, emps]) => (
                       <React.Fragment key={dept}>
                         <tr className="bg-[#f9fafb] border-y border-[#eeeeee]">
-                           <td colSpan={4} className={cn("px-6 py-3", isRTL ? "text-right" : "text-left")}>
+                           <td colSpan={5} className={cn("px-6 py-3", isRTL ? "text-right" : "text-left")}>
                                <span className="text-xs font-bold text-[#6b7280]">{dept}</span>
                                <span className="mx-2 text-[10px] bg-white border border-[#eeeeee] rounded-full px-2 py-0.5 text-[#111]">{emps.length}</span>
                            </td>
@@ -286,7 +353,18 @@ export default function EmployeesPage() {
                     key={emp.id}
                     className="border-t border-[#f1f1f1] hover:bg-[#fafafa] transition-colors group"
                   >
-                    <td className="px-6 py-5 text-start">
+                    <td className="px-6 py-5 text-center">
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-[#eeeeee] accent-[#ff5a00]" 
+                        checked={selectedEmployeeIds.includes(emp.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedEmployeeIds([...selectedEmployeeIds, emp.id]);
+                          else setSelectedEmployeeIds(selectedEmployeeIds.filter(id => id !== emp.id));
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-5 text-start">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold uppercase ring-1 ring-[#ffd4b8] shrink-0">
                           {emp.name.substring(0, 2)}
