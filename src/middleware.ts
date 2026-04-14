@@ -12,12 +12,11 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || "";
 
   // 1. Subdomain Check: sadmin.yawmy.app or sadmin.localhost
-  // 1. Subdomain Check: sadmin.yawmy.app or sadmin.localhost
   if (hostname.startsWith("sadmin.") && !url.pathname.startsWith("/api")) {
     // If they are not already accessing the /sadmin path under the hood
     if (!url.pathname.startsWith("/sadmin")) {
       url.pathname = `/sadmin${url.pathname === "/" ? "" : url.pathname}`;
-      return NextResponse.rewrite(url);
+      response = NextResponse.rewrite(url);
     }
   }
 

@@ -20,10 +20,16 @@ export default function SadminDashboard() {
     setLoading(true);
     // Note: To fetch everything, we actually need an API route using Service Role Key
     // because standard RLS blocks us.
-    const res = await fetch("/api/sadmin/data");
-    const data = await res.json();
-    if (data.ok) {
-      setCompanies(data.companies);
+    try {
+      const res = await fetch("/api/sadmin/data");
+      const data = await res.json();
+      if (data.ok) {
+        setCompanies(data.companies);
+      } else {
+        alert("API Error: " + data.error);
+      }
+    } catch (e: any) {
+      alert("Fetch Error: " + e.message);
     }
     setLoading(false);
   };
