@@ -114,12 +114,12 @@ export default function AnnouncementsPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
-        title={isRTL ? "التعميمات والتنبيهات" : "Announcements"}
+        title={isRTL ? "إعلانات الشركة" : "Announcements"}
         subtitle={isRTL ? "إرسال قرارات إدارية وتنبيهات فورية لموظفيك عبر تليجرام" : "Broadcast company updates instantly via Telegram"}
         isRTL={isRTL}
         action={
           <PrimaryButton disabled={isSubmitting} icon={Plus} onClick={() => setShowForm(!showForm)}>
-            {showForm ? (isRTL ? "إلغاء" : "Cancel") : (isRTL ? "إضافة تعميم" : "New Announcement")}
+            {showForm ? (isRTL ? "إلغاء" : "Cancel") : (isRTL ? "إضافة إعلان" : "New Announcement")}
           </PrimaryButton>
         }
       />
@@ -128,23 +128,23 @@ export default function AnnouncementsPage() {
         <SectionCard className="border-[#ff5a00] ring-1 ring-[#ff5a00] bg-[#fff1e8]">
           <h3 className={cn("text-lg font-bold text-[#111] mb-4 flex items-center gap-2", isRTL && "justify-end")}>
             <Megaphone className="w-5 h-5 text-[#ff5a00]" />
-            {isRTL ? "نشر تعميم جديد" : "Broadcast New Announcement"}
+            {isRTL ? "نشر إعلان جديد" : "Broadcast New Announcement"}
           </h3>
           <form onSubmit={handleCreate} className="space-y-6">
             
             <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-4", isRTL && "text-end")}>
               <div className={isRTL ? "text-end" : "text-start"}>
-                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "عنوان التعميم *" : "Announcement Title *"}</label>
+                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "عنوان الإعلان *" : "Announcement Title *"}</label>
                 <input disabled={isSubmitting} type="text" required dir="auto" placeholder={isRTL ? "مثال: تعديل ساعات العمل في رمضان" : "e.g., Ramadan Working Hours"} value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50 font-bold" />
               </div>
               <div className={isRTL ? "text-end" : "text-start"}>
-                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "تاريخ انتهاء التعميم *" : "Expiration Date *"}</label>
+                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "تاريخ انتهاء الإعلان *" : "Expiration Date *"}</label>
                 <input disabled={isSubmitting} type="date" required value={form.expire_at} onChange={e => setForm({...form, expire_at: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50" />
               </div>
             </div>
 
             <div className={isRTL ? "text-end" : "text-start"}>
-                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "نص التعميم *" : "Message Content *"}</label>
+                <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "نص الإعلان *" : "Message Content *"}</label>
                 <textarea disabled={isSubmitting} rows={4} required dir="auto" placeholder={isRTL ? "اكتب تفاصيل القرار أو التنبيه هنا..." : "Type the announcement details..."} value={form.message} onChange={e => setForm({...form, message: e.target.value})} className="w-full p-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50 resize-y" />
             </div>
 
@@ -195,7 +195,7 @@ export default function AnnouncementsPage() {
 
             <div className={cn("flex items-center pt-2 gap-4", isRTL && "justify-end flex-row-reverse")}>
               <PrimaryButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (isRTL ? "جاري الإرسال عبر تليجرام..." : "Broadcasting via Telegram...") : (isRTL ? "نشر التعميم" : "Send Announcement")}
+                {isSubmitting ? (isRTL ? "جاري الإرسال عبر تليجرام..." : "Broadcasting via Telegram...") : (isRTL ? "نشر الإعلان" : "Send Announcement")}
               </PrimaryButton>
               <p className="text-xs font-bold text-[#9ca3af]">
                  {isRTL ? "سيتم إرسال التنبيه فوراً كرسالة بوش للبوت." : "Will instantly push Telegram alerts to targets."}
@@ -207,14 +207,14 @@ export default function AnnouncementsPage() {
 
       <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
         <div className={cn("p-5 border-b border-[#eeeeee] flex items-center justify-between bg-[#f9fafb]", isRTL && "flex-row-reverse")}>
-          <h3 className="font-bold text-[#111] text-sm">{isRTL ? "جميع التعميمات" : "All Announcements"}</h3>
+          <h3 className="font-bold text-[#111] text-sm">{isRTL ? "جميع إعلانات الشركة" : "All Announcements"}</h3>
         </div>
 
         <div className="overflow-x-auto">
            <table className="w-full text-start">
              <thead>
                <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
-                 <th className="px-6 py-4 font-bold text-start w-[40%]">{isRTL ? "عنوان التعميم والتفاصيل" : "Announcement Breakdown"}</th>
+                 <th className="px-6 py-4 font-bold text-start w-[40%]">{isRTL ? "عنوان الإعلان والتفاصيل" : "Announcement Breakdown"}</th>
                  <th className="px-6 py-4 font-bold text-start w-[20%]">{isRTL ? "المستهدف" : "Target"}</th>
                  <th className="px-6 py-4 font-bold text-center w-[15%]">{isRTL ? "تاريخ الانتهاء" : "Expires"}</th>
                  <th className="px-6 py-4 font-bold text-end w-[25%]">{isRTL ? "الحالة" : "Status"}</th>
@@ -231,7 +231,7 @@ export default function AnnouncementsPage() {
                  <tr>
                    <td colSpan={4} className="px-6 py-16 text-center">
                      <Megaphone className="w-10 h-10 text-[#d1d5db] mx-auto mb-3 opacity-50" />
-                     <p className="text-[#9ca3af] text-sm italic font-medium">{isRTL ? "لا توجد تعميمات إدارية منشورة." : "No announcements broadcasted yet."}</p>
+                     <p className="text-[#9ca3af] text-sm italic font-medium">{isRTL ? "لا توجد إعلانات منشورة." : "No announcements broadcasted yet."}</p>
                    </td>
                  </tr>
                ) : (

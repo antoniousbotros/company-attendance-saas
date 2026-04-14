@@ -21,14 +21,14 @@ const getMainMenu = (enableGeofencing: boolean, lang: string = 'en') => {
       return Markup.keyboard([
         [Markup.button.locationRequest("📍 إرسال الموقع")],
         ["📊 تقرير حضوري", "📝 مهامي"],
-        ["📌 مهمة جديدة", "📢 التعميمات"],
+        ["📌 مهمة جديدة", "📢 إعلانات الشركة"],
         ["ℹ️ مساعدة"]
       ]).resize();
     }
     return Markup.keyboard([
       ["✅ تسجيل حضور", "🚪 تسجيل انصراف"],
       ["📊 تقرير حضوري", "📝 مهامي"],
-      ["📌 مهمة جديدة", "📢 التعميمات"],
+      ["📌 مهمة جديدة", "📢 إعلانات الشركة"],
       ["ℹ️ مساعدة"]
     ]).resize();
   }
@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
       return ctx.replyWithHTML(table + "</pre>");
     });
     // ANNOUNCEMENTS HOOK
-    bot.hears(["📢 Announcements", "📢 التعميمات"], async (ctx) => {
+    bot.hears(["📢 Announcements", "📢 إعلانات الشركة"], async (ctx) => {
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).single();
       if (!employee) return;
       
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
         .eq("is_active", true);
 
       if (error || !announcements || announcements.length === 0) {
-         return ctx.reply(lang === 'ar' ? "🎉 لا توجد تعميمات نشطة حالياً." : "🎉 No active announcements at the moment.");
+         return ctx.reply(lang === 'ar' ? "🎉 لا توجد إعلانات نشطة حالياً." : "🎉 No active announcements at the moment.");
       }
 
       const activeAnnouncements = announcements.filter(a => {
@@ -214,10 +214,10 @@ export async function POST(req: NextRequest) {
       });
 
       if (activeAnnouncements.length === 0) {
-         return ctx.reply(lang === 'ar' ? "🎉 لا توجد تعميمات نشطة حالياً." : "🎉 No active announcements at the moment.");
+         return ctx.reply(lang === 'ar' ? "🎉 لا توجد إعلانات نشطة حالياً." : "🎉 No active announcements at the moment.");
       }
 
-      await ctx.reply(lang === 'ar' ? `لديك ${activeAnnouncements.length} تعميمات نشطة:` : `You have ${activeAnnouncements.length} active announcements:`);
+      await ctx.reply(lang === 'ar' ? `لديك ${activeAnnouncements.length} إعلانات نشطة:` : `You have ${activeAnnouncements.length} active announcements:`);
 
       for (const a of activeAnnouncements) {
          const msg = `📢 <b>${a.title}</b>\n\n${a.message}\n\n<i>${lang === 'ar' ? 'ينتهي في' : 'Expires'}: ${new Date(a.expire_at).toDateString()}</i>`;

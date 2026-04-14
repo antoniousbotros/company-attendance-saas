@@ -52,7 +52,7 @@ function useNav(): NavGroup[] {
       items: [
         { name: t.employees, href: "/employees", icon: Users },
         { name: (t as any).tasks, href: "/tasks", icon: ListTodo },
-        { name: isRTL ? "التعميمات" : "Announcements", href: "/announcements", icon: Megaphone },
+        { name: isRTL ? "إعلانات الشركة" : "Announcements", href: "/announcements", icon: Megaphone },
         { name: (t as any).payroll, href: "/payroll", icon: CreditCard },
         { name: t.billing, href: "/billing", icon: CreditCard },
         { name: t.settings, href: "/settings", icon: SettingsIcon },
