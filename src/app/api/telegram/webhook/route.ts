@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Telegraf, Context, Markup } from "telegraf";
 
-const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
+export const dynamic = 'force-dynamic';
+
+const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN || 'placeholder');
 
 // Define the main menu
 const mainMenu = Markup.keyboard([
