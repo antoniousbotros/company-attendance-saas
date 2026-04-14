@@ -231,7 +231,7 @@ export const translations = {
     monthlySummaryDesc: "تقرير شامل لكل الموظفين لهذا الشهر — الساعات والتأخيرات والغيابات.",
     selectMonth: "اختر الشهر",
     export: "تصدير",
-    anomalyDetection: "رصد الشذوذ",
+    anomalyDetection: "رصد المخالفات",
     anomalyDesc: "ابحث عن الموظفين ذوي التأخيرات المتكررة أو انصراف مفقود.",
     analyzeData: "تحليل",
     teamPerformance: "أداء الفريق مقارنةً بالشهر السابق",
