@@ -156,17 +156,17 @@ export default function EmployeesPage() {
 
       <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full text-start">
             <thead>
               <tr className="text-[#6b7280] text-[11px] uppercase tracking-wider border-b border-[#f1f1f1]">
-                <th className={cn("px-6 py-5 font-bold", isRTL ? "text-right" : "text-left")}>
+                <th className="px-6 py-5 font-bold text-start w-[30%]">
                   {isRTL ? "الموظف" : "Employee"}
                 </th>
-                <th className={cn("px-6 py-5 font-bold", isRTL ? "text-right" : "text-left")}>{isRTL ? "رقم الهاتف" : "Phone"}</th>
-                <th className={cn("px-6 py-5 font-bold", isRTL ? "text-right" : "text-left")}>
+                <th className="px-6 py-5 font-bold text-start w-[20%]">{isRTL ? "رقم الهاتف" : "Phone"}</th>
+                <th className="px-6 py-5 font-bold text-start w-[25%]">
                   {isRTL ? "حالة الربط" : "Status"}
                 </th>
-                <th className={cn("px-6 py-5 font-bold", isRTL ? "text-left" : "text-right")}>
+                <th className="px-6 py-5 font-bold text-end w-[25%]">
                   {isRTL ? "الإجراءات" : "Actions"}
                 </th>
               </tr>
@@ -190,28 +190,28 @@ export default function EmployeesPage() {
                     key={emp.id}
                     className="border-t border-[#f1f1f1] hover:bg-[#fafafa] transition-colors group"
                   >
-                    <td className="px-6 py-5">
-                      <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
-                        <div className="w-10 h-10 rounded-xl bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold uppercase ring-1 ring-[#ffd4b8]">
+                    <td className="px-6 py-5 text-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold uppercase ring-1 ring-[#ffd4b8] shrink-0">
                           {emp.name.substring(0, 2)}
                         </div>
-                        <div className={isRTL ? "text-right" : "text-left"}>
-                          <p className="text-sm font-bold text-[#111]">{emp.name}</p>
+                        <div className="text-start max-w-[200px]">
+                          <p className="text-sm font-bold text-[#111] truncate">{emp.name}</p>
                           <p className="text-[10px] text-[#9ca3af] font-medium uppercase">{isRTL ? "موظف" : "Staff"}</p>
                         </div>
                       </div>
                     </td>
-                    <td className={cn("px-6 py-5 text-sm font-semibold text-[#4b5563] font-mono", isRTL && "text-right")}>
-                      +{emp.phone}
+                    <td className="px-6 py-5 text-sm font-semibold text-[#4b5563] font-mono text-start">
+                      <span dir="ltr" className="inline-block">+{"\u200E"}{emp.phone}</span>
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 text-start">
                       <StatusPill
                         label={emp.telegram_user_id ? (isRTL ? "متصل" : "Connected") : (isRTL ? "غير مربوط" : "Not Linked")}
                         tone={emp.telegram_user_id ? "success" : "neutral"}
                       />
                     </td>
-                    <td className="px-6 py-5">
-                      <div className={cn("flex items-center gap-2", isRTL ? "justify-start" : "justify-end")}>
+                    <td className="px-6 py-5 text-end">
+                      <div className="flex items-center gap-2 justify-end">
                         {!emp.telegram_user_id && (
                           <button
                             onClick={() => copyInviteLink(emp.id)}
