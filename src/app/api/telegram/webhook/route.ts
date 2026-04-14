@@ -181,14 +181,17 @@ export async function POST(req: NextRequest) {
 
       // Check if location is intended for a Sales Draft
       const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft").single();
-      if (draftReport && company.sales_tracking_enabled && !draftReport.location_lat) {
-          // Location for sales report! (Since location is step 1, if it has no lat/lng, it's pending it)
+      if (draftReport && company.sales_tracking_enabled) {
+          // Location for sales report! (Update it and proceed to the next step)
           await supabaseAdmin.from("reports").update({ 
              location_lat: ctx.message.location.latitude,
              location_lng: ctx.message.location.longitude
           }).eq("id", draftReport.id);
           
-          return runNextReportStep(ctx, employee, draftReport);
+          return runNextReportStep(ctx, employee, Object.assign({}, draftReport, {
+             location_lat: ctx.message.location.latitude,
+             location_lng: ctx.message.location.longitude
+          }));
       }
 
       // Fallback: Attendance flow
@@ -325,7 +328,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check if draft exists
-      let { data: draft } = await supabaseAdmin.from("reports").select("id").eq("employee_id", employee.id).eq("status", "draft").single();
+      let { data: draft } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft").single();
       
       const today = new Date().toISOString().split("T")[0];
 
@@ -336,13 +339,18 @@ export async function POST(req: NextRequest) {
               employee_id: employee.id,
               date: today,
               status: 'draft'
-          }).select("id").single();
+          }).select("id, team_id, location_lat, location_lng").single();
           draft = newDraft;
       }
 
+      if (draft && draft.location_lat) {
+          // Already have a location for this draft, resume next field
+          return runNextReportStep(ctx, employee, draft);
+      }
+
       return ctx.reply(lang === 'ar' 
-        ? "أهلاً بك!\nللبدء بتسجيل التقرير الميداني، يرجى إرسال موقعك الحالي أولاً 📍" 
-        : "Welcome!\nTo start tracking your field report, please send your current location 📍",
+        ? "أهلاً بك!\nللبدء بتسجيل التقرير الميداني، يرجى إرسال موقعك الحالي أولاً باستخدام زر 'إرسال الموقع' بالأسفل 📍" 
+        : "Welcome!\nTo start tracking your field report, please send your current location using the button below 📍",
         Markup.keyboard([[Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location")]]).resize()
       );
     });
