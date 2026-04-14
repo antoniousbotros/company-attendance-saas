@@ -16,7 +16,6 @@ import {
   Menu as MenuIcon,
   X,
   ChevronLeft,
-  ChevronLeft,
   Languages,
   Banknote
 } from "lucide-react";
