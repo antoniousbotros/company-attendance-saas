@@ -95,7 +95,7 @@ export default function OnboardingPage() {
             <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500 mb-8">
               <Building2 className="w-10 h-10" />
             </div>
-            <h1 className="text-3xl font-black mb-2">Let's name your workspace</h1>
+            <h1 className="text-3xl font-black mb-2">Let&apos;s name your workspace</h1>
             <p className="text-zinc-500 mb-8">We pre-filled this based on your name, but you can change it.</p>
             
             <input 
@@ -203,20 +203,20 @@ export default function OnboardingPage() {
               onClick={nextStep}
               className="w-full bg-zinc-800 text-white font-black py-4 rounded-2xl hover:bg-zinc-700 transition-all"
             >
-              I've connected my account
+              I&apos;ve connected my account
             </button>
           </div>
         )}
       </div>
       
       <p className="mt-8 text-zinc-600 font-medium text-sm">
-        Quick setup: You're almost there!
+        Quick setup: You&apos;re almost there!
       </p>
     </div>
   );
 }
 
-function ExternalLink({ className }: any) {
+function ExternalLink({ className }: { className?: string }) {
   return (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

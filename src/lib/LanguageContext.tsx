@@ -1,40 +1,77 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useCallback,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import { translations, type Language } from "./i18n";
 
 type LanguageContextType = {
   lang: Language;
-  t: typeof translations['en'];
+  t: typeof translations["en"];
   toggleLang: () => void;
   isRTL: boolean;
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+const STORAGE_KEY = "lang";
+
+// In-memory fanout so components subscribed via useSyncExternalStore rerender
+// when toggleLang mutates localStorage (the native `storage` event only fires
+// for OTHER tabs, not the current one).
+const listeners = new Set<() => void>();
+function emit() {
+  listeners.forEach((l) => l());
+}
+function subscribe(callback: () => void) {
+  listeners.add(callback);
+  const onStorage = () => callback();
+  window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(callback);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
+function getClientLang(): Language {
+  if (typeof window === "undefined") return "en";
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  return raw === "ar" ? "ar" : "en";
+}
+
+function getServerLang(): Language {
+  return "en";
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Language>("en");
+  const lang = useSyncExternalStore(subscribe, getClientLang, getServerLang);
 
+  // Document attributes are DOM side effects — setting them in an effect is
+  // correct (not setState, so the react-hooks/set-state-in-effect rule is happy).
   useEffect(() => {
-    const savedLang = (localStorage.getItem("lang") as Language) || "en";
-    setLang(savedLang);
-    document.documentElement.setAttribute("dir", savedLang === "ar" ? "rtl" : "ltr");
-    document.documentElement.setAttribute("lang", savedLang);
-  }, []);
+    document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+    document.documentElement.setAttribute("lang", lang);
+  }, [lang]);
 
-  const toggleLang = () => {
-    const newLang = lang === "en" ? "ar" : "en";
-    setLang(newLang);
-    localStorage.setItem("lang", newLang);
-    document.documentElement.setAttribute("dir", newLang === "ar" ? "rtl" : "ltr");
-    document.documentElement.setAttribute("lang", newLang);
+  const toggleLang = useCallback(() => {
+    const next: Language = lang === "en" ? "ar" : "en";
+    window.localStorage.setItem(STORAGE_KEY, next);
+    emit();
+  }, [lang]);
+
+  const value: LanguageContextType = {
+    lang,
+    t: translations[lang],
+    toggleLang,
+    isRTL: lang === "ar",
   };
 
-  const isRTL = lang === "ar";
-  const t = translations[lang];
-
   return (
-    <LanguageContext.Provider value={{ lang, t, toggleLang, isRTL }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

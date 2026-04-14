@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
       }
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     // Protected routes list
     const protectedRoutes = ['/overview', '/employees', '/attendance', '/reports', '/billing', '/onboarding'];
@@ -76,8 +76,9 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
       }
     }
-  } catch (e: any) {
-    console.error("Middleware Critical Failure:", e.message);
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Middleware Critical Failure:", message);
   }
 
   return response;

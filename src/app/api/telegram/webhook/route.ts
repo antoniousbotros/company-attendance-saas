@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { Telegraf, Context, Markup } from "telegraf";
+import { Telegraf, Markup } from "telegraf";
 
 export const dynamic = 'force-dynamic';
 

@@ -1,37 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { 
-  ArrowRight, 
-  MessageCircle, 
-  ShieldCheck, 
-  Zap, 
-  BarChart3, 
+import {
+  ArrowRight,
+  MessageCircle,
+  ShieldCheck,
+  Zap,
+  BarChart3,
   Clock,
   Smartphone,
-  ChevronRight,
-  Sun,
-  Moon
 } from "lucide-react";
 import PricingSection from "./components/pricing-section";
 
 export default function LandingPage() {
-  const [theme, setTheme] = useState("dark");
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") || "dark";
-    setTheme(savedTheme);
-    document.documentElement.classList.toggle("dark", savedTheme === "dark");
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    document.documentElement.classList.toggle("dark", newTheme === "dark");
-  };
-
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
       {/* Navigation */}
@@ -48,12 +30,6 @@ export default function LandingPage() {
             <a href="#features" className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">Features</a>
             <a href="#pricing" className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
             <Link href="/login" className="text-sm font-bold text-muted-foreground hover:text-foreground transition-colors">Sign In</Link>
-            <button 
-              onClick={toggleTheme}
-              className="p-2 rounded-xl bg-secondary text-secondary-foreground hover:bg-border transition-all"
-            >
-              {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
             <Link href="/signup" className="bg-foreground text-background px-6 py-3 rounded-2xl font-black hover:scale-105 transition-all text-sm shadow-xl">
               Start Free Trial
             </Link>
