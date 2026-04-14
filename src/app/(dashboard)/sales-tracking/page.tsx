@@ -311,18 +311,20 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     const [newOptionsText, setNewOptionsText] = useState("");
     const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
     const [activeTab, setActiveTab] = useState<"fields"|"members">("fields");
+    const [errorMsg, setErrorMsg] = useState("");
     
     // Notes configuration state
     const [showNotes, setShowNotes] = useState(team.show_notes ?? true);
     const [requireNotes, setRequireNotes] = useState(team.require_notes ?? false);
 
     const handleAddField = async () => {
+        setErrorMsg("");
         if (!newLabel.trim()) {
-            alert("⚠️ يرجى إدخال اسم الحقل أولاً.");
+            setErrorMsg("⚠️ يرجى كتابة اسم الحقل المخصص في الجزء العلوي أولاً.");
             return;
         }
         if (newType === 'select' && !newOptionsText.trim()) {
-            alert("⚠️ يرجى إدخال خيار واحد على الأقل، مفصولاً بفاصلة.");
+            setErrorMsg("⚠️ يرجى كتابة الخيارات في الجزء السفلي.");
             return;
         }
         
@@ -356,6 +358,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     };
 
     const handleDeleteField = async (id: string) => {
+        setErrorMsg("");
         await supabase.from("custom_fields").delete().eq("id", id);
         const next = localFields.filter(f => f.id !== id);
         setLocalFields(next);
@@ -457,18 +460,19 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                 </div>
                             ))}
 
-                            <div className="flex flex-col p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 gap-2">
+                            <div className="flex flex-col p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 gap-2 overflow-hidden transition-all duration-300 focus-within:border-[#ff5a00]">
                                 <div className="flex items-center gap-2">
                                     <input 
-                                        placeholder="اسم الحقل الجديد (مثال: عدد الزيارات)" 
-                                        className="bg-transparent border-none outline-none flex-1 font-medium"
+                                        placeholder="اسم الحقل المخصص (مثال: تقييم العميل)" 
+                                        className="bg-transparent border-none outline-none flex-1 font-semibold text-gray-900 placeholder:text-gray-300"
                                         value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                                        onFocus={() => setErrorMsg("")}
                                     />
                                     <div className="flex items-center gap-2 border-r border-gray-200 pr-2">
-                                        <select className="bg-transparent text-xs outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
-                                            <option value="number">رقم</option>
+                                        <select className="bg-transparent text-xs font-bold text-[#ff5a00] outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
                                             <option value="text">نص سريع</option>
-                                            <option value="select">خيارات اختيارية</option>
+                                            <option value="number">رقم</option>
+                                            <option value="select">خيارات متعددة</option>
                                         </select>
                                         {newType !== 'select' && (
                                             <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors" type="button">
@@ -480,13 +484,19 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                 {newType === 'select' && (
                                     <div className="flex items-center gap-2 border-t border-gray-100 pt-2 pb-1">
                                         <input 
-                                            placeholder="اكتب الخيارات وافصل بينها بفاصلة (,)" 
-                                            className="bg-gray-50 border border-gray-200 rounded px-2 py-1 outline-none flex-1 font-medium text-xs text-gray-800"
+                                            placeholder="اكتب الخيارات هنا وافصل بينها بفاصلة. مثال: مهتم, غير مهتم, مشغول" 
+                                            className="bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 outline-none flex-1 font-medium text-[11px] text-gray-800 focus:border-[#ff5a00] transition-colors"
                                             value={newOptionsText} onChange={e => setNewOptionsText(e.target.value)}
+                                            onFocus={() => setErrorMsg("")}
                                         />
-                                        <button onClick={handleAddField} className="bg-black text-white px-3 py-1 rounded text-xs font-semibold hover:bg-gray-800 transition-colors" type="button">
-                                            إضافة
+                                        <button onClick={handleAddField} className="bg-[#ff5a00] text-white px-4 py-1.5 rounded-md text-xs font-bold hover:bg-[#e04f00] shadow-sm transition-colors" type="button">
+                                            إضافة الحقل
                                         </button>
+                                    </div>
+                                )}
+                                {errorMsg && (
+                                    <div className="text-red-500 text-[10px] font-bold bg-red-50 p-1.5 rounded-md mt-1 animate-in fade-in zoom-in slide-in-from-top-1">
+                                        {errorMsg}
                                     </div>
                                 )}
                             </div>

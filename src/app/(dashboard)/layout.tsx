@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -20,7 +21,8 @@ import {
   Banknote,
   ListTodo,
   Megaphone,
-  LocateFixed
+  LocateFixed,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
@@ -71,8 +73,14 @@ function Sidebar({
   setIsOpen: (v: boolean) => void;
 }) {
   const pathname = usePathname();
-  const { isRTL } = useLanguage();
+  const router = useRouter();
+  const { t, isRTL } = useLanguage();
   const groups = useNav();
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
     <>
@@ -141,6 +149,17 @@ function Sidebar({
             </div>
           ))}
         </nav>
+
+        {/* Bottom Actions */}
+        <div className="px-3 pb-3 space-y-2 border-t border-[#f5f5f5] pt-4">
+          <button
+            onClick={handleSignOut}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[14px] text-red-600 hover:bg-red-50 transition-colors"
+          >
+            <LogOut className="w-[18px] h-[18px] shrink-0" />
+            <span className="truncate">{isRTL ? "تسجيل الخروج" : "Sign Out"}</span>
+          </button>
+        </div>
 
         {/* Collapse chevron (decorative on desktop — functional for mobile close) */}
         <div className="px-4 pb-4">
