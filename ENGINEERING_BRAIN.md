@@ -51,9 +51,13 @@
 - [ ] Real-time Attendance Live-view Notification
 
 ## DECISIONS LOG
-- **2026-04-14**: Switched to `@supabase/ssr` for better Next.js 15+ compatibility.
+- **2026-04-14**: Switched to `@supabase/ssr` for better Next.js 15+ compatibility and cookie-based auth.
+- **2026-04-14**: Redesigned dashboard to **Notion-style Minimalist Workspace** for professional clarity.
+- **2026-04-14**: Implemented `LanguageProvider` for instant RTL/LTR switching across all dashboard components.
+- **2026-04-14**: Added `telegram_token` support to allows multi-tenant bot ownership.
 - **2026-04-14**: Implemented `force-dynamic` on Telegram webhook to ensure reliability on Vercel.
 - **2026-04-14**: Added `onboarding_step` to `companies` to prevent users from skipping the activation flow.
 
 ## CHANGE LOG
+- **v1.1.0**: Major UI overhaul (Notion Style), Cookie-based Auth, and multi-tenant bot support.
 - **v1.0.0**: Initial release of SyncTime SaaS.
