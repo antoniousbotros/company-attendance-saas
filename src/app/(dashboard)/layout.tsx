@@ -17,7 +17,8 @@ import {
   X,
   ChevronLeft,
   Languages,
-  Banknote
+  Banknote,
+  ListTodo
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
@@ -49,7 +50,8 @@ function useNav(): NavGroup[] {
       label: t.manage,
       items: [
         { name: t.employees, href: "/employees", icon: Users },
-        { name: (t as any).payroll, href: "/payroll", icon: CreditCard }, // Using CreditCard or another icon
+        { name: (t as any).tasks || "Tasks", href: "/tasks", icon: ListTodo },
+        { name: (t as any).payroll, href: "/payroll", icon: CreditCard },
         { name: t.billing, href: "/billing", icon: CreditCard },
         { name: t.settings, href: "/settings", icon: SettingsIcon },
       ],

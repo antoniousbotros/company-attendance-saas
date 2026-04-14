@@ -23,12 +23,14 @@ const getMainMenu = (enableGeofencing: boolean) => {
   if (enableGeofencing) {
     return Markup.keyboard([
       [Markup.button.locationRequest("📍 Send Location (Check In / Out)")],
-      ["📊 My Attendance", "ℹ️ Help"]
+      ["📊 My Attendance", "📝 My Tasks"],
+      ["ℹ️ Help"]
     ]).resize();
   }
   return Markup.keyboard([
     ["✅ Check In", "🚪 Check Out"],
-    ["📊 My Attendance", "ℹ️ Help"]
+    ["📊 My Attendance", "📝 My Tasks"],
+    ["ℹ️ Help"]
   ]).resize();
 };
 
@@ -292,6 +294,72 @@ export async function POST(req: NextRequest) {
       table += "</pre>";
 
       return ctx.replyWithHTML(table, getMainMenu(employee.companies.enable_geofencing));
+    });
+
+    bot.hears("📝 My Tasks", async (ctx) => {
+      const userId = ctx.from.id;
+      const { data: employee } = await supabaseAdmin
+        .from("employees")
+        .select("*, companies(*)")
+        .eq("telegram_user_id", userId)
+        .single();
+
+      if (!employee) return ctx.reply("Please link your account first.");
+
+      const { data: tasks } = await supabaseAdmin
+        .from("tasks")
+        .select("*")
+        .eq("employee_id", employee.id)
+        .in("status", ["pending", "late"])
+        .order("due_date", { ascending: true });
+
+      if (!tasks || tasks.length === 0) {
+        return ctx.reply("🎉 You have no pending tasks! Great job.", getMainMenu(employee.companies.enable_geofencing));
+      }
+
+      await ctx.reply(`You have ${tasks.length} active tasks:`);
+
+      for (const task of tasks) {
+        const buttons = [];
+        if (task.link) {
+          buttons.push(Markup.button.url("🔗 Open Link", task.link));
+        }
+        buttons.push(Markup.button.callback("✅ Mark as Done", `task_done_${task.id}`));
+
+        const dueDate = new Date(task.due_date).toDateString();
+        const msg = `📌 <b>${task.title}</b>\n\n${task.description ? task.description + "\n\n" : ""}⏳ Due: ${dueDate}\n⚠️ Status: ${task.status === "late" ? "🔴 LATE" : "🟡 PENDING"}`;
+        
+        await ctx.replyWithHTML(msg, Markup.inlineKeyboard([buttons]));
+      }
+    });
+
+    bot.on("callback_query", async (ctx: any) => {
+      const cbq = ctx.callbackQuery;
+      const data = cbq.data;
+
+      if (data && data.startsWith("task_done_")) {
+        const taskId = data.replace("task_done_", "");
+        const userId = ctx.from.id;
+        
+        const { data: employee } = await supabaseAdmin.from("employees").select("id").eq("telegram_user_id", userId).single();
+        if(!employee) return ctx.answerCbQuery("Not authorized.");
+
+        // verify ownership & mark done
+        const { data: task } = await supabaseAdmin.from("tasks").select("*").eq("id", taskId).eq("employee_id", employee.id).single();
+        if (!task) return ctx.answerCbQuery("Task not found or not yours.");
+
+        if (task.status === "completed") {
+           return ctx.answerCbQuery("Task already completed!");
+        }
+
+        await supabaseAdmin
+          .from("tasks")
+          .update({ status: "completed", completed_at: new Date().toISOString() })
+          .eq("id", taskId);
+
+        await ctx.answerCbQuery("Task marked as completed! ✅");
+        await ctx.editMessageText(`✅ <b>COMPLETED:</b> ${task.title}\n\nGood work!`, { parse_mode: "HTML" });
+      }
     });
 
     bot.on("text", async (ctx) => {

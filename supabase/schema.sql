@@ -151,3 +151,24 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- TASKS MODULE
+CREATE TABLE IF NOT EXISTS public.tasks (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    description TEXT,
+    link TEXT,
+    due_date DATE NOT NULL,
+    status TEXT CHECK (status IN ('pending', 'completed', 'late')) DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+ALTER TABLE public.tasks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Owners can view tasks of their company" ON public.tasks;
+CREATE POLICY "Owners can view tasks of their company" ON public.tasks 
+    FOR ALL USING (
+        company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
+    );
