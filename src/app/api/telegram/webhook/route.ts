@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { Telegraf, Markup } from "telegraf";
+import ExcelJS from "exceljs";
 
 export const dynamic = 'force-dynamic';
 
@@ -375,9 +376,29 @@ export async function POST(req: NextRequest) {
       // 3. Fetch custom fields mapped for this team
       const { data: fields } = await supabaseAdmin.from("custom_fields").select("id, label").eq("team_id", membership.team_id).order("order_index", { ascending: true });
       
-      // 4. Construct CSV Structure
-      const fieldHeaders = fields ? fields.map(f => `"${f.label.replace(/"/g, '""')}"`) : [];
-      let csvContent = `\uFEFFDate,Time,Employee,${fieldHeaders.join(",")},Notes,LocationLink\n`; // Add BOM for excel Arabic support
+      // 4. Construct Excel Structure
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Team Reports', { views: [{ rightToLeft: lang === 'ar' }] });
+
+      const columns = [
+        { header: 'Date', key: 'date', width: 15 },
+        { header: 'Time', key: 'time', width: 12 },
+        { header: 'Employee', key: 'employee', width: 25 },
+      ];
+      
+      if (fields) {
+        fields.forEach(f => columns.push({ header: f.label, key: f.id, width: 20 }));
+      }
+      columns.push({ header: 'Notes', key: 'notes', width: 40 });
+      columns.push({ header: 'Location Link', key: 'location', width: 30 });
+
+      worksheet.columns = columns;
+
+      // Style Header
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { name: 'Arial', family: 4, size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+      headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F4E79' } };
+      headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
       reports.forEach((r: any) => {
           const d = new Date(r.created_at);
@@ -385,28 +406,43 @@ export async function POST(req: NextRequest) {
           const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
           const empData: any = r.employees;
           const rawName = Array.isArray(empData) ? empData[0]?.name : empData?.name;
-          const empName = `"${(rawName || 'Unknown').replace(/"/g, '""')}"`;
+          const empName = rawName || 'Unknown';
           
           const valsMap: Record<string, string> = {};
           if (r.report_values) {
               r.report_values.forEach((v: any) => { valsMap[v.field_id] = v.value; });
           }
 
-          const fieldVals = fields ? fields.map(f => {
-              const val = valsMap[f.id] || "";
-              return `"${val.replace(/"/g, '""')}"`;
-          }) : [];
+          const rowData: any = {
+             date: dateStr,
+             time: timeStr,
+             employee: empName,
+             notes: r.notes || "",
+          };
 
-          const notes = `"${(r.notes || "").replace(/"/g, '""')}"`;
-          const mapLink = r.location_lat ? `"https://www.google.com/maps?q=${r.location_lat},${r.location_lng}"` : '""';
+          if (fields) {
+             fields.forEach(f => {
+                rowData[f.id] = valsMap[f.id] || "";
+             });
+          }
 
-          csvContent += `${dateStr},${timeStr},${empName},${fieldVals.join(",")},${notes},${mapLink}\n`;
+          const mapLink = r.location_lat ? `https://www.google.com/maps?q=${r.location_lat},${r.location_lng}` : "";
+          
+          const row = worksheet.addRow(rowData);
+          row.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+          
+          if (mapLink) {
+             row.getCell('location').value = { text: 'View Map', hyperlink: mapLink };
+             row.getCell('location').font = { color: { argb: 'FF0563C1' }, underline: true };
+          } else {
+             row.getCell('location').value = "-";
+          }
       });
 
-      const buffer = Buffer.from(csvContent, "utf8");
+      const buffer = await workbook.xlsx.writeBuffer();
       
       await ctx.reply(lang === 'ar' ? `📊 تم سحب ${reports.length} تقارير من فريق ${teamName}. يتم توليد الملف...` : `📊 Fetched ${reports.length} reports for ${teamName}. Generating file...`);
-      return ctx.replyWithDocument({ source: buffer, filename: `Team_Reports_${new Date().toISOString().split("T")[0]}.csv` });
+      return ctx.replyWithDocument({ source: Buffer.from(buffer), filename: `Team_Reports_${new Date().toISOString().split("T")[0]}.xlsx` });
     });
 
     // SALES TRACKING HOOK
