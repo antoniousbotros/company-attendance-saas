@@ -9,6 +9,25 @@ export async function middleware(request: NextRequest) {
   });
 
   const url = request.nextUrl.clone();
+  const hostname = request.headers.get("host") || "";
+
+  // 1. Subdomain Check: sadmin.yawmy.app or sadmin.localhost
+  if (hostname.startsWith("sadmin.")) {
+    // If they are not already accessing the /sadmin path under the hood
+    if (!url.pathname.startsWith("/sadmin")) {
+      url.pathname = `/sadmin${url.pathname === "/" ? "" : url.pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
+  // 2. Protect Sadmin Routes
+  if (url.pathname.startsWith("/sadmin") && !url.pathname.startsWith("/sadmin/login")) {
+    const sadminSession = request.cookies.get("sadmin_session");
+    if (!sadminSession) {
+      url.pathname = "/sadmin/login";
+      return NextResponse.redirect(url);
+    }
+  }
 
   // Basic check to see if we have URLs
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
