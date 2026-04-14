@@ -174,9 +174,11 @@ export async function POST(req: NextRequest) {
 
         if (error) return ctx.reply(lang === 'ar' ? "حدث خطأ. يرجى المحاولة." : "Error recording attendance. Please try again.");
         
+        const timeStr = now.toLocaleTimeString("en-US", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: true });
+
         const inMsg = lang === 'ar'
-          ? `✅ تم تسجيل الحضور الساعة ${now.toLocaleTimeString()}.${isLate ? `\n⚠️ لقد تأخرت ${lateMins} دقيقة.` : ""}`
-          : `✅ Checked In at ${now.toLocaleTimeString()}.${isLate ? `\n⚠️ You are ${lateMins} minutes late.` : ""}`;
+          ? `✅ تم تسجيل الحضور الساعة ${timeStr}.${isLate ? `\n⚠️ لقد تأخرت ${lateMins} دقيقة.` : ""}`
+          : `✅ Checked In at ${timeStr}.${isLate ? `\n⚠️ You are ${lateMins} minutes late.` : ""}`;
         
         return ctx.reply(inMsg);
       }
@@ -197,9 +199,11 @@ export async function POST(req: NextRequest) {
 
         if (error) return ctx.reply(lang === 'ar' ? "حدث خطأ. يرجى المحاولة." : "Error recording checkout. Please try again.");
         
+        const timeStr = now.toLocaleTimeString("en-US", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: true });
+
         const outMsg = lang === 'ar'
-          ? `🚪 تم تسجيل الانصراف الساعة ${now.toLocaleTimeString()}.\nإجمالي الساعات: ${diffHours}h`
-          : `🚪 Checked Out at ${now.toLocaleTimeString()}.\nTotal hours: ${diffHours}h`;
+          ? `🚪 تم تسجيل الانصراف الساعة ${timeStr}.\nإجمالي الساعات: ${diffHours}h`
+          : `🚪 Checked Out at ${timeStr}.\nTotal hours: ${diffHours}h`;
 
         return ctx.reply(outMsg);
       }
@@ -257,9 +261,10 @@ export async function POST(req: NextRequest) {
       const today = new Date().toISOString().split("T")[0];
       const { data: attendance } = await supabaseAdmin.from("attendance").select("*").eq("employee_id", employee.id).eq("date", today).single();
       if (attendance && attendance.check_in) {
+        const timeStr = new Date(attendance.check_in).toLocaleTimeString("en-US", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: true });
         return ctx.reply(lang === 'ar' 
-          ? `لقد سجلت الحضور اليوم الساعة ${new Date(attendance.check_in).toLocaleTimeString()}.`
-          : `You already checked in today at ${new Date(attendance.check_in).toLocaleTimeString()}.`);
+          ? `لقد سجلت الحضور اليوم الساعة ${timeStr}.`
+          : `You already checked in today at ${timeStr}.`);
       }
 
       await processAttendance(ctx, employee);
@@ -283,9 +288,12 @@ export async function POST(req: NextRequest) {
       const { data: attendance } = await supabaseAdmin.from("attendance").select("*").eq("employee_id", employee.id).eq("date", today).single();
       
       if (!attendance || !attendance.check_in) return ctx.reply(lang === 'ar' ? "لم تقم بتسجيل الحضور بعد!" : "You haven't checked in yet today!");
-      if (attendance.check_out) return ctx.reply(lang === 'ar' 
-        ? `لقد سجلت الانصراف مسبقاً الساعة ${new Date(attendance.check_out).toLocaleTimeString()}.`
-        : `You already checked out today at ${new Date(attendance.check_out).toLocaleTimeString()}.`);
+      if (attendance.check_out) {
+        const timeStr = new Date(attendance.check_out).toLocaleTimeString("en-US", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: true });
+        return ctx.reply(lang === 'ar' 
+          ? `لقد سجلت الانصراف مسبقاً الساعة ${timeStr}.`
+          : `You already checked out today at ${timeStr}.`);
+      }
 
       await processAttendance(ctx, employee);
     });
@@ -318,9 +326,7 @@ export async function POST(req: NextRequest) {
       const formatTime = (iso: string | null) => {
         if (!iso) return " -   ";
         const d = new Date(iso);
-        let h = d.getHours();
-        const m = d.getMinutes().toString().padStart(2, "0");
-        return `${h.toString().padStart(2, "0")}:${m}`;
+        return d.toLocaleTimeString("en-US", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: false });
       };
 
       const formatStatus = (s: string) => {
