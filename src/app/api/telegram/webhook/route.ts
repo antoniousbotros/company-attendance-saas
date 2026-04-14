@@ -237,6 +237,10 @@ export async function POST(req: NextRequest) {
       await processAttendance(ctx, employee);
     });
 
+    bot.hears("📍 Send Location (Check In / Out)", async (ctx) => {
+      return ctx.reply("⚠️ Your device does not support automatic location buttons (common on Desktop/Web Telegram).\n\nPlease click the 📎 Paperclip icon next to the chat box and send your 'Location' manually.");
+    });
+
     bot.hears("📊 My Attendance", async (ctx) => {
       const userId = ctx.from.id;
       
