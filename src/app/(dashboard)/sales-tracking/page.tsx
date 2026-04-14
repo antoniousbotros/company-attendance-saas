@@ -287,18 +287,30 @@ function TeamCard({ team, fields, onFieldsChange }: { team: Team, fields: Field[
 
     const handleAddField = async () => {
         if (!newLabel.trim()) return;
-        const { data } = await supabase.from("custom_fields").insert({
-            team_id: team.id,
-            label: newLabel,
-            field_type: newType,
-            order_index: localFields.length
-        }).select().single();
         
-        if (data) {
-            const next = [...localFields, data];
-            setLocalFields(next);
-            onFieldsChange(next);
-            setNewLabel("");
+        try {
+            const { data, error } = await supabase.from("custom_fields").insert({
+                team_id: team.id,
+                label: newLabel,
+                field_type: newType,
+                order_index: localFields.length
+            }).select().single();
+            
+            if (error) {
+                console.error("Supabase Error adding field:", error);
+                alert("تعذر حفظ الحقل المخصص. تأكد من اتصالك بالإنترنت وأن لديك صلاحية: " + error.message);
+                return;
+            }
+            
+            if (data) {
+                const next = [...localFields, data];
+                setLocalFields(next);
+                onFieldsChange(next);
+                setNewLabel("");
+            }
+        } catch (err) {
+            console.error("Network or Syntax Error adding field:", err);
+            alert("حدث خطأ غير متوقع.");
         }
     };
 
