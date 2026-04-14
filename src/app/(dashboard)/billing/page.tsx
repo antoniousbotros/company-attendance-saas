@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
 import { CheckCircle2 } from "lucide-react";
 import { PLANS, calculateExtraCosts } from "@/lib/billing";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -16,17 +17,35 @@ import {
 export default function BillingPage() {
   const { t, isRTL } = useLanguage();
 
-  // Mock data for demo — wire up once subscription queries land.
-  // Lazy initializer so Date.now() is called once at mount, not during render.
-  const [company] = useState(() => {
+  const [loading, setLoading] = useState(true);
+  const [currency, setCurrency] = useState("EGP");
+  const [employeeCount, setEmployeeCount] = useState(0);
+
+  // We fall back to a local generated trial if no backend payment system exists
+  const [company, setCompany] = useState(() => {
     const trial_ends_at = new Date(Date.now() + 86400000 * 10).toISOString();
     return {
       plan_id: "growth",
       subscription_status: "trialing",
       trial_ends_at,
-      employee_count: 55,
     };
   });
+
+  useEffect(() => {
+    async function loadBilling() {
+       const { data: { user } } = await supabase.auth.getUser();
+       if (!user) return;
+       const { data: comp } = await supabase.from("companies").select("id, currency").eq("owner_id", user.id).single();
+       if (comp) {
+          setCurrency(comp.currency || "EGP");
+          const { count } = await supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", comp.id);
+          setEmployeeCount(count || 0);
+       }
+       setLoading(false);
+    }
+    loadBilling();
+  }, []);
+
   const [daysLeft] = useState(() =>
     Math.max(
       0,
@@ -38,15 +57,15 @@ export default function BillingPage() {
 
   const currentPlan = PLANS[company.plan_id as keyof typeof PLANS];
   const extraCost = calculateExtraCosts(
-    company.employee_count,
+    employeeCount,
     company.plan_id
   );
   const trialProgress = Math.min(100, ((14 - daysLeft) / 14) * 100);
 
   const extraCount = Math.max(
     0,
-    company.employee_count -
-      (currentPlan.employeeLimit === Infinity ? company.employee_count : currentPlan.employeeLimit)
+    employeeCount -
+      (currentPlan.employeeLimit === Infinity ? employeeCount : currentPlan.employeeLimit)
   );
   const limitLabel =
     currentPlan.employeeLimit === Infinity ? "∞" : currentPlan.employeeLimit;
@@ -59,9 +78,9 @@ export default function BillingPage() {
         isRTL={isRTL}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         {/* Current plan */}
-        <SectionCard className="lg:col-span-2">
+        <SectionCard>
           <div
             className={cn(
               "flex items-start justify-between mb-6",
@@ -76,7 +95,7 @@ export default function BillingPage() {
                 {currentPlan.name}
               </p>
               <p className="text-sm text-[#6b7280] mt-1">
-                {currentPlan.price} EGP / month
+                {currentPlan.price} {currency} / {isRTL ? "شهر" : "month"}
               </p>
             </div>
             <StatusPill
@@ -139,53 +158,13 @@ export default function BillingPage() {
             )}
           >
             <p className="text-sm text-[#6b7280] max-w-sm">
-              Upgrade to continue using premium features and raise your
-              employee limit.
+              {isRTL ? "قم بالترقية الآن للوصول إلى ميزات إضافية ورفع الحد الأقصى لعدد الموظفين." : "Upgrade to continue using premium features and raise your employee limit."}
             </p>
             <PrimaryButton>{t.upgradePlan}</PrimaryButton>
           </div>
         </SectionCard>
 
-        {/* Invoices */}
-        <SectionCard>
-          <div
-            className={cn(
-              "flex items-center justify-between mb-4",
-              isRTL && "flex-row-reverse"
-            )}
-          >
-            <h3 className="text-sm font-bold text-[#111]">
-              {t.recentInvoices}
-            </h3>
-          </div>
-          <div className="divide-y divide-[#f1f1f1]">
-            {[1, 2].map((i) => (
-              <div
-                key={i}
-                className={cn(
-                  "flex items-center justify-between py-3",
-                  isRTL && "flex-row-reverse"
-                )}
-              >
-                <div>
-                  <p className="text-sm font-semibold text-[#111]">
-                    Inv #00{i}-24
-                  </p>
-                  <p className="text-xs text-[#9ca3af]">Oct 12, 2023</p>
-                </div>
-                <div className={cn("text-right", isRTL && "text-left")}>
-                  <p className="text-sm font-bold text-[#111]">
-                    {currentPlan.price} EGP
-                  </p>
-                  <StatusPill label={t.paid} tone="success" className="mt-1" />
-                </div>
-              </div>
-            ))}
-          </div>
-          <button className="mt-4 text-sm font-medium text-[#ff5a00] hover:underline">
-            {t.viewAllHistory}
-          </button>
-        </SectionCard>
+
       </div>
 
       {/* Usage */}
@@ -197,7 +176,7 @@ export default function BillingPage() {
               {t.totalEmployeesLabel}
             </p>
             <p className="text-[28px] font-bold text-[#111]">
-              {company.employee_count}
+              {loading ? "..." : employeeCount}
             </p>
             <p className="text-xs text-[#9ca3af] mt-1">
               {t.planLimit}: {limitLabel}
@@ -215,7 +194,7 @@ export default function BillingPage() {
               {t.estimatedAddon}
             </p>
             <p className="text-[28px] font-bold text-[#ff5a00]">
-              {extraCost} EGP
+              +{extraCost} {currency}
             </p>
             <p className="text-xs text-[#9ca3af] mt-1">{t.nextBill}</p>
           </SectionCard>
