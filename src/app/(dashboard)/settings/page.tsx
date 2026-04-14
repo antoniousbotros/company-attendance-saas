@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
+  Clock,
+  Timer
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -69,6 +71,9 @@ export default function SettingsPage() {
     name: "",
     telegram_token: "",
     bot_name: "",
+    work_start_time: "09:00",
+    work_end_time: "17:00",
+    late_threshold: 15
   });
   const [message, setMessage] = useState<{
     type: "success" | "error" | "";
@@ -94,6 +99,9 @@ export default function SettingsPage() {
           name: data.name || "",
           telegram_token: data.telegram_token || "",
           bot_name: data.bot_name || "",
+          work_start_time: data.work_start_time || "09:00",
+          work_end_time: data.work_end_time || "17:00",
+          late_threshold: data.late_threshold || 15
         });
       }
       setLoading(false);
@@ -109,10 +117,6 @@ export default function SettingsPage() {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) {
-      setSaving(false);
-      return;
-    }
 
     const { error } = await supabase
       .from("companies")
@@ -120,147 +124,197 @@ export default function SettingsPage() {
         name: formData.name,
         telegram_token: formData.telegram_token,
         bot_name: formData.bot_name,
+        work_start_time: formData.work_start_time,
+        work_end_time: formData.work_end_time,
+        late_threshold: formData.late_threshold
       })
-      .eq("owner_id", user.id);
+      .eq("owner_id", user?.id);
 
     if (error) {
       setMessage({ type: "error", text: error.message });
     } else {
-      setMessage({ type: "success", text: t.saved });
+      setMessage({
+        type: "success",
+        text: isRTL ? "تم حفظ الإعدادات بنجاح!" : "Settings saved successfully!",
+      });
     }
     setSaving(false);
   };
 
-  if (loading) {
+  if (loading)
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 border-2 border-[#ff5a00] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#ff5a00] border-t-transparent rounded-full animate-spin" />
       </div>
     );
-  }
-
-  const inputBase =
-    "w-full h-11 px-4 rounded-md bg-white border border-[#eeeeee] text-sm text-[#111] outline-none focus:border-[#ffd4b8] focus:ring-2 focus:ring-[#ff5a00]/10 transition-all";
 
   return (
-    <div className="space-y-8 max-w-3xl">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl">
       <PageHeader
-        title={t.settingsTitle}
-        subtitle={t.settingsSubtitle}
-        isRTL={isRTL}
+        title={isRTL ? "الإعدادات" : "Settings"}
+        description={
+          isRTL
+            ? "إدارة هوية شركتك، إعدادات البوت، وسياسات الحضور"
+            : "Manage your company identity, bot settings, and attendance policies"
+        }
       />
 
       {message.text && (
         <div
           className={cn(
-            "rounded-md border px-4 py-3 flex items-center gap-2 text-sm",
+            "p-4 rounded-xl flex items-center gap-3 mb-8 animate-in zoom-in duration-300",
             message.type === "success"
-              ? "bg-[#e6f6ec] border-[#c9ecd2] text-[#1e8e3e]"
-              : "bg-[#fef1f1] border-[#f5cccc] text-[#b91c1c]"
+              ? "bg-[#f0fdf4] text-[#166534] border border-[#dcfce7]"
+              : "bg-[#fef2f2] text-[#991b1b] border border-[#fee2e2]"
           )}
         >
           {message.type === "success" ? (
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
           ) : (
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
           )}
-          <span className="font-medium">{message.text}</span>
+          <span className="font-semibold text-sm">{message.text}</span>
         </div>
       )}
 
-      <form onSubmit={handleSave} className="space-y-6">
-        <SectionCard padding="lg">
+      <form onSubmit={handleSave} className="space-y-8 pb-20">
+        {/* Company Identity */}
+        <SectionCard>
           <SectionHeader
             icon={Building2}
-            title={t.companyIdentity}
-            subtitle={t.basics}
+            title={isRTL ? "هوية الشركة" : "Company Identity"}
+            subtitle={isRTL ? "المعلومات الأساسية للنشاط" : "Basic business information"}
           />
-          <Field label={t.companyName}>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) =>
-                setFormData({ ...formData, name: e.target.value })
-              }
-              className={inputBase}
-              placeholder="e.g. Acme Corp"
-            />
-          </Field>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Field label={isRTL ? "اسم الشركة" : "Company Name"}>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                placeholder="e.g. Acme Corp"
+              />
+            </Field>
+          </div>
         </SectionCard>
 
-        <SectionCard padding="lg">
+        {/* Attendance Policy */}
+        <SectionCard>
+          <SectionHeader
+            icon={Clock}
+            title={isRTL ? "سياسة الحضور" : "Attendance Policy"}
+            subtitle={isRTL ? "حدد مواعيد العمل وقواعد التأخير" : "Define work hours and late rules"}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Field label={isRTL ? "بداية العمل" : "Work Start"}>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                <input
+                  type="time"
+                  value={formData.work_start_time}
+                  onChange={(e) =>
+                    setFormData({ ...formData, work_start_time: e.target.value })
+                  }
+                  className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                />
+              </div>
+            </Field>
+            <Field label={isRTL ? "نهاية العمل" : "Work End"}>
+              <div className="relative">
+                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                <input
+                  type="time"
+                  value={formData.work_end_time}
+                  onChange={(e) =>
+                    setFormData({ ...formData, work_end_time: e.target.value })
+                  }
+                  className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                />
+              </div>
+            </Field>
+            <Field label={isRTL ? "مهلة التأخير (دقائق)" : "Late Threshold (Min)"}>
+              <div className="relative">
+                <Timer className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af]" />
+                <input
+                  type="number"
+                  value={formData.late_threshold}
+                  onChange={(e) =>
+                    setFormData({ ...formData, late_threshold: parseInt(e.target.value) })
+                  }
+                  className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                />
+              </div>
+            </Field>
+          </div>
+        </SectionCard>
+
+        {/* Telegram Integration */}
+        <SectionCard className="relative overflow-hidden">
           <SectionHeader
             icon={Bot}
-            title={t.telegramIntegration}
-            subtitle={t.botConnection}
+            title={isRTL ? "إعدادات تليجرام" : "Telegram Integration"}
+            subtitle={isRTL ? "ربط بوت الحضور والتواصل" : "Bot connection and messaging"}
           />
-
-          <div className="space-y-5">
-            <Field label={t.botName}>
+          <div className="space-y-8 relative z-10">
+            <Field label={isRTL ? "اسم البوت (اختياري)" : "Bot Name (Optional)"}>
               <input
                 type="text"
                 value={formData.bot_name}
                 onChange={(e) =>
                   setFormData({ ...formData, bot_name: e.target.value })
                 }
-                className={inputBase}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
                 placeholder="@SyncTimeBot"
               />
             </Field>
 
-            <Field label={t.botToken} hint={t.botTokenHint}>
+            <Field
+              label={isRTL ? "رمز البوت (Token)" : "Telegram Bot Token"}
+              hint={
+                isRTL
+                  ? "احصل عليه من @BotFather في تليجرام. لا تشاركه مع أي شخص."
+                  : "Get this from @BotFather on Telegram. Never share it."
+              }
+            >
               <input
                 type="password"
                 value={formData.telegram_token}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    telegram_token: e.target.value,
-                  })
+                  setFormData({ ...formData, telegram_token: e.target.value })
                 }
-                className={cn(inputBase, "font-mono")}
+                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors font-mono"
                 placeholder="123456789:ABCDefgh..."
               />
             </Field>
 
             {formData.telegram_token && (
-              <div
-                className={cn(
-                  "flex items-center justify-between rounded-md border border-[#ffd4b8] bg-[#fff1e8] px-4 py-3",
-                  isRTL && "flex-row-reverse"
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex items-center gap-2 text-[#ff5a00]",
-                    isRTL && "flex-row-reverse"
-                  )}
-                >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wider">
-                    {t.securelyEncrypted}
+              <div className="bg-[#fff1e8] p-4 rounded-xl border border-[#fee2e2] flex items-center justify-between">
+                <div className="flex items-center gap-3 text-[#ff5a00]">
+                  <ShieldCheck className="w-5 h-5" />
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    {isRTL ? "اتصال مشفر وآمن" : "Securely Encrypted"}
                   </span>
                 </div>
-                <StatusPill label={t.ready} tone="success" />
+                <StatusPill status="success" text={isRTL ? "جاهز" : "Linked"} />
               </div>
             )}
           </div>
         </SectionCard>
 
-        <div
-          className={cn(
-            "flex items-center justify-end gap-2",
-            isRTL && "flex-row-reverse"
-          )}
-        >
-          <button
-            type="button"
-            className="h-10 px-4 text-sm font-medium text-[#4b5563] hover:text-[#111] hover:bg-white rounded-md transition-colors"
+        <div className="flex justify-end pt-4 gap-4">
+          <PrimaryButton
+            type="submit"
+            disabled={saving}
+            className="px-12 h-14 rounded-xl font-bold text-base bg-[#ff5a00] hover:bg-[#e65100]"
           >
-            {t.cancel}
-          </button>
-          <PrimaryButton type="submit" icon={Save} disabled={saving}>
-            {saving ? "…" : t.saveChanges}
+            {saving ? (
+              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Save className="w-5 h-5" />
+            )}
+            {isRTL ? "حفظ التغييرات" : "Save Settings"}
           </PrimaryButton>
         </div>
       </form>

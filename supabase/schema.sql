@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS public.companies (
     current_period_end TIMESTAMP WITH TIME ZONE,
     telegram_token TEXT,
     bot_name TEXT,
+    work_start_time TIME DEFAULT '09:00',
+    work_end_time TIME DEFAULT '17:00',
+    late_threshold INTEGER DEFAULT 15,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
