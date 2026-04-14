@@ -162,6 +162,7 @@ CREATE TABLE IF NOT EXISTS public.tasks (
     link TEXT,
     due_date DATE NOT NULL,
     status TEXT CHECK (status IN ('pending', 'completed', 'late')) DEFAULT 'pending',
+    employee_submission TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     completed_at TIMESTAMP WITH TIME ZONE
 );

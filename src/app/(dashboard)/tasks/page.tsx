@@ -15,6 +15,7 @@ type Task = {
   link: string;
   due_date: string;
   status: "pending" | "late" | "completed";
+  employee_submission?: string | null;
   created_at: string;
   employees: { name: string };
 };
@@ -179,6 +180,16 @@ export default function TasksPage() {
                         <span className="font-bold text-[#111] text-sm">{t.title}</span>
                         {t.description && <span className="text-xs text-[#6b7280] truncate w-full">{t.description}</span>}
                         {t.link && <a href={t.link} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-[#0284c7] hover:underline flex items-center gap-1 mt-1"><LinkIcon className="w-3 h-3"/> {isRTL ? "افتح المستند" : "Open Link"}</a>}
+                        {t.employee_submission && (
+                          <div className={cn("mt-2 p-2 rounded border border-[#bae6fd] bg-[#f0f9ff] text-[#0369a1] text-[11px] font-medium leading-relaxed w-full", isRTL && "text-end")}>
+                            <span className="font-bold opacity-80 block mb-0.5">{isRTL ? "ملاحظات الموظف / الرابط:" : "Employee's Note / Link:"}</span>
+                            {t.employee_submission.startsWith("http") ? (
+                              <a href={t.employee_submission} target="_blank" rel="noreferrer" className="underline hover:text-[#0284c7]">{t.employee_submission}</a>
+                            ) : (
+                              <span>{t.employee_submission}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">

@@ -352,18 +352,41 @@ export async function POST(req: NextRequest) {
            return ctx.answerCbQuery("Task already completed!");
         }
 
-        await supabaseAdmin
-          .from("tasks")
-          .update({ status: "completed", completed_at: new Date().toISOString() })
-          .eq("id", taskId);
-
-        await ctx.answerCbQuery("Task marked as completed! ✅");
-        await ctx.editMessageText(`✅ <b>COMPLETED:</b> ${task.title}\n\nGood work!`, { parse_mode: "HTML" });
+        await ctx.answerCbQuery();
+        await ctx.reply(`📝 Please reply to this exact message with any notes or links for your work.\n\nTask UUID: ${task.id}\n\n(If you have no notes, just type "done")`, {
+          reply_markup: { force_reply: true }
+        });
       }
     });
 
     bot.on("text", async (ctx) => {
       const telegramUserId = ctx.from.id;
+      
+      const replyToMsg = ctx.message.reply_to_message;
+      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("Task UUID: ")) {
+        const match = replyToMsg.text.match(/Task UUID:\s*([a-f0-9\-]{36})/);
+        if (match) {
+          const taskId = match[1];
+          const text = ctx.message.text.trim().toLowerCase();
+          const userNote = (text === "done" || text === "skip") ? null : ctx.message.text;
+
+          const { data: employee } = await supabaseAdmin.from("employees").select("*").eq("telegram_user_id", telegramUserId).single();
+          if(!employee) return ctx.reply("Not authorized.");
+
+          const { data: task } = await supabaseAdmin.from("tasks").select("*").eq("id", taskId).eq("employee_id", employee.id).single();
+          
+          if (!task) return ctx.reply("Task not found or not yours.");
+          if (task.status === "completed") return ctx.reply("Task is already completed!");
+
+          await supabaseAdmin
+            .from("tasks")
+            .update({ status: "completed", completed_at: new Date().toISOString(), employee_submission: userNote })
+            .eq("id", taskId);
+
+          return ctx.reply(`✅ <b>COMPLETED:</b> ${task.title}\n${userNote ? `<i>Note attached: ${userNote}</i>` : 'Good work!'}`, { parse_mode: "HTML" });
+        }
+      }
+
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).single();
 
       if (!employee) {
