@@ -7,12 +7,14 @@ export const translations = {
     manage: "Manage your business",
 
     // Nav items
+    // Nav items
     overview: "Dashboard",
     attendance: "Attendance History",
     reports: "Reports",
     employees: "Employees",
     billing: "Payments",
     payroll: "Payroll",
+    tasks: "Tasks",
     settings: "Settings",
 
     // Header
@@ -155,6 +157,7 @@ export const translations = {
     employees: "الموظفين",
     billing: "المدفوعات",
     payroll: "كشف الرواتب",
+    tasks: "المهام",
     settings: "الإعدادات",
 
     helpCenter: "مركز المساعدة",

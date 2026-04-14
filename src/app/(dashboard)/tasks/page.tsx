@@ -112,17 +112,17 @@ export default function TasksPage() {
 
             <div className={isRTL ? "text-end" : "text-start"}>
                 <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "عنوان المهمة *" : "Task Title *"}</label>
-                <input type="text" required placeholder={isRTL ? "مثال: مراجعة الميزانية" : "e.g., Audit Q1 Financials"} value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none" />
+                <input type="text" required dir="auto" placeholder={isRTL ? "مثال: مراجعة الميزانية" : "e.g., Audit Q1 Financials"} value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none" />
             </div>
 
             <div className={isRTL ? "text-end" : "text-start"}>
                 <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "تفاصيل إضافية (اختياري)" : "Description (Optional)"}</label>
-                <input type="text" value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none" />
+                <input type="text" dir="auto" value={form.description} onChange={e => setForm({...form, description: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none" />
             </div>
 
             <div className={isRTL ? "text-end" : "text-start"}>
                 <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "رابط ملف أو مستند (اختياري)" : "Resource Link (Optional)"}</label>
-                <input type="url" placeholder="https://" value={form.link} onChange={e => setForm({...form, link: e.target.value})} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none" />
+                <input type="url" dir="ltr" placeholder="https://" value={form.link} onChange={e => setForm({...form, link: e.target.value})} className={cn("w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none", isRTL && "text-end")} />
             </div>
 
             <div className={cn("flex pt-2", isRTL && "justify-end")}>
@@ -136,9 +136,9 @@ export default function TasksPage() {
         <div className={cn("p-5 border-b border-[#eeeeee] flex items-center justify-between bg-[#f9fafb]", isRTL && "flex-row-reverse")}>
           <h3 className="font-bold text-[#111] text-sm">{isRTL ? "سجل المهام" : "Task Board"}</h3>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-yellow-100 text-yellow-800">Pending</span>
-            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-green-100 text-green-800">Completed</span>
-            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-red-100 text-red-800">Late</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-yellow-100 text-yellow-800">{isRTL ? "قيد الانتظار" : "Pending"}</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-green-100 text-green-800">{isRTL ? "مكتمل" : "Completed"}</span>
+            <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-red-100 text-red-800">{isRTL ? "متأخر" : "Late"}</span>
           </div>
         </div>
 
