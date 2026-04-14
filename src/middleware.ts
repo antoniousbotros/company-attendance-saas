@@ -54,28 +54,40 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // Use getUser() for security as it validates the session with the server
+  const { data: { user } } = await supabase.auth.getUser();
 
   const url = request.nextUrl.clone();
 
-  // Onboarding Guard
-  if (session && !url.pathname.startsWith('/onboarding') && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/_next')) {
+  // Protected routes list
+  const protectedRoutes = ['/overview', '/employees', '/attendance', '/reports', '/billing', '/onboarding'];
+  const isProtectedRoute = protectedRoutes.some(route => url.pathname.startsWith(route));
+
+  // 1. If no user and trying to access protected route -> Login
+  if (!user && isProtectedRoute) {
+    url.pathname = '/login';
+    return NextResponse.redirect(url);
+  }
+
+  // 2. If user exists, check onboarding
+  if (user && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/_next')) {
     const { data: company } = await supabase
       .from('companies')
       .select('onboarding_step')
-      .eq('owner_id', session.user.id)
+      .eq('owner_id', user.id)
       .single();
 
-    if (company && (!company.onboarding_step || company.onboarding_step < 4)) {
+    // If company hasn't finished onboarding and not already on onboarding page -> Onboarding
+    if (company && (!company.onboarding_step || company.onboarding_step < 4) && !url.pathname.startsWith('/onboarding')) {
       url.pathname = '/onboarding';
       return NextResponse.redirect(url);
     }
-  }
 
-  const protectedRoutes = ['/overview', '/employees', '/attendance', '/reports', '/billing', '/onboarding'];
-  if (!session && protectedRoutes.some(route => url.pathname.startsWith(route))) {
-    url.pathname = '/login';
-    return NextResponse.redirect(url);
+    // If user is logged in and tries to access login/signup -> Dashboard
+    if (url.pathname === '/login' || url.pathname === '/signup') {
+      url.pathname = '/overview';
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;
