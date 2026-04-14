@@ -56,19 +56,26 @@ export async function POST(req: NextRequest) {
         return ctx.reply("Please share YOUR OWN contact.");
       }
 
-      // Find employee by phone
-      const phone = contact.phone_number.replace("+", "");
-      
-      const { data: employee, error } = await supabaseAdmin
+      // Extract last 9 digits to cleanly ignore country codes and leading zeroes
+      const fullPhone = contact.phone_number.replace(/\D/g, "");
+      const last9digits = fullPhone.slice(-9);
+
+      const { data: employees, error } = await supabaseAdmin
         .from("employees")
-        .update({ telegram_user_id: telegramUserId })
-        .or(`phone.eq.${phone},phone.eq.+${phone}`)
         .select("*, companies(name)")
-        .single();
+        .ilike("phone", `%${last9digits}`);
+
+      const employee = employees?.[0]; // take the first match
 
       if (error || !employee) {
-        return ctx.reply("Sorry, your phone number is not registered in our system. Please contact your administrator.");
+        return ctx.reply(`Sorry, your phone number (ending in ${last9digits}) is not registered in our system.\n\nPlease ask your administrator to add your phone number.`);
       }
+
+      // Officially link them now that we found a match
+      await supabaseAdmin
+        .from("employees")
+        .update({ telegram_user_id: telegramUserId })
+        .eq("id", employee.id);
 
       return ctx.reply(
         `Success! Your account is now linked to ${employee.companies.name}.\n\nYou can now use the check-in and check-out buttons.`,
