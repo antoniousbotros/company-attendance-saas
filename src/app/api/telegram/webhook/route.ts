@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
       if (employee) {
         return ctx.reply(
-          `Welcome back, ${employee.name}! You are linked to ${employee.companies.name}.\n\nUse the buttons below to log your status.`,
+          `Welcome back, ${employee.name}! We are happy to have you as one of the ${employee.companies.name} family.\n\nUse the buttons below to log your status.`,
           getMainMenu(employee.companies.enable_geofencing)
         );
       }
