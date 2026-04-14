@@ -261,12 +261,37 @@ export async function POST(req: NextRequest) {
 
       if (!logs || logs.length === 0) return ctx.reply("No attendance records found.");
 
-      let message = "📅 *Your Recent Attendance*\n\n";
-      logs.forEach(log => {
-        message += `${log.date}: ${log.status.toUpperCase()}\nIn: ${log.check_in ? new Date(log.check_in).toLocaleTimeString() : "-"} | Out: ${log.check_out ? new Date(log.check_out).toLocaleTimeString() : "-"}\n\n`;
-      });
+      const formatTime = (iso: string | null) => {
+        if (!iso) return " -   ";
+        const d = new Date(iso);
+        let h = d.getHours();
+        const m = d.getMinutes().toString().padStart(2, "0");
+        return `${h.toString().padStart(2, "0")}:${m}`;
+      };
 
-      return ctx.replyWithMarkdown(message, getMainMenu(employee.companies.enable_geofencing));
+      const formatStatus = (s: string) => {
+        if (s === "present") return "Pres.";
+        if (s === "absent") return "Absn.";
+        if (s === "holiday") return "Holi.";
+        return "Late "; // 5 chars
+      };
+
+      let table = "📅 <b>Your Recent Attendance</b>\n\n<pre>";
+      table += "Date  |Status| In  | Out \n";
+      table += "------+------+-----+-----\n";
+      
+      logs.forEach(log => {
+        const d = new Date(log.date);
+        const dateStr = `${(d.getMonth()+1).toString().padStart(2,"0")}/${d.getDate().toString().padStart(2,"0")}`;
+        const statusStr = formatStatus(log.status);
+        const inStr = formatTime(log.check_in);
+        const outStr = formatTime(log.check_out);
+        
+        table += `${dateStr} |${statusStr}|${inStr}|${outStr}\n`;
+      });
+      table += "</pre>";
+
+      return ctx.replyWithHTML(table, getMainMenu(employee.companies.enable_geofencing));
     });
 
     bot.on("text", async (ctx) => {
