@@ -16,7 +16,7 @@ import {
   Menu as MenuIcon,
   X,
   ChevronLeft,
-  Languages,
+  Globe,
   Banknote,
   ListTodo
 } from "lucide-react";
@@ -172,38 +172,15 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }
         <div className="flex items-center gap-2">
           <button
             onClick={toggleLang}
-            className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] hover:bg-[#f5f5f5] transition-colors"
+            className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] border border-[#eeeeee] hover:bg-[#f5f5f5] transition-colors"
             aria-label="Toggle language"
             title={lang === "en" ? "العربية" : "English"}
           >
-            <Languages className="w-[18px] h-[18px]" />
-          </button>
-
-          <button
-            className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] hover:bg-[#f5f5f5] transition-colors"
-            aria-label="Activity"
-          >
-            <Clock className="w-[18px] h-[18px]" />
-          </button>
-
-          <button
-            className="h-9 pl-3 pr-4 inline-flex items-center gap-2 rounded-full border border-[#ffd4b8] text-[#ff5a00] text-sm font-medium bg-white hover:bg-[#fff1e8] transition-colors"
-            aria-label="Help center"
-          >
-            <HelpCircle className="w-4 h-4" />
-            <span className="hidden sm:inline">{t.helpCenter}</span>
-          </button>
-
-          <button
-            className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] hover:bg-[#f5f5f5] relative transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-[18px] h-[18px]" />
-            <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-[#ff5a00] rounded-full" />
+            <Globe className="w-[18px] h-[18px]" />
           </button>
 
           <div
-            className="h-9 w-9 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center text-[13px] font-bold"
+            className="h-9 w-9 rounded-full bg-[#111] text-white flex items-center justify-center text-[13px] font-bold shadow-sm"
             aria-label="Account"
           >
             A
