@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { Clock, Mail, Lock, ArrowRight, Languages } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/i18n";
 
 export default function LoginPage() {

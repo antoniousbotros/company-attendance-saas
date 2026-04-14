@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS public.companies (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
-    owner_id UUID NOT NULL REFERENCES auth.users(id),
+    owner_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
     plan_id TEXT DEFAULT 'starter' CHECK (plan_id IN ('starter', 'growth', 'pro', 'enterprise')),
     subscription_status TEXT DEFAULT 'trialing' CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled')),
     onboarding_step INTEGER DEFAULT 1,
