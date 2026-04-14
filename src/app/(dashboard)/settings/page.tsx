@@ -152,7 +152,7 @@ export default function SettingsPage() {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-4xl">
       <PageHeader
         title={isRTL ? "الإعدادات" : "Settings"}
-        description={
+        subtitle={
           isRTL
             ? "إدارة هوية شركتك، إعدادات البوت، وسياسات الحضور"
             : "Manage your company identity, bot settings, and attendance policies"
@@ -297,7 +297,7 @@ export default function SettingsPage() {
                     {isRTL ? "اتصال مشفر وآمن" : "Securely Encrypted"}
                   </span>
                 </div>
-                <StatusPill status="success" text={isRTL ? "جاهز" : "Linked"} />
+                <StatusPill tone="success" label={isRTL ? "جاهز" : "Linked"} />
               </div>
             )}
           </div>
