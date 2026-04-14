@@ -133,9 +133,22 @@ export default function SettingsPage() {
     if (error) {
       setMessage({ type: "error", text: error.message });
     } else {
+      // Auto-register the Webhook with Telegram if they provided a token
+      if (formData.telegram_token) {
+        try {
+          await fetch("/api/telegram/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: formData.telegram_token }),
+          });
+        } catch (err) {
+          console.error("Failed to auto-register webhook", err);
+        }
+      }
+
       setMessage({
         type: "success",
-        text: isRTL ? "تم حفظ الإعدادات بنجاح!" : "Settings saved successfully!",
+        text: isRTL ? "تم حفظ الإعدادات بنجاح! البوت جاهز للعمل." : "Settings saved! Bot is ready.",
       });
     }
     setSaving(false);
