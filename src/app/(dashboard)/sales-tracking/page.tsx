@@ -8,6 +8,8 @@ import { supabase } from "@/lib/supabase";
 // Supabase generated types conceptually
 type Team = { id: string; name: string; leader_id: string | null };
 type Field = { id: string; team_id: string; label: string; field_type: string; order_index: number };
+type Employee = { id: string; name: string };
+type TeamMember = { id: string; team_id: string; employee_id: string; role: string; employee_name?: string };
 type ReportObj = { id: string; employee_name: string; team_name: string; date: string; location_lat: number; location_lng: number; notes: string; values: Record<string, string> };
 
 export default function SalesTrackingPage() {
@@ -22,6 +24,8 @@ export default function SalesTrackingPage() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [fields, setFields] = useState<Field[]>([]);
     const [reports, setReports] = useState<ReportObj[]>([]);
+    const [employees, setEmployees] = useState<Employee[]>([]);
+    const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     
     useEffect(() => {
         loadInitialData();
@@ -53,18 +57,27 @@ export default function SalesTrackingPage() {
     };
 
     const fetchAllData = async (cid: string) => {
-        const [teamsRes, fieldsRes, rawReports] = await Promise.all([
+        const [teamsRes, fieldsRes, rawReports, employeesRes, membersRes] = await Promise.all([
             supabase.from("teams").select("*").eq("company_id", cid),
             supabase.from("custom_fields").select("*, teams!inner(company_id)").eq("teams.company_id", cid),
             supabase.from("reports").select(`
                 id, date, location_lat, location_lng, notes, status,
                 employees(name), teams(name),
                 report_values(field_id, value)
-            `).eq("company_id", cid).eq("status", "completed").order("date", { ascending: false }).limit(100)
+            `).eq("company_id", cid).eq("status", "completed").order("date", { ascending: false }).limit(100),
+            supabase.from("employees").select("id, name").eq("company_id", cid),
+            supabase.from("team_members").select("id, team_id, employee_id, role, employees!inner(name, company_id)").eq("employees.company_id", cid)
         ]);
 
         if (teamsRes.data) setTeams(teamsRes.data);
         if (fieldsRes.data) setFields(fieldsRes.data);
+        if (employeesRes.data) setEmployees(employeesRes.data);
+        if (membersRes.data) {
+            const mapped = membersRes.data.map((m: any) => ({
+                id: m.id, team_id: m.team_id, employee_id: m.employee_id, role: m.role, employee_name: m.employees?.name
+            }));
+            setTeamMembers(mapped);
+        }
 
         if (rawReports.data) {
             const formatted = rawReports.data.map((r: any) => {
@@ -131,7 +144,13 @@ export default function SalesTrackingPage() {
             )}
 
             {activeTab === "settings" && isAdmin && (
-                <TeamSettingsView companyId={companyId!} initialTeams={teams} initialFields={fields} />
+                <TeamSettingsView 
+                   companyId={companyId!} 
+                   initialTeams={teams} 
+                   initialFields={fields} 
+                   employees={employees}
+                   initialMembers={teamMembers}
+                />
             )}
         </div>
     );
@@ -215,9 +234,10 @@ function ReportsView({ reports, fields }: { reports: ReportObj[], fields: Field[
     );
 }
 
-function TeamSettingsView({ companyId, initialTeams, initialFields }: { companyId: string, initialTeams: Team[], initialFields: Field[] }) {
+function TeamSettingsView({ companyId, initialTeams, initialFields, employees, initialMembers }: { companyId: string, initialTeams: Team[], initialFields: Field[], employees: Employee[], initialMembers: TeamMember[] }) {
     const [teams, setTeams] = useState<Team[]>(initialTeams);
     const [fields, setFields] = useState<Field[]>(initialFields);
+    const [members, setMembers] = useState<TeamMember[]>(initialMembers);
     const [newTeamName, setNewTeamName] = useState("");
 
     const handleCreateTeam = async () => {
@@ -250,7 +270,7 @@ function TeamSettingsView({ companyId, initialTeams, initialFields }: { companyI
                     </div>
                 </div>
 
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 hidden">
                     <p className="text-xs text-orange-800 leading-relaxed font-medium">
                         ملاحظة: لتعيين موظفين داخل الفريق، يرجى التوجه إلى شاشة "فريق العمل" واختيار الموظفين وتعديل بياناتهم للانضمام للفرق (قيد التطوير).
                     </p>
@@ -263,8 +283,11 @@ function TeamSettingsView({ companyId, initialTeams, initialFields }: { companyI
                     <TeamCard 
                         key={team.id} 
                         team={team} 
-                        fields={fields.filter(f => f.team_id === team.id)} 
+                        fields={fields.filter(f => f.team_id === team.id)}
+                        employees={employees}
+                        members={members.filter(m => m.team_id === team.id)} 
                         onFieldsChange={(updated) => setFields(prev => [...prev.filter(f => f.team_id !== team.id), ...updated])}
+                        onMembersChange={(updated) => setMembers(prev => [...prev.filter(m => m.team_id !== team.id), ...updated])}
                     />
                 ))}
                 
@@ -280,10 +303,13 @@ function TeamSettingsView({ companyId, initialTeams, initialFields }: { companyI
     );
 }
 
-function TeamCard({ team, fields, onFieldsChange }: { team: Team, fields: Field[], onFieldsChange: (f: Field[]) => void }) {
+function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersChange }: { team: Team, fields: Field[], employees: Employee[], members: TeamMember[], onFieldsChange: (f: Field[]) => void, onMembersChange: (m: TeamMember[]) => void }) {
     const [localFields, setLocalFields] = useState<Field[]>(fields);
+    const [localMembers, setLocalMembers] = useState<TeamMember[]>(members);
     const [newLabel, setNewLabel] = useState("");
     const [newType, setNewType] = useState("number"); // number, text
+    const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+    const [activeTab, setActiveTab] = useState<"fields"|"members">("fields");
 
     const handleAddField = async () => {
         if (!newLabel.trim()) return;
@@ -321,60 +347,160 @@ function TeamCard({ team, fields, onFieldsChange }: { team: Team, fields: Field[
         onFieldsChange(next);
     };
 
+    const handleAddMember = async () => {
+        if (!selectedEmployeeId) return;
+        const emp = employees.find(e => e.id === selectedEmployeeId);
+        const { data, error } = await supabase.from("team_members").insert({
+            team_id: team.id,
+            employee_id: selectedEmployeeId,
+            role: 'member'
+        }).select().single();
+
+        if (error) {
+            alert("خطأ أثناء الإضافة: " + error.message);
+            return;
+        }
+
+        if (data) {
+            const newMember = { ...data, employee_name: emp?.name };
+            const next = [...localMembers, newMember];
+            setLocalMembers(next);
+            onMembersChange(next);
+            setSelectedEmployeeId("");
+        }
+    };
+
+    const handleRemoveMember = async (id: string) => {
+        await supabase.from("team_members").delete().eq("id", id);
+        const next = localMembers.filter(m => m.id !== id);
+        setLocalMembers(next);
+        onMembersChange(next);
+    };
+
+    const handleToggleRole = async (memberId: string, newRole: string) => {
+        const { error } = await supabase.from("team_members").update({ role: newRole }).eq("id", memberId);
+        if (error) {
+            alert("خطأ أثناء تغيير الصلاحية: " + error.message);
+            return;
+        }
+        const next = localMembers.map(m => m.id === memberId ? { ...m, role: newRole } : m);
+        setLocalMembers(next);
+        onMembersChange(next);
+    };
+
     return (
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
             <div className="flex items-center justify-between mb-4">
                 <h4 className="font-bold text-[16px] text-gray-900 drop-shadow-sm">{team.name}</h4>
-                <div className="bg-gray-100 px-3 py-1 rounded-full text-xs font-semibold text-gray-500">
-                    {localFields.length} حقول مخصصة
+                <div className="flex space-x-reverse space-x-1">
+                    <button onClick={() => setActiveTab("fields")} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold transition-colors", activeTab === "fields" ? "bg-[#ff5a00] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
+                        {localFields.length} حقول مخصصة
+                    </button>
+                    <button onClick={() => setActiveTab("members")} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold transition-colors", activeTab === "members" ? "bg-[#ff5a00] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
+                        {localMembers.length} أعضاء
+                    </button>
                 </div>
             </div>
 
-            <div className="bg-[#fafafa] rounded-xl p-4 border border-gray-100">
-                <p className="text-xs text-gray-500 font-bold mb-3">نموذج التقرير الميداني (يظهر في التليجرام):</p>
+            <div className="bg-[#fafafa] rounded-xl p-4 border border-gray-100 min-h-[250px]">
+                <p className="text-xs text-gray-500 font-bold mb-3">{activeTab === "fields" ? "نموذج التقرير الميداني (يظهر في التليجرام):" : "أعضاء الفريق ومسؤولياتهم:"}</p>
                 <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600">
-                        <span className="flex items-center gap-2 font-medium">1. إرسال الموقع الجغرافي <MapPin className="w-3.5 h-3.5 text-blue-500"/></span>
-                        <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">إجباري آلياً</span>
-                    </div>
+                    {activeTab === "fields" && (
+                        <>
+                            <div className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600">
+                                <span className="flex items-center gap-2 font-medium">1. إرسال الموقع الجغرافي <MapPin className="w-3.5 h-3.5 text-blue-500"/></span>
+                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">إجباري آلياً</span>
+                            </div>
 
-                    {localFields.map((f, i) => (
-                        <div key={f.id} className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
-                            <span className="font-medium text-gray-800 flex items-center gap-2">
-                                <span className="text-gray-400 text-xs w-4">{i + 2}.</span> 
-                                {f.label}
-                                <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-2">
-                                    {f.field_type === 'number' ? 'رقم' : 'نص'}
-                                </span>
-                            </span>
-                            <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors">
-                                <Trash2 className="w-4 h-4"/>
-                            </button>
-                        </div>
-                    ))}
+                            {localFields.map((f, i) => (
+                                <div key={f.id} className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm">
+                                    <span className="font-medium text-gray-800 flex items-center gap-2">
+                                        <span className="text-gray-400 text-xs w-4">{i + 2}.</span> 
+                                        {f.label}
+                                        <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-2">
+                                            {f.field_type === 'number' ? 'رقم' : 'نص'}
+                                        </span>
+                                    </span>
+                                    <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors">
+                                        <Trash2 className="w-4 h-4"/>
+                                    </button>
+                                </div>
+                            ))}
 
-                    <div className="flex items-center justify-between p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400">
-                        <input 
-                            placeholder="اسم الحقل الجديد (مثال: عدد الزيارات)" 
-                            className="bg-transparent border-none outline-none flex-1 font-medium"
-                            value={newLabel} onChange={e => setNewLabel(e.target.value)}
-                        />
-                        <div className="flex items-center gap-2 border-r border-gray-200 pr-2 pb-[1px]">
-                            <select className="bg-transparent text-xs outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
-                                <option value="number">رقم</option>
-                                <option value="text">نص سريع</option>
-                            </select>
-                            <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors">
-                                <Plus className="w-4 h-4"/>
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600 relative overflow-hidden mt-1 opacity-70">
-                        <div className="absolute inset-0 bg-gray-50/50 mix-blend-multiply pointer-events-none" />
-                        <span className="flex items-center gap-2 font-medium">الأخير. ملاحظات التقرير (اختياري)</span>
-                        <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">نهاية النموذج</span>
-                    </div>
+                            <div className="flex items-center justify-between p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400">
+                                <input 
+                                    placeholder="اسم الحقل الجديد (مثال: عدد الزيارات)" 
+                                    className="bg-transparent border-none outline-none flex-1 font-medium"
+                                    value={newLabel} onChange={e => setNewLabel(e.target.value)}
+                                />
+                                <div className="flex items-center gap-2 border-r border-gray-200 pr-2 pb-[1px]">
+                                    <select className="bg-transparent text-xs outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
+                                        <option value="number">رقم</option>
+                                        <option value="text">نص سريع</option>
+                                    </select>
+                                    <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors" type="button">
+                                        <Plus className="w-4 h-4"/>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600 relative overflow-hidden mt-1 opacity-70">
+                                <div className="absolute inset-0 bg-gray-50/50 mix-blend-multiply pointer-events-none" />
+                                <span className="flex items-center gap-2 font-medium">الأخير. ملاحظات التقرير (اختياري)</span>
+                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">نهاية النموذج</span>
+                            </div>
+                        </>
+                    )}
+
+                    {activeTab === "members" && (
+                        <>
+                            <div className="flex gap-2 mb-2">
+                                <select 
+                                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#ff5a00]"
+                                    value={selectedEmployeeId}
+                                    onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                                >
+                                    <option value="">-- إختر موظف لإضافته --</option>
+                                    {employees.filter(e => !localMembers.find(m => m.employee_id === e.id)).map(e => (
+                                        <option key={e.id} value={e.id}>{e.name}</option>
+                                    ))}
+                                </select>
+                                <button type="button" onClick={handleAddMember} disabled={!selectedEmployeeId} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 flex shrink-0 items-center gap-2">
+                                    <Plus className="w-4 h-4"/> إضافة
+                                </button>
+                            </div>
+
+                            {localMembers.length === 0 ? (
+                                <div className="text-center py-6 text-gray-400 text-sm">
+                                    لا يوجد أعضاء في هذا الفريق.
+                                </div>
+                            ) : localMembers.map(m => (
+                                <div key={m.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm text-sm gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-orange-50 text-[#ff5a00] flex items-center justify-center font-bold">
+                                            {(m.employee_name || '?').charAt(0)}
+                                        </div>
+                                        <div>
+                                            <div className="font-semibold text-gray-900">{m.employee_name}</div>
+                                            <div className="text-xs text-gray-500">{m.role === 'leader' ? 'مشرف الفريق' : 'عضو ميداني'}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 self-end sm:self-auto">
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleToggleRole(m.id, m.role === 'leader' ? 'member' : 'leader')}
+                                            className={cn("px-3 py-1.5 text-xs font-semibold rounded-md transition-colors", m.role === 'leader' ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100")}
+                                        >
+                                            {m.role === 'leader' ? 'تجريد الإشراف' : 'تعيين مشرف'}
+                                        </button>
+                                        <button type="button" onClick={() => handleRemoveMember(m.id)} className="text-red-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors">
+                                            <Trash2 className="w-4 h-4"/>
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </>
+                    )}
 
                 </div>
             </div>
