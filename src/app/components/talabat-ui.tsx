@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
 export function BrandLogo() {
-  const [name, setName] = React.useState("SyncTime");
+  const [name, setName] = React.useState("Yawmy");
 
   React.useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {

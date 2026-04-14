@@ -144,7 +144,7 @@ export default function EmployeesPage() {
   };
 
   const copyInviteLink = (empId: string) => {
-    const link = `https://t.me/${botName || 'SyncTimeBot'}`;
+    const link = `https://t.me/${botName || 'YawmyBot'}`;
     navigator.clipboard.writeText(link);
     setCopiedId(empId);
     setTimeout(() => setCopiedId(null), 2000);

@@ -552,7 +552,7 @@ export default function SettingsPage() {
                   setFormData({ ...formData, bot_name: e.target.value })
                 }
                 className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
-                placeholder="@SyncTimeBot"
+                placeholder="@YawmyBot"
               />
             </Field>
 

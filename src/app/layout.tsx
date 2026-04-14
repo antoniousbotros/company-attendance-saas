@@ -22,7 +22,7 @@ const fontArabic = FontArabic({
 });
 
 export const metadata: Metadata = {
-  title: "SyncTime | Attendance SaaS",
+  title: "Yawmy يومي | Attendance SaaS",
   description: "Modern Telegram-based attendance tracking for companies",
 };
 

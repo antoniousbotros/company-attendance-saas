@@ -23,7 +23,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-[#ff5a00] rounded-xl flex items-center justify-center shadow-lg shadow-[#ff5a00]/30">
               <Clock className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-black tracking-tighter text-[#111]">SyncTime</span>
+            <span className="text-2xl font-black tracking-tighter text-[#111]">Yawmy يومي</span>
           </div>
           
           <div className="hidden md:flex items-center gap-8">
@@ -112,9 +112,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-8">
           <div className="flex items-center gap-3">
             <Clock className="w-6 h-6 text-[#ff5a00]" />
-            <span className="text-xl font-black tracking-tighter text-[#111]">SyncTime</span>
+            <span className="text-xl font-black tracking-tighter text-[#111]">Yawmy</span>
           </div>
-          <p className="text-[#6b7280] font-bold text-sm">© 2026 SyncTime. All rights reserved.</p>
+          <p className="text-[#6b7280] font-bold text-sm">© 2026 Yawmy. All rights reserved.</p>
         </div>
       </footer>
     </div>
