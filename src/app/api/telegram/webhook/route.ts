@@ -186,16 +186,16 @@ export async function POST(req: NextRequest) {
 
             if (nextField.field_type === 'image') {
                 return ctx.reply(lang === 'ar'
-                    ? `📷 يرجى إرسال صورة: ${nextField.label}`
-                    : `📷 Please send a photo: ${nextField.label}`,
-                    { reply_markup: { force_reply: true, input_field_placeholder: `\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063` } }
+                    ? `📷 يرجى إرسال صورة: ${nextField.label}\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`
+                    : `📷 Please send a photo: ${nextField.label}\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`,
+                    { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "أرسل صورة..." : "Send a photo..." } }
                 );
             }
 
             return ctx.reply(lang === 'ar'
-                ? `يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})`
-                : `Please enter: ${nextField.label} (${nextField.field_type})`,
-                { reply_markup: { force_reply: true, input_field_placeholder: `\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063` } }
+                ? `يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`
+                : `Please enter: ${nextField.label} (${nextField.field_type})\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`,
+                { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "أدخل هنا..." : "Type here..." } }
             );
         }
 
@@ -206,9 +206,9 @@ export async function POST(req: NextRequest) {
         }
 
         return ctx.reply(lang === 'ar' 
-            ? `📝 أخيراً، أرسل أي ملاحظات لزيارتك${team?.require_notes ? ' (إجباري)' : ' (أو أرسل "لا")'} 👇`
-            : `📝 Finally, any notes regarding your visit${team?.require_notes ? ' (Required)' : ' (or type "no")'} 👇`,
-            { reply_markup: { force_reply: true, input_field_placeholder: `\u2063R:${draftReport.id.substring(0,8)}_notes\u2063` } }
+            ? `📝 أخيراً، أرسل أي ملاحظات لزيارتك${team?.require_notes ? ' (إجباري)' : ' (أو أرسل "لا")'} 👇\u2063R:${draftReport.id.substring(0,8)}_notes\u2063`
+            : `📝 Finally, any notes regarding your visit${team?.require_notes ? ' (Required)' : ' (or type "no")'} 👇\u2063R:${draftReport.id.substring(0,8)}_notes\u2063`,
+            { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "ملاحظاتك..." : "Your notes..." } }
         );
     };
 
@@ -657,9 +657,9 @@ export async function POST(req: NextRequest) {
         const lang = (employee.companies as any).bot_language || 'en';
         return ctx.reply(
           lang === 'ar'
-            ? "اكتب عنوان مهمتك الشخصية وأرسلها كرد على هذه الرسالة:"
-            : "Type your personal task title and reply to this message:",
-          { reply_markup: { force_reply: true, input_field_placeholder: "\u2063S\u2063" } }
+            ? "اكتب عنوان مهمتك الشخصية وأرسلها كرد على هذه الرسالة:\u2063S\u2063"
+            : "Type your personal task title and reply to this message:\u2063S\u2063",
+          { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "مهمة شخصية..." : "Personal task..." } }
         );
       }
 
@@ -674,9 +674,9 @@ export async function POST(req: NextRequest) {
 
         await ctx.answerCbQuery();
         return ctx.reply(lang === 'ar' 
-          ? `يرجى الرد على هذه الرسالة بوصف المهمة المطلوبة:`
-          : `Please reply to this message with the task title/description:`, 
-          { reply_markup: { force_reply: true, input_field_placeholder: `\u2063T:${shortRef}\u2063` } }
+          ? `يرجى الرد على هذه الرسالة بوصف المهمة المطلوبة:\u2063T:${shortRef}\u2063`
+          : `Please reply to this message with the task title/description:\u2063T:${shortRef}\u2063`, 
+          { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "وصف المهمة..." : "Task description..." } }
         );
       }
 
@@ -933,9 +933,9 @@ export async function POST(req: NextRequest) {
                  const noVariations = ["no", "none", "لا", "لا يوجد", "لايوجد"];
                  if (tm?.require_notes && noVariations.includes(inputValue.toLowerCase())) {
                      return ctx.reply(lang === 'ar' 
-                        ? `❌ الملاحظات إجبارية في هذا الفريق. يرجى توضيح رسالة حقيقية:` 
-                        : `❌ Notes are required for your team. Please elaborate:`,
-                        { reply_markup: { force_reply: true, input_field_placeholder: `\u2063R:${shortReportId}_notes\u2063` } }
+                        ? `❌ الملاحظات إجبارية في هذا الفريق. يرجى توضيح رسالة حقيقية:\u2063R:${shortReportId}_notes\u2063` 
+                        : `❌ Notes are required for your team. Please elaborate:\u2063R:${shortReportId}_notes\u2063`,
+                        { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "اكتب هنا..." : "Type here..." } }
                      );
                  }
                  
@@ -950,9 +950,9 @@ export async function POST(req: NextRequest) {
              if (matchedField) {
                  if (matchedField.field_type === 'number' && isNaN(Number(inputValue))) {
                      return ctx.reply(lang === 'ar' 
-                        ? `❌ خطأ في الإدخال. الرجاء إدخال رقم صحيح:` 
-                        : `❌ Invalid input. Please enter a number:`,
-                        { reply_markup: { force_reply: true, input_field_placeholder: `\u2063R:${shortReportId}_${targetFieldShort}\u2063` } }
+                        ? `❌ خطأ في الإدخال. الرجاء إدخال رقم صحيح:\u2063R:${shortReportId}_${targetFieldShort}\u2063` 
+                        : `❌ Invalid input. Please enter a number:\u2063R:${shortReportId}_${targetFieldShort}\u2063`,
+                        { reply_markup: { force_reply: true, input_field_placeholder: "123..." } }
                      );
                  }
                  await supabaseAdmin.from("report_values").insert({
