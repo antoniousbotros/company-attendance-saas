@@ -7,6 +7,11 @@ export interface TeamSession {
   company_id: string;
 }
 
+// Simple deterministic hash — sufficient for owner-set employee PINs/passwords
+export function hashPassword(password: string): string {
+  return crypto.createHash("sha256").update(`yawmy::${password}`).digest("hex");
+}
+
 export async function getTeamSession(req: NextRequest): Promise<TeamSession | null> {
   const token = req.cookies.get("team_session")?.value;
   if (!token) return null;

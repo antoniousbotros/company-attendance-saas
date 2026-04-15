@@ -15,7 +15,9 @@ import {
   CalendarDays,
   Link as LinkIcon,
   Upload,
-  Trash2
+  Trash2,
+  Smartphone,
+  MessageCircle,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -94,7 +96,8 @@ export default function SettingsPage() {
     currency: "EGP",
     half_day_enabled: false,
     half_day_hours: 4.0,
-    sales_tracking_enabled: false
+    sales_tracking_enabled: false,
+    auth_mode: "telegram" as "telegram" | "password",
   });
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -138,7 +141,8 @@ export default function SettingsPage() {
           currency: data.currency || "EGP",
           half_day_enabled: !!data.half_day_enabled,
           half_day_hours: data.half_day_hours || 4.0,
-          sales_tracking_enabled: !!data.sales_tracking_enabled
+          sales_tracking_enabled: !!data.sales_tracking_enabled,
+          auth_mode: (data.auth_mode || "telegram") as "telegram" | "password",
         });
       }
       setLoading(false);
@@ -203,7 +207,8 @@ export default function SettingsPage() {
         currency: formData.currency,
         half_day_enabled: formData.half_day_enabled,
         half_day_hours: formData.half_day_hours,
-        sales_tracking_enabled: formData.sales_tracking_enabled
+        sales_tracking_enabled: formData.sales_tracking_enabled,
+        auth_mode: formData.auth_mode,
       })
       .eq("owner_id", user?.id);
 
@@ -619,6 +624,62 @@ export default function SettingsPage() {
                 <div className={cn("dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform", formData.sales_tracking_enabled && "transform translate-x-6")}></div>
               </div>
             </label>
+          </div>
+        </SectionCard>
+
+        {/* Employee Login Mode */}
+        <SectionCard>
+          <SectionHeader
+            icon={Smartphone}
+            title={isRTL ? "طريقة تسجيل دخول الموظف" : "Employee Login Mode"}
+            subtitle={isRTL ? "اختر كيف يسجل موظفوك الدخول في team.yawmy.app" : "Choose how employees sign in on team.yawmy.app"}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Telegram Mode */}
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, auth_mode: "telegram" })}
+              className={cn(
+                "flex items-start gap-4 p-4 rounded-xl border-2 text-start transition-all",
+                formData.auth_mode === "telegram"
+                  ? "border-[#0088cc] bg-[#f0f9ff]"
+                  : "border-[#e5e7eb] bg-white hover:border-[#0088cc]/40"
+              )}
+            >
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", formData.auth_mode === "telegram" ? "bg-[#0088cc] text-white" : "bg-[#f0f9ff] text-[#0088cc]")}>
+                <MessageCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-[#111] mb-0.5">{isRTL ? "تيليجرام (OTP)" : "Telegram (OTP)"}</p>
+                <p className="text-xs text-[#6b7280] leading-relaxed">{isRTL ? "الموظف يدخل رقم هاتفه ويستقبل كود عشوائي عبر تيليجرام" : "Employee enters phone, receives a one-time code via Telegram bot"}</p>
+                {formData.auth_mode === "telegram" && (
+                  <span className="inline-block mt-2 text-[10px] font-bold text-[#0088cc] bg-[#e0f2fe] px-2 py-0.5 rounded-full">{isRTL ? "مُفعَّل" : "Active"}</span>
+                )}
+              </div>
+            </button>
+
+            {/* Password Mode */}
+            <button
+              type="button"
+              onClick={() => setFormData({ ...formData, auth_mode: "password" })}
+              className={cn(
+                "flex items-start gap-4 p-4 rounded-xl border-2 text-start transition-all",
+                formData.auth_mode === "password"
+                  ? "border-[#ff5a00] bg-[#fff7f3]"
+                  : "border-[#e5e7eb] bg-white hover:border-[#ff5a00]/40"
+              )}
+            >
+              <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", formData.auth_mode === "password" ? "bg-[#ff5a00] text-white" : "bg-[#fff1e8] text-[#ff5a00]")}>
+                <Smartphone className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-[#111] mb-0.5">{isRTL ? "هاتف + كلمة مرور" : "Phone + Password"}</p>
+                <p className="text-xs text-[#6b7280] leading-relaxed">{isRTL ? "أنت تحدد كلمة مرور لكل موظف من صفحة الموظفين. لا يحتاج تيليجرام." : "You set a password per employee from the Employees page. No Telegram needed."}</p>
+                {formData.auth_mode === "password" && (
+                  <span className="inline-block mt-2 text-[10px] font-bold text-[#ff5a00] bg-[#fff1e8] px-2 py-0.5 rounded-full">{isRTL ? "مُفعَّل" : "Active"}</span>
+                )}
+              </div>
+            </button>
           </div>
         </SectionCard>
 

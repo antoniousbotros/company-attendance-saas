@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowRight, ChevronRight, Building2, ChevronLeft } from "lucide-react";
+import { ArrowRight, ChevronRight, Building2, ChevronLeft, Eye, EyeOff } from "lucide-react";
 import { countryCodes } from "@/lib/countryCodes";
 
-type Step = "phone" | "select_company" | "otp";
+type Step = "phone" | "select_company" | "otp" | "password";
 
 interface CompanyOption { company_id: string; company_name: string; }
 
@@ -13,19 +13,22 @@ export default function TeamLoginPage() {
   const [countryCode, setCountryCode] = useState("+20");
   const [phone, setPhone] = useState("");
   const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [companies, setCompanies] = useState<CompanyOption[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const fullPhone = `${countryCode}${phone.startsWith("0") ? phone.substring(1) : phone}`;
   const otpCode = otpDigits.join("");
 
-  useEffect(() => {
-    if (step === "otp") otpRefs.current[0]?.focus();
-  }, [step]);
+  useEffect(() => { if (step === "otp") otpRefs.current[0]?.focus(); }, [step]);
+  useEffect(() => { if (step === "password") setTimeout(() => passwordRef.current?.focus(), 100); }, [step]);
 
+  // ── OTP helpers ─────────────────────────────────────────────────────────────
   const handleOtpChange = (index: number, value: string) => {
     if (value.length > 1) value = value.slice(-1);
     if (value && !/^\d$/.test(value)) return;
@@ -45,25 +48,59 @@ export default function TeamLoginPage() {
     if (paste.length === 6) { setOtpDigits(paste.split("")); otpRefs.current[5]?.focus(); }
   };
 
-  const handleSendOTP = async (companyId?: string) => {
+  // ── Step 1: check mode after phone entry ────────────────────────────────────
+  const handlePhoneContinue = async (companyId?: string) => {
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/team/auth/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: fullPhone, company_id: companyId }) });
+      const res = await fetch("/api/team/auth/check-mode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: fullPhone, company_id: companyId }),
+      });
       const data = await res.json();
       if (!data.ok) { setError(data.error || "Something went wrong"); return; }
-      if (data.step === "select_company") { setCompanies(data.companies); setStep("select_company"); }
-      else { setStep("otp"); }
+
+      if (data.mode === "select_company") {
+        setCompanies(data.companies);
+        setStep("select_company");
+      } else if (data.mode === "password") {
+        if (companyId) setSelectedCompanyId(companyId);
+        setStep("password");
+      } else {
+        // telegram mode — send OTP
+        if (companyId) setSelectedCompanyId(companyId);
+        await sendOTP(companyId);
+      }
     } catch { setError("Connection error"); }
     finally { setLoading(false); }
   };
 
-  const handleCompanySelect = (companyId: string) => { setSelectedCompanyId(companyId); handleSendOTP(companyId); };
+  const handleCompanySelect = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    handlePhoneContinue(companyId);
+  };
+
+  // ── Telegram OTP flow ────────────────────────────────────────────────────────
+  const sendOTP = async (companyId?: string) => {
+    const res = await fetch("/api/team/auth/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: fullPhone, company_id: companyId }),
+    });
+    const data = await res.json();
+    if (!data.ok) { setError(data.error || "Failed to send code"); return; }
+    setStep("otp");
+  };
 
   const handleVerifyOTP = async () => {
     if (otpCode.length !== 6) return;
     setLoading(true); setError("");
     try {
-      const res = await fetch("/api/team/auth/verify-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: fullPhone, code: otpCode, company_id: selectedCompanyId || undefined }) });
+      const res = await fetch("/api/team/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: fullPhone, code: otpCode, company_id: selectedCompanyId || undefined }),
+      });
       const data = await res.json();
       if (!data.ok) { setError(data.error || "Invalid code"); return; }
       window.location.href = "/team";
@@ -75,6 +112,24 @@ export default function TeamLoginPage() {
     if (otpCode.length === 6 && step === "otp" && !loading) handleVerifyOTP();
   }, [otpCode]);
 
+  // ── Password flow ────────────────────────────────────────────────────────────
+  const handlePasswordLogin = async () => {
+    if (!password.trim()) return;
+    setLoading(true); setError("");
+    try {
+      const res = await fetch("/api/team/auth/login-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: fullPhone, password: password.trim(), company_id: selectedCompanyId || undefined }),
+      });
+      const data = await res.json();
+      if (!data.ok) { setError(data.error || "Invalid phone or password"); return; }
+      window.location.href = "/team";
+    } catch { setError("Connection error"); }
+    finally { setLoading(false); }
+  };
+
+  // ── UI ───────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-sans">
       <div className="w-full max-w-[340px]">
@@ -87,12 +142,12 @@ export default function TeamLoginPage() {
           <p className="text-[11px] font-semibold text-[#b0b0b0] tracking-[0.2em] uppercase">Employee Portal</p>
         </div>
 
-        {/* Phone Step */}
+        {/* ── Phone Step ── */}
         {step === "phone" && (
           <div className="space-y-8 animate-in fade-in duration-300">
             <div>
               <h1 className="text-[28px] font-black text-[#111] tracking-tight leading-tight">Sign in</h1>
-              <p className="text-[14px] text-[#999] mt-2 leading-relaxed">We&apos;ll send a code to your Telegram.</p>
+              <p className="text-[14px] text-[#999] mt-2 leading-relaxed">Enter your phone number to continue.</p>
             </div>
 
             {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
@@ -107,6 +162,7 @@ export default function TeamLoginPage() {
                   placeholder="Phone number"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && phone && handlePhoneContinue()}
                   className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
                   autoFocus
                 />
@@ -114,7 +170,7 @@ export default function TeamLoginPage() {
             </div>
 
             <button
-              onClick={() => handleSendOTP()}
+              onClick={() => handlePhoneContinue()}
               disabled={loading || !phone}
               className="w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30"
             >
@@ -123,7 +179,7 @@ export default function TeamLoginPage() {
           </div>
         )}
 
-        {/* Company Select */}
+        {/* ── Select Company ── */}
         {step === "select_company" && (
           <div className="space-y-6 animate-in fade-in duration-300">
             <div>
@@ -131,7 +187,6 @@ export default function TeamLoginPage() {
               <h1 className="text-[28px] font-black text-[#111] tracking-tight">Choose workspace</h1>
               <p className="text-[14px] text-[#999] mt-2">Multiple accounts found.</p>
             </div>
-
             <div className="space-y-1">
               {companies.map((c) => (
                 <button key={c.company_id} onClick={() => handleCompanySelect(c.company_id)} disabled={loading}
@@ -140,20 +195,56 @@ export default function TeamLoginPage() {
                     <Building2 className="w-5 h-5 text-[#999] group-hover:text-white transition-colors" />
                   </div>
                   <span className="text-[15px] font-semibold text-[#111] flex-1">{c.company_name}</span>
-                  <ChevronRight className="w-4 h-4 text-[#ddd]" />
+                  {loading ? <div className="w-4 h-4 border-2 border-[#ddd] border-t-[#111] rounded-full animate-spin" /> : <ChevronRight className="w-4 h-4 text-[#ddd]" />}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* OTP Step */}
+        {/* ── Password Step ── */}
+        {step === "password" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div>
+              <button onClick={() => { setStep("phone"); setPassword(""); setError(""); }} className="text-[#999] hover:text-[#111] mb-4 flex items-center gap-1 text-sm font-medium"><ChevronLeft className="w-4 h-4" /> Back</button>
+              <h1 className="text-[28px] font-black text-[#111] tracking-tight leading-tight">Enter password</h1>
+              <p className="text-[14px] text-[#999] mt-2">Use the password your manager gave you.</p>
+            </div>
+
+            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
+
+            <div className="flex items-center border-b-2 border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+              <input
+                ref={passwordRef}
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                onKeyDown={(e) => e.key === "Enter" && password && handlePasswordLogin()}
+                className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
+              />
+              <button onClick={() => setShowPassword((v) => !v)} className="text-[#bbb] hover:text-[#111] transition-colors p-2">
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+
+            <button
+              onClick={handlePasswordLogin}
+              disabled={loading || !password.trim()}
+              className="w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30"
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>Sign in <ArrowRight className="w-4 h-4" /></>}
+            </button>
+          </div>
+        )}
+
+        {/* ── OTP Step ── */}
         {step === "otp" && (
           <div className="space-y-8 animate-in fade-in duration-300">
             <div>
               <button onClick={() => { setStep("phone"); setOtpDigits(["","","","","",""]); setError(""); }} className="text-[#999] hover:text-[#111] mb-4 flex items-center gap-1 text-sm font-medium"><ChevronLeft className="w-4 h-4" /> Back</button>
               <h1 className="text-[28px] font-black text-[#111] tracking-tight">Verification</h1>
-              <p className="text-[14px] text-[#999] mt-2">Enter the 6-digit code from Telegram.</p>
+              <p className="text-[14px] text-[#999] mt-2">Enter the 6-digit code sent to your Telegram.</p>
             </div>
 
             {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
@@ -181,14 +272,13 @@ export default function TeamLoginPage() {
             )}
 
             <div className="text-center">
-              <button onClick={() => handleSendOTP(selectedCompanyId || undefined)} disabled={loading} className="text-[13px] text-[#999] font-medium hover:text-[#111] transition-colors disabled:opacity-50">
+              <button onClick={() => sendOTP(selectedCompanyId || undefined)} disabled={loading} className="text-[13px] text-[#999] font-medium hover:text-[#111] transition-colors disabled:opacity-50">
                 Resend code
               </button>
             </div>
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-16 text-center">
           <p className="text-[11px] text-[#ddd] font-medium">Yawmy &middot; 2026</p>
         </div>
