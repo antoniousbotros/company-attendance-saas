@@ -88,6 +88,9 @@
 - **2026-04-14**: **Dashboard UI redesigned** to a Talabat Partners-inspired light theme with orange (`#ff5a00`) primary. Dropped dark mode entirely. Introduced shared primitives in `src/app/components/talabat-ui.tsx`. Sidebar reduced to 6 honest routes grouped into two sections — no stub pages for features we don't have. Business logic (Supabase queries, RLS, billing math, phone normalization, Telegram webhook) unchanged.
 
 ## DECISIONS LOG (NEW)
+- **2026-04-15**: Team portal UI redesigned to analytics dashboard style with Recharts bar charts, period selectors, stats grids, RTL support, and company logo.
+- **2026-04-15**: Added logo upload to admin Settings (Supabase Storage `company-logos` bucket, `logo_url` column on companies table).
+- **2026-04-15**: Team reports page now includes table view for leaders with client-side Excel export (ExcelJS), matching Telegram bot's Excel output format.
 - **2026-04-15**: Simplified pricing to 4 plans (Free/Starter/Pro/Enterprise) — all features included, only employee limit differs. Removed `growth` plan. Extra cost raised to 50 EGP/employee.
 - **2026-04-15**: Replaced 14-day trial with permanent Free plan (5 employees).
 - **2026-04-15**: Built employee web portal at `team.yawmy.app` — custom phone+OTP auth, mirrors all Telegram bot features.
@@ -96,6 +99,7 @@
 - **2026-04-15**: Security hardening — added `company_id` scoping to all team API queries, try/catch on all routes, sanitized error messages, crypto-secure OTP generation.
 
 ## CHANGE LOG
+- **v2.1.0**: Team portal UI redesign (analytics dashboard style), Recharts charts, company logo upload, Excel export for team leaders, full RTL/Arabic support.
 - **v2.0.0**: Employee Portal (`team.yawmy.app`), simplified pricing (4 plans, all features), sadmin pricing control, security hardening.
 - **v1.1.0**: Major UI overhaul (Notion Style), Cookie-based Auth, and multi-tenant bot support.
 - **v1.0.0**: Initial release of SyncTime SaaS.
