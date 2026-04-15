@@ -293,7 +293,7 @@ export function HelpCard({
         </div>
         {moreLabel && (
           <Link
-            href="#"
+            href="/blog"
             className="text-sm font-medium text-[#6b7280] hover:text-[#111] inline-flex items-center gap-1"
           >
             {moreLabel} <span aria-hidden>›</span>

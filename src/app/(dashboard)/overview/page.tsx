@@ -12,6 +12,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
+import { blogData } from "@/lib/blog-data";
 import {
   PageHeader,
   SectionCard,
@@ -240,15 +241,14 @@ export default function OverviewPage() {
       {/* Help section */}
       <HelpCard
         title={t.needHelpTitle}
-        subtitle={t.needHelpSubtitle}
+        subtitle={isRTL ? "اطلع على هذه المقالات لمعرفة المزيد" : "Check out these articles to learn more"}
         moreLabel={t.more}
         isRTL={isRTL}
-        articles={[
-          { title: t.article1Title, description: t.article1Desc },
-          { title: t.article2Title, description: t.article2Desc },
-          { title: t.article3Title, description: t.article3Desc },
-          { title: t.article4Title, description: t.article4Desc },
-        ]}
+        articles={blogData.slice(0, 4).map((post) => ({
+          title: post.title[isRTL ? "ar" : "en"],
+          description: post.description[isRTL ? "ar" : "en"],
+          href: `/blog/${post.slug}`,
+        }))}
       />
     </div>
   );

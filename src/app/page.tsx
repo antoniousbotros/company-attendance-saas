@@ -43,6 +43,7 @@ function LandingPageContent() {
               <span className="hidden md:inline">{lang === "en" ? "العربية" : "English"}</span>
             </button>
             <div className="hidden md:flex items-center gap-6">
+              <Link href="/blog" className="text-sm font-bold text-[#6b7280] hover:text-[#ff5a00] transition-colors">{isRTL ? "المدونة" : "Blog"}</Link>
               <Link href="/login" className="text-sm font-bold text-[#6b7280] hover:text-[#ff5a00] transition-colors">{isRTL ? "تسجيل الدخول" : "Sign In"}</Link>
             </div>
             <Link href="/signup" className="bg-[#ff5a00] text-white px-5 py-2.5 md:px-6 md:py-3 rounded-xl md:rounded-2xl font-black hover:bg-[#e04f00] hover:-translate-y-0.5 transition-all text-sm shadow-xl shadow-[#ff5a00]/20">
@@ -266,6 +267,7 @@ function LandingPageContent() {
             <span className="text-xl font-black tracking-tighter text-[#111]">Yawmy {isRTL && "يومي"}</span>
           </div>
           <div className="flex gap-6 text-sm font-bold text-[#6b7280]">
+             <Link href="/blog" className="hover:text-[#ff5a00]">{isRTL ? "المدونة" : "Blog"}</Link>
              <Link href="#" className="hover:text-[#ff5a00]">{isRTL ? "سياسة الخصوصية" : "Privacy Policy"}</Link>
              <Link href="#" className="hover:text-[#ff5a00]">{isRTL ? "تواصل معنا" : "Contact Sales"}</Link>
           </div>
