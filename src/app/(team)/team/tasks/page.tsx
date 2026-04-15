@@ -327,16 +327,31 @@ export default function TeamTasksPage() {
   // Task actions
   const [toggling, setToggling] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<any | null>(null);
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
 
-  const loadTasks = useCallback(() => {
-    fetch("/api/team/tasks")
+  const loadTasks = useCallback((all = false) => {
+    fetch(`/api/team/tasks${all ? "?all=true" : ""}`)
       .then((r) => r.json())
       .then((data) => {
         setMyTasks(data.tasks || []);
         setAssignedByMe(data.assigned_by_me || []);
+        setHasOlder(data.has_older ?? false);
         setLoading(false);
       });
   }, []);
+
+  const loadOlderTasks = () => {
+    setLoadingOlder(true);
+    fetch("/api/team/tasks?all=true")
+      .then((r) => r.json())
+      .then((data) => {
+        setMyTasks(data.tasks || []);
+        setAssignedByMe(data.assigned_by_me || []);
+        setHasOlder(false); // all loaded
+        setLoadingOlder(false);
+      });
+  };
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
@@ -520,6 +535,22 @@ export default function TeamTasksPage() {
               onEdit={setEditTask}
             />
           ))}
+
+          {/* Load older tasks */}
+          {hasOlder && (
+            <div className="pt-2 text-center">
+              <button
+                onClick={loadOlderTasks}
+                disabled={loadingOlder}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#e0e0e0] text-[12px] font-bold text-[#6b7280] hover:text-[#111] hover:border-[#111] transition-all disabled:opacity-50"
+              >
+                {loadingOlder
+                  ? <><Loader2 className="w-3 h-3 animate-spin" />{isRTL ? "جاري التحميل..." : "Loading..."}</>
+                  : <>{isRTL ? "⏳ عرض المهام الأقدم" : "⏳ Load older tasks"}</>}
+              </button>
+              <p className="mt-1.5 text-[10px] text-[#bbb]">{isRTL ? "يتم عرض آخر 30 يوماً فقط" : "Showing last 30 days only"}</p>
+            </div>
+          )}
         </div>
       )}
 
