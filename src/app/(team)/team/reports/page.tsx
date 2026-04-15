@@ -23,6 +23,8 @@ export default function TeamReportsPage() {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState("");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -224,31 +226,49 @@ export default function TeamReportsPage() {
                           <img src={fieldValues[f.id]} alt="" className="w-full h-40 object-cover rounded-xl border border-[#e0e0e0]" />
                           <button onClick={() => setFieldValues({ ...fieldValues, [f.id]: "" })} className="absolute top-2 end-2 bg-white/90 text-[#b91c1c] rounded-lg p-1.5 text-xs font-bold shadow-sm">&times;</button>
                         </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                            <Camera className="w-4 h-4" />
-                            {isRTL ? "التقاط صورة" : "Take Photo"}
-                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
-                              const file = e.target.files?.[0]; if (!file) return;
-                              const fd = new FormData(); fd.append("image", file);
-                              const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
-                              const data = await res.json();
-                              if (data.ok) setFieldValues({ ...fieldValues, [f.id]: data.url });
-                            }} />
-                          </label>
-                          <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                            <ImageIcon className="w-4 h-4" />
-                            {isRTL ? "رفع صورة" : "Upload"}
-                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                              const file = e.target.files?.[0]; if (!file) return;
-                              const fd = new FormData(); fd.append("image", file);
-                              const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
-                              const data = await res.json();
-                              if (data.ok) setFieldValues({ ...fieldValues, [f.id]: data.url });
-                            }} />
-                          </label>
+                      ) : uploadingField === f.id ? (
+                        <div className="flex items-center justify-center py-6 text-xs text-[#6b7280] font-semibold gap-2">
+                          <div className="w-4 h-4 border-2 border-[#ff5a00]/20 border-t-[#ff5a00] rounded-full animate-spin" />
+                          {isRTL ? "جاري رفع الصورة..." : "Uploading..."}
                         </div>
+                      ) : (
+                        <>
+                          <div className="flex gap-2">
+                            <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                              <Camera className="w-4 h-4" />
+                              {isRTL ? "التقاط صورة" : "Take Photo"}
+                              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                                const file = e.target.files?.[0]; if (!file) return;
+                                setUploadingField(f.id); setUploadError("");
+                                const fd = new FormData(); fd.append("image", file);
+                                try {
+                                  const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
+                                  const data = await res.json();
+                                  if (data.ok) { setFieldValues((prev) => ({ ...prev, [f.id]: data.url })); }
+                                  else { setUploadError(data.error || (isRTL ? "فشل رفع الصورة" : "Upload failed")); }
+                                } catch { setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); }
+                                setUploadingField(null);
+                              }} />
+                            </label>
+                            <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                              <ImageIcon className="w-4 h-4" />
+                              {isRTL ? "رفع صورة" : "Upload"}
+                              <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                                const file = e.target.files?.[0]; if (!file) return;
+                                setUploadingField(f.id); setUploadError("");
+                                const fd = new FormData(); fd.append("image", file);
+                                try {
+                                  const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
+                                  const data = await res.json();
+                                  if (data.ok) { setFieldValues((prev) => ({ ...prev, [f.id]: data.url })); }
+                                  else { setUploadError(data.error || (isRTL ? "فشل رفع الصورة" : "Upload failed")); }
+                                } catch { setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); }
+                                setUploadingField(null);
+                              }} />
+                            </label>
+                          </div>
+                          {uploadError && <p className="text-xs text-[#b91c1c] font-semibold mt-2">{uploadError}</p>}
+                        </>
                       )}
                     </div>
                   ) : (
