@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getTeamSession } from "../../_helpers";
-import { Telegraf } from "telegraf";
-
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
@@ -50,7 +48,8 @@ export async function POST(req: NextRequest) {
       const lang = companyRes.data?.bot_language || "en";
 
       if (token) {
-        const bot = new Telegraf(token);
+        const { Telegraf } = await import("telegraf");
+        const bot = new Telegraf(token as string);
         const deadlineStr = deadline ? `\n📅 ${deadline}` : "";
         const msg = lang === "ar"
           ? `📌 <b>مهمة جديدة!</b>\n\nمن: ${assignerName}\nالمهمة: <b>${title}</b>${deadlineStr}`

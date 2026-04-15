@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getTeamSession } from "../../_helpers";
-import { Telegraf } from "telegraf";
-
 export const dynamic = "force-dynamic";
 
 export async function PATCH(req: NextRequest) {
@@ -51,7 +49,8 @@ export async function PATCH(req: NextRequest) {
       const lang = companyRes.data?.bot_language || "en";
 
       if (assignerTgId && token) {
-        const bot = new Telegraf(token);
+        const { Telegraf } = await import("telegraf");
+        const bot = new Telegraf(token as string);
         const msg = action === "start"
           ? (lang === "ar"
             ? `⏳ ${assigneeName} بدأ العمل على: <b>${task.title}</b>`

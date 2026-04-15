@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { generateOTP, matchPhone } from "../../_helpers";
-import { Telegraf } from "telegraf";
 
 export const dynamic = "force-dynamic";
 
@@ -64,15 +63,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Failed to generate code. Please try again." }, { status: 500 });
     }
 
-    // Send OTP via Telegram
+    // Send OTP via Telegram — lazy import to avoid bundling issues on Vercel
     const token = (employee.companies as any)?.telegram_token || process.env.TELEGRAM_BOT_TOKEN;
-    if (token) {
-      const bot = new Telegraf(token);
-      await bot.telegram.sendMessage(
-        employee.telegram_user_id.toString(),
-        `🔐 Your login code: <b>${code}</b>\n\nThis code expires in 5 minutes. Do not share it.`,
-        { parse_mode: "HTML" }
-      );
+    if (token && employee.telegram_user_id) {
+      try {
+        const { Telegraf } = await import("telegraf");
+        const bot = new Telegraf(token);
+        await bot.telegram.sendMessage(
+          employee.telegram_user_id.toString(),
+          `🔐 Your login code: <b>${code}</b>\n\nThis code expires in 5 minutes. Do not share it.`,
+          { parse_mode: "HTML" }
+        );
+      } catch (tgErr) {
+        console.error("Telegram send error:", tgErr);
+        // OTP is already stored — let user proceed even if Telegram fails
+      }
     }
 
     return NextResponse.json({ ok: true, step: "otp_sent" });
