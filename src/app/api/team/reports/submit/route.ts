@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getTeamSession } from "../../_helpers";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   const session = await getTeamSession(req);
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });

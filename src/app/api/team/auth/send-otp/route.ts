@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { generateOTP, matchPhone } from "../../_helpers";
 import { Telegraf } from "telegraf";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const { phone, company_id } = await req.json();
@@ -51,12 +53,16 @@ export async function POST(req: NextRequest) {
     const code = generateOTP();
     const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
-    await supabaseAdmin.from("employee_otp").insert({
+    const { error: otpError } = await supabaseAdmin.from("employee_otp").insert({
       employee_id: employee.id,
       company_id: employee.company_id,
       code,
       expires_at,
     });
+    if (otpError) {
+      console.error("OTP insert error:", otpError.message);
+      return NextResponse.json({ ok: false, error: "Failed to generate code. Please try again." }, { status: 500 });
+    }
 
     // Send OTP via Telegram
     const token = (employee.companies as any)?.telegram_token || process.env.TELEGRAM_BOT_TOKEN;
@@ -70,7 +76,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ ok: true, step: "otp_sent" });
-  } catch {
+  } catch (e: unknown) {
+    console.error("send-otp error:", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: "Something went wrong" }, { status: 500 });
   }
 }

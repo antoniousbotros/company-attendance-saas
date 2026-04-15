@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 const CONFIG_ID = "00000000-0000-0000-0000-000000000001";
 
 export async function GET(req: NextRequest) {
