@@ -174,7 +174,6 @@ export async function POST(req: NextRequest) {
         
         if (nextField) {
             if (nextField.field_type === 'select' && nextField.options && nextField.options.length > 0) {
-                // Generate Inline Keyboard
                 const optionButtons = nextField.options.map((opt: string, idx: number) => [
                     Markup.button.callback(opt, `ropt_${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}_${idx}`)
                 ]);
@@ -184,7 +183,15 @@ export async function POST(req: NextRequest) {
                     Markup.inlineKeyboard(optionButtons)
                 );
             }
-            
+
+            if (nextField.field_type === 'image') {
+                return ctx.reply(lang === 'ar'
+                    ? `📷 يرجى إرسال صورة: ${nextField.label}\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`
+                    : `📷 Please send a photo: ${nextField.label}\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`,
+                    { reply_markup: { force_reply: true } }
+                );
+            }
+
             return ctx.reply(lang === 'ar'
                 ? `يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`
                 : `Please enter: ${nextField.label} (${nextField.field_type})\n\n[Report: ${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}]`,
@@ -234,6 +241,50 @@ export async function POST(req: NextRequest) {
         }
       }
       await processAttendance(ctx, employee, true);
+    });
+
+    // PHOTO HANDLER — for image field type in reports
+    bot.on("photo", async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
+      if (!employee) return;
+      const lang = employee.companies.bot_language || 'en';
+
+      // Check for active draft report
+      const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft").single();
+      if (!draftReport) return ctx.reply(lang === 'ar' ? "لا يوجد تقرير نشط لإرفاق الصورة." : "No active report to attach photo to.");
+
+      // Find the next unfilled image field
+      const { data: fields } = await supabaseAdmin.from("custom_fields").select("*").eq("team_id", draftReport.team_id).order("order_index", { ascending: true });
+      const { data: filledValues } = await supabaseAdmin.from("report_values").select("field_id").eq("report_id", draftReport.id);
+      const filledIds = filledValues?.map(v => v.field_id) || [];
+      const nextImageField = fields?.find(f => f.field_type === 'image' && !filledIds.includes(f.id));
+
+      if (!nextImageField) return ctx.reply(lang === 'ar' ? "لا يوجد حقل صورة ينتظر الإدخال." : "No image field is waiting for input.");
+
+      try {
+        // Get the highest quality photo
+        const photos = ctx.message.photo;
+        const bestPhoto = photos[photos.length - 1];
+        const fileLink = await ctx.telegram.getFileLink(bestPhoto.file_id);
+
+        // Download the image
+        const response = await fetch(fileLink.href);
+        const buffer = Buffer.from(await response.arrayBuffer());
+        const filePath = `${employee.company_id}/${employee.id}/${draftReport.id}_${nextImageField.id}.jpg`;
+
+        // Upload to Supabase Storage
+        await supabaseAdmin.storage.from("report-images").upload(filePath, buffer, { contentType: "image/jpeg", upsert: true });
+        const { data: urlData } = supabaseAdmin.storage.from("report-images").getPublicUrl(filePath);
+
+        // Save the URL as the field value
+        await supabaseAdmin.from("report_values").insert({ report_id: draftReport.id, field_id: nextImageField.id, value: urlData.publicUrl });
+
+        await ctx.reply(lang === 'ar' ? `✅ تم رفع الصورة لحقل: ${nextImageField.label}` : `✅ Photo uploaded for: ${nextImageField.label}`);
+        return runNextReportStep(ctx, employee, draftReport);
+      } catch (err) {
+        console.error("Photo upload error:", err);
+        return ctx.reply(lang === 'ar' ? "❌ فشل رفع الصورة. حاول مرة أخرى." : "❌ Failed to upload photo. Try again.");
+      }
     });
 
     bot.hears(["✅ Check In", "✅ تسجيل حضور", "🚪 Check Out", "🚪 تسجيل انصراف"], async (ctx) => {

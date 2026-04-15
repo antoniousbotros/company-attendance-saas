@@ -249,7 +249,7 @@ CREATE TABLE IF NOT EXISTS public.custom_fields (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     team_id UUID NOT NULL REFERENCES public.teams(id) ON DELETE CASCADE,
     label TEXT NOT NULL,
-    field_type TEXT NOT NULL DEFAULT 'text', -- 'number', 'text', 'select'
+    field_type TEXT NOT NULL DEFAULT 'text', -- 'number', 'text', 'select', 'image'
     options JSONB DEFAULT '[]'::jsonb,
     is_required BOOLEAN DEFAULT true,
     order_index INTEGER DEFAULT 0

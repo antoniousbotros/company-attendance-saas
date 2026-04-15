@@ -502,7 +502,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                             <span className="text-gray-400 text-xs w-4">{i + 2}.</span> 
                                             {f.label}
                                             <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-2">
-                                                {f.field_type === 'number' ? 'رقم' : f.field_type === 'select' ? 'خيارات متعددة' : 'نص'}
+                                                {f.field_type === 'number' ? 'رقم' : f.field_type === 'select' ? 'خيارات متعددة' : f.field_type === 'image' ? 'صورة' : 'نص'}
                                             </span>
                                         </span>
                                         <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors">
@@ -532,6 +532,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                             <option value="text">نص سريع</option>
                                             <option value="number">رقم</option>
                                             <option value="select">خيارات متعددة</option>
+                                            <option value="image">صورة</option>
                                         </select>
                                         {newType !== 'select' && (
                                             <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors" type="button">

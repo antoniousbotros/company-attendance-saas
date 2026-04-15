@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useTeam } from "../layout";
-import { BarChart3, MapPin, Send, User, Download } from "lucide-react";
+import { BarChart3, MapPin, Send, User, Download, Camera, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "submit" | "my_reports" | "team_reports";
@@ -196,6 +196,40 @@ export default function TeamReportsPage() {
                       <option value="">{isRTL ? "اختر" : "Select"}</option>
                       {(f.options || []).map((opt: string, i: number) => (<option key={i} value={opt}>{opt}</option>))}
                     </select>
+                  ) : f.field_type === "image" ? (
+                    <div>
+                      {fieldValues[f.id] ? (
+                        <div className="relative">
+                          <img src={fieldValues[f.id]} alt="" className="w-full h-40 object-cover rounded-xl border border-[#e0e0e0]" />
+                          <button onClick={() => setFieldValues({ ...fieldValues, [f.id]: "" })} className="absolute top-2 end-2 bg-white/90 text-[#b91c1c] rounded-lg p-1.5 text-xs font-bold shadow-sm">&times;</button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                            <Camera className="w-4 h-4" />
+                            {isRTL ? "التقاط صورة" : "Take Photo"}
+                            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0]; if (!file) return;
+                              const fd = new FormData(); fd.append("image", file);
+                              const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
+                              const data = await res.json();
+                              if (data.ok) setFieldValues({ ...fieldValues, [f.id]: data.url });
+                            }} />
+                          </label>
+                          <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
+                            <ImageIcon className="w-4 h-4" />
+                            {isRTL ? "رفع صورة" : "Upload"}
+                            <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                              const file = e.target.files?.[0]; if (!file) return;
+                              const fd = new FormData(); fd.append("image", file);
+                              const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
+                              const data = await res.json();
+                              if (data.ok) setFieldValues({ ...fieldValues, [f.id]: data.url });
+                            }} />
+                          </label>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <input type={f.field_type === "number" ? "number" : "text"} value={fieldValues[f.id] || ""} onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} placeholder={f.label} className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] placeholder:text-[#9ca3af] outline-none focus:border-[#ff5a00]" />
                   )}
@@ -234,9 +268,17 @@ export default function TeamReportsPage() {
               </div>
               {r.report_values?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
-                  {r.report_values.map((v: any, i: number) => (
-                    <span key={i} className="text-[9px] font-semibold bg-[#f5f5f5] text-[#4b5563] px-2 py-1 rounded-lg">{getFieldLabel(v.field_id)}: {v.value}</span>
-                  ))}
+                  {r.report_values.map((v: any, i: number) => {
+                    const isImage = v.value?.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(v.value);
+                    if (isImage) {
+                      return (
+                        <a key={i} href={v.value} target="_blank" rel="noreferrer" className="block">
+                          <img src={v.value} alt={getFieldLabel(v.field_id)} className="w-16 h-16 object-cover rounded-lg border border-[#e0e0e0]" />
+                        </a>
+                      );
+                    }
+                    return <span key={i} className="text-[9px] font-semibold bg-[#f5f5f5] text-[#4b5563] px-2 py-1 rounded-lg">{getFieldLabel(v.field_id)}: {v.value}</span>;
+                  })}
                 </div>
               )}
               {r.notes && <p className="text-[11px] text-[#6b7280] italic">{r.notes}</p>}
