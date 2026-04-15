@@ -39,7 +39,10 @@ function formatCheckInLabel(iso: string, locale: string, isRTL: boolean) {
 }
 
 function formatDate(d: Date) {
-  return d.toISOString().split("T")[0];
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function rangeLabel(from: Date, to: Date, locale: string) {
@@ -82,8 +85,8 @@ export default function AttendancePage() {
   const [logs, setLogs] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
-  const [activePreset, setActivePreset] = useState<PresetKey>("week");
-  const [range, setRange] = useState(getPresetRange("week"));
+  const [activePreset, setActivePreset] = useState<PresetKey>("today");
+  const [range, setRange] = useState(getPresetRange("today"));
   const [showCustom, setShowCustom] = useState(false);
   const [customFrom, setCustomFrom] = useState(formatDate(range.from));
   const [customTo, setCustomTo] = useState(formatDate(range.to));
