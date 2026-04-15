@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { Check, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -85,16 +86,18 @@ export default function PricingSection() {
                 </span>
               </div>
 
-              <button className={cn(
-                "w-full py-3 rounded-lg font-black transition-all text-sm",
-                plan.popular
-                  ? "bg-white text-[#ff5a00] hover:bg-[#fff1e8]"
-                  : "bg-[#111] text-white hover:bg-[#111]/80"
-              )}>
+              <Link 
+                href="/signup"
+                className={cn(
+                  "w-full py-3 rounded-lg font-black transition-all text-sm flex items-center justify-center",
+                  plan.popular
+                    ? "bg-white text-[#ff5a00] hover:bg-[#fff1e8]"
+                    : "bg-[#111] text-white hover:bg-[#111]/80"
+                )}>
                 {plan.price === 0
                   ? (isRTL ? "ابدأ مجاناً" : "Start Free")
                   : (isRTL ? "ابدأ الآن" : "Get Started")}
-              </button>
+              </Link>
             </div>
           ))}
         </div>
