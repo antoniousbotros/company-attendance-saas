@@ -380,19 +380,35 @@ export async function POST(req: NextRequest) {
       const { data: tasks } = await supabaseAdmin.from("tasks").select("*, assigner:employees!assigned_by(name)").eq("assigned_to", employee.id).in("status", ["pending", "in_progress", "late"]).order("created_at", { ascending: true });
 
       if (!tasks || tasks.length === 0) {
-        return ctx.reply(lang === 'ar' ? "🎉 ليس لديك مهام معلقة! عمل رائع." : "🎉 You have no pending tasks! Great job.");
+        return ctx.reply(
+          lang === 'ar' ? "🎉 ليس لديك مهام معلقة! عمل رائع." : "🎉 You have no pending tasks! Great job.",
+          Markup.inlineKeyboard([
+            [Markup.button.callback(lang === 'ar' ? "➕ إضافة مهمة شخصية" : "➕ Add Personal Task", "add_self_task")]
+          ])
+        );
       }
 
       for (const task of tasks) {
+        const isSelf = task.assigned_by === employee.id;
         const buttons = [];
         if (task.status === "pending" || task.status === "late") {
-           buttons.push(Markup.button.callback(lang === 'ar' ? "⏳ قيد التنفيذ" : "⏳ Start Progress", `start_task_${task.id}`));
+           if (!isSelf) buttons.push(Markup.button.callback(lang === 'ar' ? "⏳ قيد التنفيذ" : "⏳ Start Progress", `start_task_${task.id}`));
         }
         buttons.push(Markup.button.callback(lang === 'ar' ? "✅ تم الإنجاز" : "✅ Mark as Done", `task_done_${task.id}`));
 
-        const msg = `📌 <b>${task.title}</b>\n\n👤 ${lang === 'ar' ? 'بواسطة' : 'Assigned By'}: ${task.assigner?.name || 'Admin'}\n⏳ ${lang === 'ar' ? 'التسليم' : 'Deadline'}: ${task.deadline || 'N/A'}\n⚠️ ${lang === 'ar' ? 'الحالة' : 'Status'}: ${task.status.toUpperCase()}`;
+        const checkbox = task.status === "completed" ? "✅" : (task.status === "in_progress" ? "🔄" : "⬜");
+        const assignedByLine = isSelf
+          ? (lang === 'ar' ? "🏷️ مهمة شخصية" : "🏷️ Personal Task")
+          : `👤 ${lang === 'ar' ? 'بواسطة' : 'By'}: ${task.assigner?.name || 'Admin'}`;
+        const msg = `${checkbox} <b>${task.title}</b>\n\n${assignedByLine}\n⏳ ${lang === 'ar' ? 'التسليم' : 'Deadline'}: ${task.deadline || (lang === 'ar' ? 'غير محدد' : 'N/A')}`;
         await ctx.replyWithHTML(msg, Markup.inlineKeyboard([buttons]));
       }
+
+      // Add personal task button at end
+      await ctx.reply(
+        lang === 'ar' ? "➕ لإضافة مهمة شخصية جديدة:" : "➕ To add a personal task:",
+        Markup.inlineKeyboard([[Markup.button.callback(lang === 'ar' ? "➕ إضافة مهمة شخصية" : "➕ Add Personal Task", "add_self_task")]])
+      );
     });
 
     // TEAM LEADER REPORTS HOOK
@@ -632,7 +648,21 @@ export async function POST(req: NextRequest) {
     bot.on("callback_query", async (ctx: any) => {
       const data = ctx.callbackQuery.data;
       const telegramUserId = ctx.from.id;
-      
+
+      // ADD PERSONAL TASK HOOK
+      if (data === "add_self_task") {
+        await ctx.answerCbQuery();
+        const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
+        if (!employee) return;
+        const lang = (employee.companies as any).bot_language || 'en';
+        return ctx.reply(
+          lang === 'ar'
+            ? "اكتب عنوان مهمتك الشخصية وأرسلها كرد على هذه الرسالة:\n\n[SelfTask]"
+            : "Type your personal task title and reply to this message:\n\n[SelfTask]",
+          { reply_markup: { force_reply: true } }
+        );
+      }
+
       // TASK ASSIGNMENT HOOK (Step 1 -> 2)
       if (data && data.startsWith("assign_task_to_")) {
         const assigneeFullId = data.replace("assign_task_to_", "");
@@ -805,7 +835,26 @@ export async function POST(req: NextRequest) {
     bot.on("text", async (ctx) => {
       const telegramUserId = ctx.from.id;
       const replyToMsg = ctx.message.reply_to_message;
-      
+
+      // PERSONAL SELF-TASK HOOK
+      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("[SelfTask]")) {
+        const taskTitle = ctx.message.text.trim();
+        const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
+        if (!employee) return;
+        const lang = (employee.companies as any).bot_language || 'en';
+        await supabaseAdmin.from("tasks").insert({
+          company_id: employee.company_id,
+          assigned_by: employee.id,
+          assigned_to: employee.id,
+          title: taskTitle,
+          status: 'pending',
+        });
+        return ctx.reply(
+          lang === 'ar' ? `✅ تمت إضافة المهمة:\n"${taskTitle}"` : `✅ Task added:\n"${taskTitle}"`,
+          getMainMenu(employee.companies)
+        );
+      }
+
       // TASK ASSIGNMENT HOOK (Step 2 -> 3)
       // TASK ASSIGNMENT HOOK (Drafting Phase)
       if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("[Ref:")) {

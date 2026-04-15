@@ -44,6 +44,7 @@ export async function GET(req: NextRequest) {
         ...t,
         assigned_by_name: nameMap[t.assigned_by] || "Unknown",
         assigned_to_name: nameMap[t.assigned_to] || "Unknown",
+        is_self: t.assigned_by === t.assigned_to,
       }));
 
     return NextResponse.json({

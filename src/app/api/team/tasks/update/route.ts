@@ -9,7 +9,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const { task_id, action } = await req.json();
-    if (!task_id || !["start", "done"].includes(action)) {
+    if (!task_id || !["start", "done", "undo"].includes(action)) {
       return NextResponse.json({ ok: false, error: "Invalid params" }, { status: 400 });
     }
 
@@ -28,6 +28,8 @@ export async function PATCH(req: NextRequest) {
 
     if (action === "start") {
       await supabaseAdmin.from("tasks").update({ status: "in_progress" }).eq("id", task_id);
+    } else if (action === "undo") {
+      await supabaseAdmin.from("tasks").update({ status: "pending", completed_at: null }).eq("id", task_id);
     } else {
       await supabaseAdmin
         .from("tasks")
