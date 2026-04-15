@@ -1,14 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, FileText, MoveRight } from "lucide-react";
-import { blogData } from "@/lib/blog-data";
+import { ArrowRight, FileText, MoveRight, Loader2 } from "lucide-react";
+import { fetchBlogs, BlogPost } from "@/lib/blog-data";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
 
 export default function BlogListPage() {
   const { lang, isRTL } = useLanguage();
+  const [blogs, setBlogs] = useState<BlogPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchBlogs().then((data) => {
+      setBlogs(data);
+      setIsLoading(false);
+    });
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#fafafa] font-sans pb-24">
@@ -48,16 +57,21 @@ export default function BlogListPage() {
         </div>
 
         {/* Blog Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-          {blogData.map((post, i) => (
-            <Link
-              href={`/blog/${post.slug}`}
-              key={post.slug}
-              className="group bg-white rounded-3xl border border-[#eeeeee] overflow-hidden hover:border-[#111] hover:shadow-2xl hover:shadow-black/5 transition-all duration-300 flex flex-col"
-              style={{ animationDelay: `${i * 100}ms` }}
-            >
-              <div className="aspect-[16/9] w-full overflow-hidden relative bg-[#f5f5f5]">
-                <img
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-10 h-10 animate-spin text-[#ff5a00]" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            {blogs.map((post, i) => (
+              <Link
+                href={`/blog/${post.slug}`}
+                key={post.slug}
+                className="group bg-white rounded-3xl border border-[#eeeeee] overflow-hidden hover:border-[#111] hover:shadow-2xl hover:shadow-black/5 transition-all duration-300 flex flex-col"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <div className="aspect-[16/9] w-full overflow-hidden relative bg-[#f5f5f5]">
+                  <img
                   src={post.coverImage}
                   alt={post.title[lang === "ar" ? "ar" : "en"]}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
@@ -94,7 +108,8 @@ export default function BlogListPage() {
               </div>
             </Link>
           ))}
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );

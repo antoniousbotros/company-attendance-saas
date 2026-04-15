@@ -12,7 +12,7 @@ import {
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
-import { blogData } from "@/lib/blog-data";
+import { fetchBlogs, BlogPost } from "@/lib/blog-data";
 import {
   PageHeader,
   SectionCard,
@@ -80,6 +80,7 @@ export default function OverviewPage() {
     absent: 0,
     recent: [] as AttendanceRow[],
   });
+  const [blogsData, setBlogsData] = useState<BlogPost[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,6 +99,8 @@ export default function OverviewPage() {
         absent: Math.max(0, (employees?.length || 0) - present),
         recent: (attendance as AttendanceRow[] | null)?.slice(0, 6) || [],
       });
+      const bData = await fetchBlogs();
+      setBlogsData(bData.slice(0, 4));
     };
     fetchData();
   }, []);
@@ -244,7 +247,7 @@ export default function OverviewPage() {
         subtitle={isRTL ? "اطلع على هذه المقالات لمعرفة المزيد" : "Check out these articles to learn more"}
         moreLabel={t.more}
         isRTL={isRTL}
-        articles={blogData.slice(0, 4).map((post) => ({
+        articles={blogsData.map((post) => ({
           title: post.title[isRTL ? "ar" : "en"],
           description: post.description[isRTL ? "ar" : "en"],
           href: `/blog/${post.slug}`,

@@ -114,3 +114,18 @@ export const blogData: BlogPost[] = [
     date: "2024-04-15",
   },
 ];
+
+import { supabase } from "@/lib/supabase";
+
+export async function fetchBlogs(): Promise<BlogPost[]> {
+   const { data, error } = await supabase.from('blog_posts').select('*').order('published_at', { ascending: false });
+   if (error || !data) return [];
+   return data.map(b => ({
+     slug: b.slug,
+     title: { ar: b.title_ar, en: b.title_en },
+     description: { ar: b.description_ar, en: b.description_en },
+     content: { ar: b.content_ar, en: b.content_en },
+     coverImage: b.cover_image,
+     date: b.published_at,
+   }));
+}

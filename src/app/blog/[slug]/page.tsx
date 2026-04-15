@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Clock, Share2 } from "lucide-react";
-import { blogData } from "@/lib/blog-data";
+import { ArrowLeft, ArrowRight, Clock, Share2, Loader2 } from "lucide-react";
+import { fetchBlogs, BlogPost } from "@/lib/blog-data";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,26 @@ export default function BlogPostPage() {
   const router = useRouter();
   const slug = params.slug as string;
 
-  const post = useMemo(() => blogData.find((p) => p.slug === slug), [slug]);
+  const [post, setPost] = useState<BlogPost | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUrl, setCurrentUrl] = useState("");
+
+  useEffect(() => {
+    fetchBlogs().then((data) => {
+      const found = data.find((p) => p.slug === slug);
+      setPost(found || null);
+      setIsLoading(false);
+    });
+    setCurrentUrl(window.location.href);
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 text-center">
+        <Loader2 className="w-10 h-10 animate-spin text-[#ff5a00]" />
+      </div>
+    );
+  }
 
   if (!post) {
     return (
@@ -33,14 +52,8 @@ export default function BlogPostPage() {
     );
   }
 
-  const title = post.title[lang === "ar" ? "ar" : "en"];
-  const content = post.content[lang === "ar" ? "ar" : "en"];
-
-  const [currentUrl, setCurrentUrl] = React.useState("");
-
-  React.useEffect(() => {
-    setCurrentUrl(window.location.href);
-  }, []);
+  const title = post!.title[lang === "ar" ? "ar" : "en"];
+  const content = post!.content[lang === "ar" ? "ar" : "en"];
 
   const handleShare = () => {
     if (navigator.share) {
