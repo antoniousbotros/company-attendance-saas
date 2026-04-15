@@ -3,8 +3,12 @@
 import React, { useEffect, useState } from "react";
 import { CheckSquare, Plus, X, Clock, User } from "lucide-react";
 
+type Tab = "my_tasks" | "assigned_by_me";
+
 export default function TeamTasksPage() {
-  const [tasks, setTasks] = useState<any[]>([]);
+  const [tab, setTab] = useState<Tab>("my_tasks");
+  const [myTasks, setMyTasks] = useState<any[]>([]);
+  const [assignedByMe, setAssignedByMe] = useState<any[]>([]);
   const [coworkers, setCoworkers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAssign, setShowAssign] = useState(false);
@@ -18,7 +22,8 @@ export default function TeamTasksPage() {
     fetch("/api/team/tasks")
       .then((r) => r.json())
       .then((data) => {
-        setTasks(data.tasks || []);
+        setMyTasks(data.tasks || []);
+        setAssignedByMe(data.assigned_by_me || []);
         setLoading(false);
       });
   };
@@ -67,15 +72,18 @@ export default function TeamTasksPage() {
   const statusColor = (status: string) => {
     if (status === "in_progress") return "bg-[#fff1e8] text-[#ff5a00]";
     if (status === "completed") return "bg-[#e6f6ec] text-[#1e8e3e]";
+    if (status === "late") return "bg-[#fef2f2] text-[#b91c1c]";
     return "bg-[#f1f1f1] text-[#4b5563]";
   };
+
+  const activeTasks = tab === "my_tasks" ? myTasks : assignedByMe;
 
   return (
     <div className="space-y-5 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CheckSquare className="w-5 h-5 text-[#ff5a00]" />
-          <h1 className="text-xl font-black text-[#111]">My Tasks</h1>
+          <h1 className="text-xl font-black text-[#111]">Tasks</h1>
         </div>
         <button
           onClick={openAssignModal}
@@ -85,46 +93,68 @@ export default function TeamTasksPage() {
         </button>
       </div>
 
+      {/* Tabs */}
+      <div className="flex bg-white rounded-lg border border-[#e0e0e0] p-1">
+        <button
+          onClick={() => setTab("my_tasks")}
+          className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+            tab === "my_tasks" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]"
+          }`}
+        >
+          Assigned to me ({myTasks.length})
+        </button>
+        <button
+          onClick={() => setTab("assigned_by_me")}
+          className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+            tab === "assigned_by_me" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]"
+          }`}
+        >
+          I assigned ({assignedByMe.length})
+        </button>
+      </div>
+
       {loading ? (
         <div className="text-center py-12 text-sm text-[#6b7280]">Loading...</div>
-      ) : tasks.length === 0 ? (
-        <div className="text-center py-12 text-sm text-[#6b7280]">No pending tasks.</div>
+      ) : activeTasks.length === 0 ? (
+        <div className="text-center py-12 text-sm text-[#6b7280]">No tasks.</div>
       ) : (
         <div className="space-y-2">
-          {tasks.map((t) => (
-            <div
-              key={t.id}
-              className="bg-white rounded-xl border border-[#e0e0e0] p-4"
-            >
+          {activeTasks.map((t) => (
+            <div key={t.id} className="bg-white rounded-xl border border-[#e0e0e0] p-4">
               <div className="flex items-start justify-between mb-2">
                 <h3 className="text-sm font-bold text-[#111] flex-1">{t.title}</h3>
-                <span
-                  className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${statusColor(t.status)}`}
-                >
+                <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${statusColor(t.status)}`}>
                   {t.status}
                 </span>
               </div>
               <div className="flex flex-wrap gap-3 text-xs text-[#6b7280] font-medium mb-3">
-                <span className="flex items-center gap-1">
-                  <User className="w-3 h-3" /> {t.assigned_by_name}
-                </span>
+                {tab === "my_tasks" ? (
+                  <span className="flex items-center gap-1">
+                    <User className="w-3 h-3" /> From: {t.assigned_by_name}
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <User className="w-3 h-3" /> To: {t.assigned_to_name}
+                  </span>
+                )}
                 {t.deadline && (
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" /> {new Date(t.deadline).toLocaleDateString()}
                   </span>
                 )}
               </div>
-              <div className="flex gap-2">
-                {t.status === "pending" && (
-                  <button
-                    onClick={() => handleUpdate(t.id, "start")}
-                    disabled={updating === t.id}
-                    className="text-xs font-bold text-[#ff5a00] bg-[#fff1e8] px-3 py-1.5 rounded-lg hover:bg-[#ffe4d1] transition-all disabled:opacity-50"
-                  >
-                    Start
-                  </button>
-                )}
-                {(t.status === "pending" || t.status === "in_progress") && (
+              {/* Action buttons only for tasks assigned to me */}
+              {tab === "my_tasks" && t.status !== "completed" && (
+                <div className="flex gap-2">
+                  {t.status === "pending" && (
+                    <button
+                      onClick={() => handleUpdate(t.id, "start")}
+                      disabled={updating === t.id}
+                      className="text-xs font-bold text-[#ff5a00] bg-[#fff1e8] px-3 py-1.5 rounded-lg hover:bg-[#ffe4d1] transition-all disabled:opacity-50"
+                    >
+                      Start
+                    </button>
+                  )}
                   <button
                     onClick={() => handleUpdate(t.id, "done")}
                     disabled={updating === t.id}
@@ -132,8 +162,8 @@ export default function TeamTasksPage() {
                   >
                     Done
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

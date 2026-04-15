@@ -26,7 +26,8 @@ export default function TeamHomePage() {
       const today = new Date().toISOString().split("T")[0];
       const todayRec = (attRes.records || []).find((r: any) => r.date === today);
       setTodayRecord(todayRec || null);
-      setTaskCount((taskRes.tasks || []).length);
+      const activeTasks = (taskRes.tasks || []).filter((t: any) => t.status !== "completed");
+      setTaskCount(activeTasks.length);
       setAnnouncementCount((annRes.announcements || []).length);
       setLoading(false);
     });
