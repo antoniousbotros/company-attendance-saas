@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Team i18n
 const teamT = {
   en: {
     home: "Home",
@@ -22,9 +21,6 @@ const teamT = {
     announcements: "News",
     reports: "Reports",
     signOut: "Sign Out",
-    greeting_morning: "Good morning",
-    greeting_afternoon: "Good afternoon",
-    greeting_evening: "Good evening",
   },
   ar: {
     home: "الرئيسية",
@@ -32,10 +28,7 @@ const teamT = {
     tasks: "المهام",
     announcements: "الإعلانات",
     reports: "التقارير",
-    signOut: "تسجيل الخروج",
-    greeting_morning: "صباح الخير",
-    greeting_afternoon: "مساء الخير",
-    greeting_evening: "مساء الخير",
+    signOut: "خروج",
   },
 };
 
@@ -140,32 +133,23 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
   return (
     <TeamContext.Provider value={{ employee, loading, isRTL, lang, t }}>
       <div className="min-h-screen bg-[#f5f5f5] font-sans">
-        {/* Desktop sidebar */}
-        <aside
-          className={cn(
-            "hidden lg:flex fixed inset-y-0 w-56 bg-white flex-col z-40 shadow-sm",
-            isRTL ? "right-0 border-l border-[#f0f0f0]" : "left-0 border-r border-[#f0f0f0]"
-          )}
-        >
-          <div className="p-5 border-b border-[#f0f0f0]">
-            <div className="flex items-center gap-2.5">
-              {logoUrl ? (
-                <img src={logoUrl} alt="" className="w-9 h-9 rounded-xl object-cover" />
-              ) : (
-                <div className="w-9 h-9 bg-[#ff5a00] rounded-xl flex items-center justify-center text-white font-black text-sm">
-                  {companyName.charAt(0)}
-                </div>
-              )}
-              <span className="text-base font-bold text-[#111] truncate">{companyName}</span>
-            </div>
-            {employee && (
-              <p className="text-[11px] font-medium text-[#9ca3af] mt-2 truncate">
-                {employee.name}
-              </p>
+
+        {/* Desktop: Top header bar */}
+        <header className="hidden lg:flex fixed top-0 inset-x-0 h-14 bg-white border-b border-[#f0f0f0] z-40 shadow-sm items-center px-6">
+          {/* Logo */}
+          <div className={cn("flex items-center gap-2.5 shrink-0", isRTL && "flex-row-reverse")}>
+            {logoUrl ? (
+              <img src={logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+            ) : (
+              <div className="w-8 h-8 bg-[#ff5a00] rounded-lg flex items-center justify-center text-white font-black text-xs">
+                {companyName.charAt(0)}
+              </div>
             )}
+            <span className="text-sm font-bold text-[#111]">{companyName}</span>
           </div>
 
-          <nav className="flex-1 p-3 space-y-0.5">
+          {/* Nav links — center */}
+          <nav className="flex-1 flex items-center justify-center gap-1">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -173,36 +157,38 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all",
+                    "flex items-center gap-1.5 px-4 h-14 text-[13px] font-semibold transition-all border-b-2",
                     isActive
-                      ? "bg-[#fff1e8] text-[#ff5a00]"
-                      : "text-[#6b7280] hover:bg-[#f9fafb] hover:text-[#111]"
+                      ? "border-[#ff5a00] text-[#ff5a00]"
+                      : "border-transparent text-[#6b7280] hover:text-[#111]"
                   )}
                 >
-                  <item.icon className="w-[18px] h-[18px]" />
+                  <item.icon className="w-4 h-4" />
                   {item.name}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="p-3 border-t border-[#f0f0f0]">
+          {/* Employee name + logout — end */}
+          <div className={cn("flex items-center gap-3 shrink-0", isRTL && "flex-row-reverse")}>
+            <span className="text-xs font-medium text-[#6b7280]">{employee?.name}</span>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#6b7280] hover:text-[#b91c1c] hover:bg-[#fef2f2] transition-all w-full"
+              className="text-[#9ca3af] hover:text-[#b91c1c] transition-colors p-1.5 rounded-lg hover:bg-[#fef2f2]"
+              title={t.signOut}
             >
-              <LogOut className="w-[18px] h-[18px]" />
-              {t.signOut}
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
-        </aside>
+        </header>
 
         {/* Main content */}
-        <main className={cn("pb-20 lg:pb-0", isRTL ? "lg:mr-56" : "lg:ml-56")}>
-          <div className="max-w-2xl mx-auto px-4 py-5">{children}</div>
+        <main className="lg:pt-14 pb-20 lg:pb-6">
+          <div className="max-w-5xl mx-auto px-4 lg:px-8 py-5">{children}</div>
         </main>
 
-        {/* Mobile bottom nav */}
+        {/* Mobile: Bottom nav */}
         <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#f0f0f0] z-40">
           <div className="flex items-center justify-around py-1.5 px-2">
             {navItems.map((item) => {
