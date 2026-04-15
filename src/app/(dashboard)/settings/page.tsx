@@ -19,6 +19,10 @@ import {
   Smartphone,
   MessageCircle,
   TriangleAlert,
+  KeyRound,
+  Eye,
+  EyeOff,
+  AtSign,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -107,6 +111,20 @@ export default function SettingsPage() {
     type: "success" | "error" | "";
     text: string;
   }>({ type: "", text: "" });
+  const [currentEmail, setCurrentEmail] = useState("");
+
+  // Security modals
+  type SecModalStep = "idle" | "send" | "otp" | "fields" | "done";
+  const [passModal, setPassModal] = useState<SecModalStep>("idle");
+  const [emailModal, setEmailModal] = useState<SecModalStep>("idle");
+  const [secLoading, setSecLoading] = useState(false);
+  const [secError, setSecError] = useState("");
+  const [secOtp, setSecOtp] = useState("");
+  const [secNewPass, setSecNewPass] = useState("");
+  const [secConfirmPass, setSecConfirmPass] = useState("");
+  const [secShowPass, setSecShowPass] = useState(false);
+  const [secNewEmail, setSecNewEmail] = useState("");
+  const [secResend, setSecResend] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -124,6 +142,7 @@ export default function SettingsPage() {
         .single();
       if (data) {
         setLogoUrl(data.logo_url || null);
+        setCurrentEmail(user.email || "");
         setFormData({
           name: data.name || "",
           telegram_token: data.telegram_token || "",
@@ -796,6 +815,215 @@ export default function SettingsPage() {
           </PrimaryButton>
         </div>
       </form>
+
+      {/* ── Security Section (outside form) ── */}
+      <SectionCard>
+        <SectionHeader
+          icon={KeyRound}
+          title={isRTL ? "الأمان والحساب" : "Security & Account"}
+          subtitle={isRTL ? "تغيير كلمة المرور أو البريد الإلكتروني" : "Change your password or email address"}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            type="button"
+            onClick={() => { setPassModal("send"); setSecError(""); setSecOtp(""); setSecNewPass(""); setSecConfirmPass(""); }}
+            className="flex items-center gap-4 p-4 rounded-xl border border-[#e5e7eb] hover:border-[#111] hover:bg-[#f9fafb] transition-all text-start group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] text-[#111] flex items-center justify-center">
+              <KeyRound className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-[#111]">{isRTL ? "تغيير كلمة المرور" : "Change Password"}</p>
+              <p className="text-xs text-[#9ca3af]">{isRTL ? "ستصلك رمز على بريدك" : "You'll get a code by email"}</p>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setEmailModal("send"); setSecError(""); setSecOtp(""); setSecNewEmail(""); }}
+            className="flex items-center gap-4 p-4 rounded-xl border border-[#e5e7eb] hover:border-[#111] hover:bg-[#f9fafb] transition-all text-start group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] text-[#111] flex items-center justify-center">
+              <AtSign className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-[#111]">{isRTL ? "تغيير البريد الإلكتروني" : "Change Email"}</p>
+              <p className="text-xs text-[#9ca3af]">{isRTL ? "أدخل البريد الجديد للتحقق" : "Enter new email to verify"}</p>
+            </div>
+          </button>
+        </div>
+      </SectionCard>
+
+      {/* ── Change Password Modal ── */}
+      {passModal !== "idle" && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm border border-[#eeeeee] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f1f1f1]">
+              <h2 className="text-base font-black text-[#111]">{isRTL ? "تغيير كلمة المرور" : "Change Password"}</h2>
+              <button onClick={() => setPassModal("idle")} className="p-2 rounded-lg hover:bg-[#f5f5f5] text-[#6b7280]"><AtSign className="w-4 h-4 rotate-45" /></button>
+            </div>
+            <div className="px-6 py-6 space-y-4">
+              {secError && <p className="text-[13px] text-[#e04f00] font-semibold">{secError}</p>}
+
+              {passModal === "send" && (
+                <>
+                  <p className="text-sm text-[#6b7280]">
+                    {isRTL ? `سنرسل رمز تحقق إلى ${currentEmail}` : `We'll send a code to ${currentEmail}`}
+                  </p>
+                  <button
+                    onClick={async () => {
+                      setSecLoading(true); setSecError("");
+                      const res = await fetch("/api/auth/owner/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: currentEmail, purpose: "reset_password" }) });
+                      const data = await res.json();
+                      setSecLoading(false);
+                      if (!data.ok) { setSecError(data.error || "Failed"); return; }
+                      setPassModal("otp"); setSecResend(60);
+                    }}
+                    disabled={secLoading}
+                    className="w-full bg-[#111] text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {secLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : isRTL ? "إرسال الرمز" : "Send Code"}
+                  </button>
+                </>
+              )}
+
+              {passModal === "otp" && (
+                <>
+                  <p className="text-sm text-[#6b7280]">{isRTL ? `أدخل الرمز المرسل إلى ${currentEmail}` : `Enter the 6-digit code sent to ${currentEmail}`}</p>
+                  <input
+                    value={secOtp} onChange={(e) => setSecOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="w-full text-center text-[24px] font-black tracking-[0.3em] border-b-2 border-[#e5e7eb] focus:border-[#111] outline-none py-3 bg-transparent transition-colors" placeholder="------" maxLength={6} inputMode="numeric" autoFocus
+                  />
+                  <button onClick={() => { if (secOtp.length === 6) setPassModal("fields"); }} disabled={secOtp.length < 6}
+                    className="w-full bg-[#111] text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all disabled:opacity-40">
+                    {isRTL ? "متابعة" : "Continue"}
+                  </button>
+                  <div className="text-center">
+                    {secResend > 0
+                      ? <p className="text-[12px] text-[#bbb]">Resend in {secResend}s</p>
+                      : <button onClick={async () => { await fetch("/api/auth/owner/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: currentEmail, purpose: "reset_password" }) }); setSecResend(60); }} className="text-[12px] text-[#999] hover:text-[#111]">{isRTL ? "إعادة الإرسال" : "Resend"}</button>}
+                  </div>
+                </>
+              )}
+
+              {passModal === "fields" && (
+                <>
+                  <div className="flex items-center border-b border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+                    <input type={secShowPass ? "text" : "password"} placeholder={isRTL ? "كلمة المرور الجديدة" : "New password"}
+                      value={secNewPass} onChange={(e) => { setSecNewPass(e.target.value); setSecError(""); }}
+                      className="flex-1 py-3 bg-transparent text-sm font-semibold text-[#111] outline-none placeholder:text-[#ccc]" />
+                    <button type="button" onClick={() => setSecShowPass((v) => !v)} className="text-[#bbb]">{secShowPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button>
+                  </div>
+                  <div className="border-b border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+                    <input type={secShowPass ? "text" : "password"} placeholder={isRTL ? "تأكيد كلمة المرور" : "Confirm password"}
+                      value={secConfirmPass} onChange={(e) => { setSecConfirmPass(e.target.value); setSecError(""); }}
+                      className="w-full py-3 bg-transparent text-sm font-semibold text-[#111] outline-none placeholder:text-[#ccc]" />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (secNewPass !== secConfirmPass) { setSecError(isRTL ? "كلمتا المرور غير متطابقتين" : "Passwords don't match"); return; }
+                      if (secNewPass.length < 8) { setSecError(isRTL ? "يجب أن تكون 8 أحرف على الأقل" : "Min 8 characters"); return; }
+                      setSecLoading(true); setSecError("");
+                      const res = await fetch("/api/auth/owner/reset-password", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: currentEmail, code: secOtp, new_password: secNewPass }) });
+                      const data = await res.json();
+                      setSecLoading(false);
+                      if (!data.ok) { setSecError(data.error || "Invalid code"); return; }
+                      setPassModal("done");
+                    }}
+                    disabled={secLoading || !secNewPass || !secConfirmPass}
+                    className="w-full bg-[#ff5a00] text-white font-bold py-3.5 rounded-xl hover:bg-[#e04e00] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {secLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : isRTL ? "حفظ كلمة المرور" : "Save Password"}
+                  </button>
+                </>
+              )}
+
+              {passModal === "done" && (
+                <div className="text-center space-y-4 py-2">
+                  <CheckCircle2 className="w-12 h-12 text-[#1e8e3e] mx-auto" />
+                  <p className="font-black text-[#111]">{isRTL ? "تم تغيير كلمة المرور!" : "Password changed!"}</p>
+                  <button onClick={() => setPassModal("idle")} className="w-full bg-[#111] text-white font-bold py-3 rounded-xl">{isRTL ? "إغلاق" : "Close"}</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Change Email Modal ── */}
+      {emailModal !== "idle" && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-sm border border-[#eeeeee] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-[#f1f1f1]">
+              <h2 className="text-base font-black text-[#111]">{isRTL ? "تغيير البريد الإلكتروني" : "Change Email"}</h2>
+              <button onClick={() => setEmailModal("idle")} className="p-2 rounded-lg hover:bg-[#f5f5f5] text-[#6b7280]"><AtSign className="w-4 h-4 rotate-45" /></button>
+            </div>
+            <div className="px-6 py-6 space-y-4">
+              {secError && <p className="text-[13px] text-[#e04f00] font-semibold">{secError}</p>}
+
+              {emailModal === "send" && (
+                <>
+                  <p className="text-sm text-[#6b7280]">{isRTL ? "أدخل البريد الإلكتروني الجديد" : "Enter your new email address"}</p>
+                  <div className="border-b border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+                    <input type="email" placeholder="new@email.com" dir="ltr" value={secNewEmail} onChange={(e) => { setSecNewEmail(e.target.value); setSecError(""); }}
+                      className="w-full py-3 bg-transparent text-sm font-semibold text-[#111] outline-none placeholder:text-[#ccc]" autoFocus />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!secNewEmail.includes("@")) { setSecError(isRTL ? "بريد إلكتروني غير صالح" : "Invalid email"); return; }
+                      setSecLoading(true); setSecError("");
+                      const res = await fetch("/api/auth/owner/send-otp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: currentEmail, purpose: "change_email", new_email: secNewEmail }) });
+                      const data = await res.json();
+                      setSecLoading(false);
+                      if (!data.ok) { setSecError(data.error || "Failed"); return; }
+                      setEmailModal("otp"); setSecResend(60);
+                    }}
+                    disabled={secLoading || !secNewEmail.trim()}
+                    className="w-full bg-[#111] text-white font-bold py-3.5 rounded-xl hover:bg-black transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {secLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : isRTL ? "إرسال رمز التحقق" : "Send Verification Code"}
+                  </button>
+                  <p className="text-[11px] text-[#9ca3af] text-center">{isRTL ? `سيصل الرمز إلى البريد الجديد: ${secNewEmail || "..."}`  : `Code will be sent to: ${secNewEmail || "..."}`}</p>
+                </>
+              )}
+
+              {emailModal === "otp" && (
+                <>
+                  <p className="text-sm text-[#6b7280]">{isRTL ? `أدخل الرمز المرسل إلى ${secNewEmail}` : `Enter the code sent to ${secNewEmail}`}</p>
+                  <input
+                    value={secOtp} onChange={(e) => setSecOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="w-full text-center text-[24px] font-black tracking-[0.3em] border-b-2 border-[#e5e7eb] focus:border-[#111] outline-none py-3 bg-transparent transition-colors" placeholder="------" maxLength={6} inputMode="numeric" autoFocus
+                  />
+                  <button
+                    onClick={async () => {
+                      if (secOtp.length < 6) return;
+                      setSecLoading(true); setSecError("");
+                      const res = await fetch("/api/auth/owner/change-email", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ current_email: currentEmail, code: secOtp, new_email: secNewEmail }) });
+                      const data = await res.json();
+                      setSecLoading(false);
+                      if (!data.ok) { setSecError(data.error || "Invalid code"); return; }
+                      setCurrentEmail(secNewEmail);
+                      setEmailModal("done");
+                    }}
+                    disabled={secLoading || secOtp.length < 6}
+                    className="w-full bg-[#ff5a00] text-white font-bold py-3.5 rounded-xl hover:bg-[#e04e00] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+                  >
+                    {secLoading ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : isRTL ? "تأكيد التغيير" : "Confirm Change"}
+                  </button>
+                </>
+              )}
+
+              {emailModal === "done" && (
+                <div className="text-center space-y-4 py-2">
+                  <CheckCircle2 className="w-12 h-12 text-[#1e8e3e] mx-auto" />
+                  <p className="font-black text-[#111]">{isRTL ? "تم تغيير البريد الإلكتروني!" : "Email updated!"}</p>
+                  <p className="text-sm text-[#6b7280]">{secNewEmail}</p>
+                  <button onClick={() => setEmailModal("idle")} className="w-full bg-[#111] text-white font-bold py-3 rounded-xl">{isRTL ? "إغلاق" : "Close"}</button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,199 +1,267 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { Clock, Mail, ArrowRight, Languages, Lock } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { ArrowRight, Mail, Lock, Eye, EyeOff, ChevronLeft, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { type Language } from "@/lib/i18n";
+
+type Step = "email" | "otp" | "new_password" | "done";
 
 export default function ForgotPasswordPage() {
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const [lang, setLang] = useState<Language>("en");
+  const [error, setError] = useState("");
+  const [resendCountdown, setResendCountdown] = useState(0);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const otpCode = otpDigits.join("");
+
+  // Countdown timer for resend
   useEffect(() => {
-    const savedLang = (localStorage.getItem("lang") as Language) || "en";
-    setLang(savedLang);
-    document.documentElement.setAttribute("dir", savedLang === "ar" ? "rtl" : "ltr");
-  }, []);
+    if (resendCountdown <= 0) return;
+    const t = setTimeout(() => setResendCountdown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCountdown]);
 
-  const toggleLang = () => {
-    const newLang = lang === "en" ? "ar" : "en";
-    setLang(newLang);
-    localStorage.setItem("lang", newLang);
-    document.documentElement.setAttribute("dir", newLang === "ar" ? "rtl" : "ltr");
+  useEffect(() => { if (step === "otp") otpRefs.current[0]?.focus(); }, [step]);
+
+  // ── OTP input helpers ──────────────────────────────────────────────────────
+  const handleOtpChange = (i: number, val: string) => {
+    if (val.length > 1) val = val.slice(-1);
+    if (val && !/^\d$/.test(val)) return;
+    const next = [...otpDigits]; next[i] = val; setOtpDigits(next);
+    if (val && i < 5) otpRefs.current[i + 1]?.focus();
   };
-
-  const handleReset = async (e: React.FormEvent) => {
+  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otpDigits[i] && i > 0) otpRefs.current[i - 1]?.focus();
+  };
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    setLoading(true);
-    setErrorMsg("");
-    setSuccess(false);
-    
-    try {
-      if (!supabase) throw new Error("Supabase client not initialized");
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-         redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) {
-        setErrorMsg(error.message);
-      } else {
-        setSuccess(true);
-      }
-    } catch (err: unknown) {
-      setErrorMsg("System error: " + (err instanceof Error ? err.message : String(err)));
-    } finally {
-      setLoading(false);
-    }
+    const paste = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (paste.length === 6) { setOtpDigits(paste.split("")); otpRefs.current[5]?.focus(); }
   };
 
-  const isRTL = lang === 'ar';
+  // ── Step 1: send OTP ───────────────────────────────────────────────────────
+  const handleSendOtp = async () => {
+    if (!email.trim()) return;
+    setLoading(true); setError("");
+    const res = await fetch("/api/auth/owner/send-otp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), purpose: "reset_password" }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!data.ok) { setError(data.error || "Something went wrong"); return; }
+    setStep("otp");
+    setResendCountdown(60);
+  };
+
+  // ── Step 2: verify OTP ─────────────────────────────────────────────────────
+  const handleVerifyOtp = async () => {
+    if (otpCode.length !== 6) return;
+    setLoading(true); setError("");
+    // We don't verify here — the OTP is verified together with the new password in step 3
+    // Just advance to let user enter new password
+    setLoading(false);
+    setStep("new_password");
+  };
+
+  // ── Step 3: set new password ───────────────────────────────────────────────
+  const handleResetPassword = async () => {
+    if (!newPass.trim() || newPass !== confirmPass) {
+      setError("Passwords do not match"); return;
+    }
+    if (newPass.length < 8) {
+      setError("Password must be at least 8 characters"); return;
+    }
+    setLoading(true); setError("");
+    const res = await fetch("/api/auth/owner/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: email.trim(), code: otpCode, new_password: newPass }),
+    });
+    const data = await res.json();
+    setLoading(false);
+    if (!data.ok) { setError(data.error || "Invalid or expired code. Please start over."); return; }
+    setStep("done");
+  };
 
   return (
-    <div className="min-h-screen w-full flex font-sans bg-white selection:bg-[#ff5a00]/30 transition-colors duration-500">
-       
-      {/* LEFT PANE - Form Content */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 lg:p-24 relative z-10 transition-all duration-500 bg-white shadow-xl shadow-black/5">
-        
-        {/* Lang Switcher Absolute Corner */}
-        <button 
-          type="button"
-          onClick={toggleLang}
-          className={cn("absolute top-8 flex items-center gap-2 bg-[#f9fafb] text-[#6b7280] border border-[#eeeeee] px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#f5f5f5] hover:text-[#111] transition-all", isRTL ? "left-8" : "right-8")}
-        >
-          <Languages className="w-4 h-4" />
-          {lang === "en" ? "العربية" : "English"}
-        </button>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-[360px]">
 
-        <div className="w-full max-w-[420px] space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          
-          {/* Logo Brand Header */}
-          <div className="flex flex-col items-start space-y-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#ff5a00] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff5a00]/30">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-black tracking-tighter text-[#111]">Yawmy {isRTL && "يومي"}</span>
-            </div>
-            
-            <div className="space-y-2">
-               <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111]">
-                 {isRTL ? "نسيت كلمة المرور؟" : "Reset Password"}
-               </h1>
-               <p className="text-[#6b7280] font-bold text-lg">
-                 {isRTL ? "أدخل بريدك الإلكتروني وسنرسل لك رابطاً لاستعادة حسابك." : "Enter your email and we'll send you a recovery link."}
-               </p>
-            </div>
+        {/* Logo */}
+        <div className="mb-12 text-center">
+          <div className="w-12 h-12 bg-[#ff5a00] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#ff5a00]/20">
+            <Lock className="w-6 h-6 text-white" />
           </div>
+          <p className="text-[11px] font-semibold text-[#b0b0b0] tracking-[0.2em] uppercase">Yawmy · Reset Password</p>
+        </div>
 
-          {!success ? (
-             <form onSubmit={handleReset} className="space-y-6">
-               
-               {errorMsg && (
-                  <div className="bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca] p-4 rounded-xl text-sm font-bold animate-in fade-in">
-                     {errorMsg}
-                  </div>
-               )}
+        {/* ── Step 1: Email ── */}
+        {step === "email" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div>
+              <h1 className="text-[28px] font-black text-[#111] tracking-tight">Reset password</h1>
+              <p className="text-[14px] text-[#999] mt-2">Enter your email and we'll send a 6-digit code.</p>
+            </div>
 
-               <div className="space-y-2 font-sans">
-                 <label className="text-sm font-bold text-[#111] block mb-1">
-                    {isRTL ? "البريد الإلكتروني" : "Email address"}
-                 </label>
-                 <div className="relative group">
-                   <div className={cn(
-                     "absolute inset-y-0 flex items-center pointer-events-none text-[#9ca3af] transition-colors group-focus-within:text-[#ff5a00]",
-                     isRTL ? "right-4" : "left-4"
-                   )}>
-                     <Mail className="w-5 h-5" />
-                   </div>
-                   <input 
-                     type="email" 
-                     placeholder={isRTL ? "name@company.com" : "name@company.com"}
-                     value={email}
-                     onChange={(e) => setEmail(e.target.value)}
-                     className={cn(
-                       "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
-                       isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
-                     )}
-                     required
-                   />
-                 </div>
-               </div>
+            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
 
-               <button 
-                 type="submit"
-                 disabled={loading}
-                 className="w-full bg-[#111] text-white font-black py-4 rounded-xl hover:bg-[#111]/80 hover:scale-[1.01] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-xl shadow-black/10 mt-8"
-               >
-                 {loading ? (
-                   <span className="flex items-center gap-2">
-                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                     {isRTL ? "جاري الإرسال..." : "Processing..."}
-                   </span>
-                 ) : (
-                   <>
-                     {isRTL ? "إرسال رابط الاستعادة" : "Send Recovery Link"}
-                     <ArrowRight className={cn("w-5 h-5 group-hover:translate-x-1 transition-transform", isRTL && "rotate-180")} />
-                   </>
-                 )}
-               </button>
-             </form>
-          ) : (
-             <div className="bg-[#f0fdf4] text-[#15803d] border border-[#bbf7d0] p-6 rounded-xl animate-in fade-in space-y-3">
-                <h3 className="font-black text-lg">{isRTL ? "تم إرسال الرابط بنجاح!" : "Recovery Link Sent!"}</h3>
-                <p className="font-bold text-sm">
-                   {isRTL ? `لقد قمنا بإرسال رسالة إلى ${email}. يرجى التحقق من بريدك الوارد (ومجلد الرسائل غير المرغوب فيها) لتعيين كلمة مرور جديدة.` : `We've sent an email to ${email}. Please check your inbox (and spam folder) to set a new password.`}
-                </p>
-             </div>
-          )}
+            <div className="flex items-center border-b-2 border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+              <Mail className="w-4 h-4 text-[#bbb] flex-shrink-0 me-3" />
+              <input
+                type="email"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && email && handleSendOtp()}
+                className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
+                autoFocus
+                dir="ltr"
+              />
+            </div>
 
-          <div className="text-left pt-2">
-            <p className="text-[#6b7280] text-sm font-bold">
-              {isRTL ? "تذكرت كلمة المرور؟" : "Remembered your password?"} <a href="/login" className="text-[#ff5a00] hover:underline font-black px-1">{isRTL ? "تسجيل الدخول" : "Sign in here"}</a>
+            <button
+              onClick={handleSendOtp}
+              disabled={loading || !email.trim()}
+              className="w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30"
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>Send code <ArrowRight className="w-4 h-4" /></>}
+            </button>
+
+            <p className="text-center text-[13px] text-[#999]">
+              Remember your password?{" "}
+              <a href="/login" className="text-[#ff5a00] font-bold hover:underline">Sign in</a>
             </p>
           </div>
-          
-          <div className="pt-20 lg:hidden">
-             <p className="text-[#9ca3af] font-bold text-xs text-center">© 2026 Yawmy Platform. All rights reserved.</p>
+        )}
+
+        {/* ── Step 2: OTP ── */}
+        {step === "otp" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div>
+              <button onClick={() => { setStep("email"); setOtpDigits(["","","","","",""]); setError(""); }} className="text-[#999] hover:text-[#111] mb-4 flex items-center gap-1 text-sm font-medium">
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+              <h1 className="text-[28px] font-black text-[#111] tracking-tight">Check your email</h1>
+              <p className="text-[14px] text-[#999] mt-2">
+                We sent a 6-digit code to <span className="text-[#111] font-bold">{email}</span>
+              </p>
+            </div>
+
+            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
+
+            <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+              {otpDigits.map((digit, i) => (
+                <input
+                  key={i}
+                  ref={(el) => { otpRefs.current[i] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  className="w-12 h-14 text-center text-[20px] font-black text-[#111] border-b-2 border-[#e5e7eb] focus:border-[#111] bg-transparent outline-none transition-colors"
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={handleVerifyOtp}
+              disabled={loading || otpCode.length < 6}
+              className="w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30"
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
+            </button>
+
+            <div className="text-center">
+              {resendCountdown > 0 ? (
+                <p className="text-[13px] text-[#bbb]">Resend in {resendCountdown}s</p>
+              ) : (
+                <button onClick={handleSendOtp} disabled={loading} className="text-[13px] text-[#999] font-medium hover:text-[#111] transition-colors">
+                  Resend code
+                </button>
+              )}
+            </div>
           </div>
+        )}
+
+        {/* ── Step 3: New Password ── */}
+        {step === "new_password" && (
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <div>
+              <h1 className="text-[28px] font-black text-[#111] tracking-tight">New password</h1>
+              <p className="text-[14px] text-[#999] mt-2">Choose a strong password of at least 8 characters.</p>
+            </div>
+
+            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
+
+            <div className="space-y-4">
+              <div className="flex items-center border-b-2 border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+                <input
+                  type={showPass ? "text" : "password"}
+                  placeholder="New password"
+                  value={newPass}
+                  onChange={(e) => { setNewPass(e.target.value); setError(""); }}
+                  className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
+                  autoFocus
+                />
+                <button onClick={() => setShowPass((v) => !v)} className="text-[#bbb] p-2">
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="flex items-center border-b-2 border-[#e5e7eb] focus-within:border-[#111] transition-colors">
+                <input
+                  type={showPass ? "text" : "password"}
+                  placeholder="Confirm password"
+                  value={confirmPass}
+                  onChange={(e) => { setConfirmPass(e.target.value); setError(""); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleResetPassword()}
+                  className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleResetPassword}
+              disabled={loading || !newPass || !confirmPass}
+              className="w-full bg-[#ff5a00] text-white font-semibold py-4 rounded-2xl hover:bg-[#e04e00] transition-all flex items-center justify-center gap-2 disabled:opacity-30"
+            >
+              {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>Set new password <ArrowRight className="w-4 h-4" /></>}
+            </button>
+          </div>
+        )}
+
+        {/* ── Done ── */}
+        {step === "done" && (
+          <div className="text-center space-y-6 animate-in fade-in duration-300">
+            <div className="w-16 h-16 bg-[#e6f6ec] rounded-full flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8 text-[#1e8e3e]" />
+            </div>
+            <div>
+              <h1 className="text-[28px] font-black text-[#111]">Password updated!</h1>
+              <p className="text-[14px] text-[#999] mt-2">You can now sign in with your new password.</p>
+            </div>
+            <a
+              href="/login"
+              className="block w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all text-center"
+            >
+              Go to sign in
+            </a>
+          </div>
+        )}
+
+        <div className="mt-16 text-center">
+          <p className="text-[11px] text-[#ddd] font-medium">Yawmy &middot; 2026</p>
         </div>
       </div>
-
-      {/* RIGHT PANE - Visual Board (Using dark variant for Password Reset to separate contexts) */}
-      <div className="hidden lg:flex w-1/2 bg-[#111] relative overflow-hidden flex-col items-center justify-center p-12 transition-all duration-500">
-         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-         
-         <div className="relative z-10 w-full max-w-lg space-y-12 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
-            <div className="space-y-4">
-               <h2 className="text-5xl font-black text-white leading-tight">
-                  {isRTL ? "بياناتك في أمان دائماً" : "Your data is always secure"}
-               </h2>
-               <p className="text-lg text-[#9ca3af] font-bold">
-                  {isRTL 
-                   ? "منصة يومي مشفرة بالكامل. لا يمكن لأي شخص الاطلاع على بيانات موظفيك باستثناءك." 
-                   : "Yawmy is completely encrypted. No one can access your employee data except you."}
-               </p>
-            </div>
-
-            <div className="relative group perspective pt-8">
-               <div className="absolute inset-0 bg-[#ff5a00]/20 blur-3xl rounded-3xl transform group-hover:scale-105 transition-all duration-700"></div>
-               {/* Decorative floating widget showing security lock instead of dashboard */}
-               <div className="relative bg-white/5 border border-white/10 p-8 rounded-3xl backdrop-blur-sm text-center shadow-2xl">
-                  <Lock className="w-20 h-20 text-[#ff5a00] mx-auto opacity-80" />
-                  <div className="mt-6 space-y-2">
-                     <div className="h-2 w-1/2 bg-white/10 rounded-full mx-auto"></div>
-                     <div className="h-2 w-3/4 bg-white/10 rounded-full mx-auto"></div>
-                     <div className="h-2 w-1/3 bg-white/10 rounded-full mx-auto"></div>
-                  </div>
-               </div>
-            </div>
-         </div>
-      </div>
-
     </div>
   );
 }
