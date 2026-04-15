@@ -632,11 +632,25 @@ export default function SettingsPage() {
 
         {/* Employee Login Mode */}
         <SectionCard>
-          <SectionHeader
-            icon={Smartphone}
-            title={isRTL ? "طريقة تسجيل دخول الموظف" : "Employee Login Mode"}
-            subtitle={isRTL ? "اختر كيف يسجل موظفوك الدخول في team.yawmy.app" : "Choose how employees sign in on team.yawmy.app"}
-          />
+          <div className="flex items-start gap-3 mb-6">
+            <div className="w-10 h-10 rounded-lg bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center shrink-0">
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#111]">{isRTL ? "طريقة تسجيل دخول الموظف" : "Employee Login Mode"}</h2>
+              <p className="text-xs text-[#6b7280] mt-0.5">
+                {isRTL ? (
+                  <>اختر كيف يسجل موظفوك الدخول في{" "}
+                    <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="text-[#ff5a00] font-bold hover:underline">team.yawmy.app</a>
+                  </>
+                ) : (
+                  <>Choose how employees sign in on{" "}
+                    <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="text-[#ff5a00] font-bold hover:underline">team.yawmy.app</a>
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Telegram Mode */}
             <button
