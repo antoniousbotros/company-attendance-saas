@@ -80,11 +80,15 @@ export default function TeamHomePage() {
 
   const getLocation = (): Promise<{ lat: number; lng: number }> =>
     new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject(new Error("Not supported"));
+      if (!navigator.geolocation) return reject(new Error("Geolocation not supported on this browser"));
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => reject(err),
-        { enableHighAccuracy: true, timeout: 10000 }
+        (err) => {
+          if (err.code === 1) reject(new Error("PERMISSION_DENIED"));
+          else if (err.code === 2) reject(new Error("POSITION_UNAVAILABLE"));
+          else reject(new Error("TIMEOUT"));
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     });
 
@@ -97,7 +101,19 @@ export default function TeamHomePage() {
       let body: any = {};
       if (geofencing) {
         try { body = await getLocation(); }
-        catch { setLocationError(isRTL ? "يرجى تفعيل الموقع" : "Please enable location access."); setActionLoading(false); return; }
+        catch (locErr: any) {
+          const msg = locErr?.message;
+          if (msg === "PERMISSION_DENIED") {
+            setLocationError(isRTL
+              ? "تم رفض الوصول للموقع. على iOS: الإعدادات ← Safari ← الموقع ← السماح"
+              : "Location denied. On iOS: Settings → Safari → Location → Allow");
+          } else if (msg === "POSITION_UNAVAILABLE") {
+            setLocationError(isRTL ? "تعذر تحديد الموقع. تأكد من تفعيل GPS." : "Location unavailable. Make sure GPS is enabled.");
+          } else {
+            setLocationError(isRTL ? "انتهت مهلة تحديد الموقع. حاول مرة أخرى." : "Location timed out. Try again.");
+          }
+          setActionLoading(false); return;
+        }
       }
       const res = await fetch(`/api/team/attendance/${type}`, {
         method: "POST",
