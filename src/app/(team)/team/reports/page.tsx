@@ -145,6 +145,14 @@ export default function TeamReportsPage() {
         const mapLink = r.location_lat ? `https://www.google.com/maps?q=${r.location_lat},${r.location_lng}` : "";
         const row = ws.addRow(rowData);
         row.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+        // Make image URLs clickable links in Excel
+        reportFields.forEach((f) => {
+          const val = getFieldValue(r, f.id);
+          if (val && val.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(val)) {
+            row.getCell(f.id).value = { text: isRTL ? "عرض الصورة" : "View Image", hyperlink: val } as any;
+            row.getCell(f.id).font = { color: { argb: "FF0563C1" }, underline: true };
+          }
+        });
         if (mapLink) {
           row.getCell("location").value = { text: "View Map", hyperlink: mapLink } as any;
           row.getCell("location").font = { color: { argb: "FF0563C1" }, underline: true };
@@ -379,7 +387,13 @@ export default function TeamReportsPage() {
                           <User className="w-3 h-3" /> {r.employee_name}
                         </td>
                         {reportFields.map((f) => (
-                          <td key={f.id} className="px-4 py-3 text-xs text-[#4b5563]">{getFieldValue(r, f.id)}</td>
+                          <td key={f.id} className="px-4 py-3 text-xs text-[#4b5563]">{(() => {
+                            const val = getFieldValue(r, f.id);
+                            if (val && val.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(val)) {
+                              return <a href={val} target="_blank" rel="noreferrer"><img src={val} alt="" className="w-10 h-10 rounded-lg object-cover" /></a>;
+                            }
+                            return val;
+                          })()}</td>
                         ))}
                         <td className="px-4 py-3 text-xs text-[#6b7280] max-w-[120px] truncate">{r.notes || "-"}</td>
                         <td className="px-4 py-3 text-xs">
