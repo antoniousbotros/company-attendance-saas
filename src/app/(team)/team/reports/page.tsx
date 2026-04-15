@@ -21,6 +21,7 @@ export default function TeamReportsPage() {
 
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState("");
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -45,10 +46,27 @@ export default function TeamReportsPage() {
 
   const captureLocation = () => {
     setLocationLoading(true);
+    setLocationError("");
+    if (!navigator.geolocation) {
+      setLocationError(isRTL ? "المتصفح لا يدعم تحديد الموقع" : "Browser does not support geolocation");
+      setLocationLoading(false);
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => { setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocationLoading(false); },
-      () => setLocationLoading(false),
-      { enableHighAccuracy: true, timeout: 10000 }
+      (err) => {
+        if (err.code === 1) {
+          setLocationError(isRTL
+            ? "تم رفض الموقع. اذهب إلى: الإعدادات ← الخصوصية ← خدمات الموقع ← Safari"
+            : "Location denied. Go to: Settings → Privacy → Location Services → Safari");
+        } else if (err.code === 2) {
+          setLocationError(isRTL ? "تعذر تحديد الموقع. فعّل خدمات الموقع." : "Location unavailable. Enable Location Services.");
+        } else {
+          setLocationError(isRTL ? "انتهت المهلة. حاول مرة أخرى." : "Timed out. Try again.");
+        }
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
     );
   };
 
@@ -183,9 +201,12 @@ export default function TeamReportsPage() {
                     <MapPin className="w-3.5 h-3.5" />{location.lat.toFixed(4)}, {location.lng.toFixed(4)}
                   </div>
                 ) : (
-                  <button onClick={captureLocation} disabled={locationLoading} className="w-full border border-dashed border-[#e0e0e0] rounded-xl py-3 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />{locationLoading ? (isRTL ? "جاري تحديد الموقع..." : "Getting location...") : (isRTL ? "تحديد الموقع" : "Capture Location")}
-                  </button>
+                  <>
+                    <button onClick={captureLocation} disabled={locationLoading} className="w-full border border-dashed border-[#e0e0e0] rounded-xl py-3 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5" />{locationLoading ? (isRTL ? "جاري تحديد الموقع..." : "Getting location...") : (isRTL ? "تحديد الموقع" : "Capture Location")}
+                    </button>
+                    {locationError && <p className="text-xs text-[#b91c1c] font-semibold mt-2">{locationError}</p>}
+                  </>
                 )}
               </div>
               {fields.map((f) => (
