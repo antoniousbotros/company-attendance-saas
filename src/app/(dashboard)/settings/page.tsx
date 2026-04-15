@@ -13,7 +13,9 @@ import {
   MapPin,
   Banknote,
   CalendarDays,
-  Link as LinkIcon
+  Link as LinkIcon,
+  Upload,
+  Trash2
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -94,6 +96,8 @@ export default function SettingsPage() {
     half_day_hours: 4.0,
     sales_tracking_enabled: false
   });
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error" | "";
     text: string;
@@ -114,6 +118,7 @@ export default function SettingsPage() {
         .eq("owner_id", user.id)
         .single();
       if (data) {
+        setLogoUrl(data.logo_url || null);
         setFormData({
           name: data.name || "",
           telegram_token: data.telegram_token || "",
@@ -140,6 +145,33 @@ export default function SettingsPage() {
     };
     load();
   }, []);
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("logo", file);
+      const res = await fetch("/api/companies/upload-logo", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.ok) {
+        setLogoUrl(data.logo_url);
+      } else {
+        setMessage({ type: "error", text: data.error });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Upload failed" });
+    }
+    setLogoUploading(false);
+  };
+
+  const handleLogoRemove = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("companies").update({ logo_url: null }).eq("owner_id", user.id);
+    setLogoUrl(null);
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -288,6 +320,34 @@ export default function SettingsPage() {
             title={isRTL ? "هوية الشركة" : "Company Identity"}
             subtitle={isRTL ? "المعلومات الأساسية للنشاط" : "Basic business information"}
           />
+          {/* Logo Upload */}
+          <div className="mb-8">
+            <label className="block text-xs font-semibold text-[#6b7280] uppercase tracking-wider mb-3">
+              {isRTL ? "شعار الشركة" : "Company Logo"}
+            </label>
+            <div className="flex items-center gap-4">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="w-16 h-16 rounded-xl object-cover border border-[#e5e7eb]" />
+              ) : (
+                <div className="w-16 h-16 rounded-xl bg-[#f9fafb] border border-dashed border-[#e5e7eb] flex items-center justify-center">
+                  <Building2 className="w-6 h-6 text-[#9ca3af]" />
+                </div>
+              )}
+              <div className="flex gap-2">
+                <label className="cursor-pointer bg-[#fff1e8] text-[#ff5a00] font-bold text-xs px-4 py-2 rounded-lg hover:bg-[#ffe4d1] transition-all flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5" />
+                  {logoUploading ? (isRTL ? "جاري الرفع..." : "Uploading...") : (isRTL ? "رفع شعار" : "Upload")}
+                  <input type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} disabled={logoUploading} />
+                </label>
+                {logoUrl && (
+                  <button type="button" onClick={handleLogoRemove} className="text-[#9ca3af] hover:text-[#b91c1c] p-2 rounded-lg hover:bg-[#fef2f2] transition-all">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <Field label={isRTL ? "اسم الشركة" : "Company Name"}>
               <input

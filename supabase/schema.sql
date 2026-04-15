@@ -128,6 +128,7 @@ CREATE POLICY "Owners can view payroll of their company" ON public.payroll
 
 -- ADD NEW FEATURES (CURRENCY & HALF-DAY)
 ALTER TABLE public.companies
+ADD COLUMN IF NOT EXISTS logo_url TEXT,
 ADD COLUMN IF NOT EXISTS currency VARCHAR(10) DEFAULT 'EGP',
 ADD COLUMN IF NOT EXISTS half_day_enabled BOOLEAN DEFAULT false,
 ADD COLUMN IF NOT EXISTS half_day_hours DECIMAL DEFAULT 4.0;
