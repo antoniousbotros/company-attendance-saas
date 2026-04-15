@@ -800,58 +800,59 @@ export default function SettingsPage() {
           </div>
         </SectionCard>
 
-        <div className="flex justify-end pt-4 gap-4">
+        {/* ── Security Section (moved inside form, above Save button) ── */}
+        <SectionCard>
+          <SectionHeader
+            icon={KeyRound}
+            title={isRTL ? "الأمان والحساب" : "Security & Account"}
+            subtitle={isRTL ? "تغيير كلمة المرور أو البريد الإلكتروني" : "Change your password or email address"}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button
+              type="button"
+              onClick={() => { setPassModal("send"); setSecError(""); setSecOtp(""); setSecNewPass(""); setSecConfirmPass(""); }}
+              className="flex items-center gap-4 p-4 rounded-xl border border-[#e5e7eb] hover:border-[#111] hover:bg-[#f9fafb] transition-all text-start group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] text-[#111] flex items-center justify-center">
+                <KeyRound className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-[#111]">{isRTL ? "تغيير كلمة المرور" : "Change Password"}</p>
+                <p className="text-xs text-[#9ca3af]">{isRTL ? "ستصلك رمز على بريدك" : "You'll get a code by email"}</p>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEmailModal("send"); setSecError(""); setSecOtp(""); setSecNewEmail(""); }}
+              className="flex items-center gap-4 p-4 rounded-xl border border-[#e5e7eb] hover:border-[#111] hover:bg-[#f9fafb] transition-all text-start group"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] text-[#111] flex items-center justify-center">
+                <AtSign className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="text-sm font-black text-[#111]">{isRTL ? "تغيير البريد الإلكتروني" : "Change Email"}</p>
+                <p className="text-xs text-[#9ca3af]">{isRTL ? "أدخل البريد الجديد للتحقق" : "Enter new email to verify"}</p>
+              </div>
+            </button>
+          </div>
+        </SectionCard>
+
+        {/* ── Sticky Save Footer ── */}
+        <div className="sticky bottom-6 flex justify-end p-4 bg-white/95 backdrop-blur-md border border-[#e5e7eb] rounded-2xl shadow-xl shadow-black/10 z-40 mt-12 transition-all group hover:bg-white">
           <PrimaryButton
             type="submit"
             disabled={saving}
-            className="px-12 h-14 rounded-xl font-bold text-base bg-[#ff5a00] hover:bg-[#e65100]"
+            className="px-12 h-14 rounded-xl font-bold text-base bg-[#ff5a00] hover:bg-[#e65100] shadow-md shadow-[#ff5a00]/20"
           >
             {saving ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
-              <Save className="w-5 h-5" />
+              <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />
             )}
             {isRTL ? "حفظ التغييرات" : "Save Settings"}
           </PrimaryButton>
         </div>
       </form>
-
-      {/* ── Security Section (outside form) ── */}
-      <SectionCard>
-        <SectionHeader
-          icon={KeyRound}
-          title={isRTL ? "الأمان والحساب" : "Security & Account"}
-          subtitle={isRTL ? "تغيير كلمة المرور أو البريد الإلكتروني" : "Change your password or email address"}
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button
-            type="button"
-            onClick={() => { setPassModal("send"); setSecError(""); setSecOtp(""); setSecNewPass(""); setSecConfirmPass(""); }}
-            className="flex items-center gap-4 p-4 rounded-xl border border-[#e5e7eb] hover:border-[#111] hover:bg-[#f9fafb] transition-all text-start group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] text-[#111] flex items-center justify-center">
-              <KeyRound className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-[#111]">{isRTL ? "تغيير كلمة المرور" : "Change Password"}</p>
-              <p className="text-xs text-[#9ca3af]">{isRTL ? "ستصلك رمز على بريدك" : "You'll get a code by email"}</p>
-            </div>
-          </button>
-          <button
-            type="button"
-            onClick={() => { setEmailModal("send"); setSecError(""); setSecOtp(""); setSecNewEmail(""); }}
-            className="flex items-center gap-4 p-4 rounded-xl border border-[#e5e7eb] hover:border-[#111] hover:bg-[#f9fafb] transition-all text-start group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-[#f5f5f5] text-[#111] flex items-center justify-center">
-              <AtSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-sm font-black text-[#111]">{isRTL ? "تغيير البريد الإلكتروني" : "Change Email"}</p>
-              <p className="text-xs text-[#9ca3af]">{isRTL ? "أدخل البريد الجديد للتحقق" : "Enter new email to verify"}</p>
-            </div>
-          </button>
-        </div>
-      </SectionCard>
 
       {/* ── Change Password Modal ── */}
       {passModal !== "idle" && (
