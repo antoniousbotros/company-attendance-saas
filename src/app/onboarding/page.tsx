@@ -12,6 +12,7 @@ import {
   Plus,
   Trash2,
   Check,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
@@ -34,6 +35,7 @@ const T = {
     step3Title: "Connect your Telegram bot",
     step3Sub: "Your team will use this bot to log attendance and receive updates.",
     botInstr1: "Open @BotFather on Telegram",
+    botFatherLink: "https://t.me/BotFather",
     botInstr2: "Send /newbot and follow the prompts",
     botInstr3: "Copy the API token and paste it below",
     tokenPh: "110201543:AAHdqTcvCH1vGWJxfSeofSAs0K5PALDsaw",
@@ -363,7 +365,7 @@ export default function OnboardingPage() {
                     <p className="text-sm text-[#9ca3af] mb-6">{t.step3Sub}</p>
 
                     {/* Instructions */}
-                    <div className="bg-[#f9fafb] rounded-xl border border-[#e5e7eb] p-4 mb-5 space-y-3">
+                    <div className="bg-[#f9fafb] rounded-xl border border-[#e5e7eb] p-4 mb-4 space-y-3">
                       {[t.botInstr1, t.botInstr2, t.botInstr3].map((instr, i) => (
                         <div key={i} className="flex items-start gap-3">
                           <span className="w-5 h-5 rounded-full bg-[#0284c7]/10 text-[#0284c7] flex items-center justify-center text-xs font-black flex-shrink-0 mt-0.5">
@@ -373,6 +375,28 @@ export default function OnboardingPage() {
                         </div>
                       ))}
                     </div>
+
+                    {/* BotFather CTA button */}
+                    <a
+                      href="https://t.me/BotFather"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between w-full bg-[#0088cc] hover:bg-[#0077b5] text-white rounded-xl px-4 py-3.5 mb-5 transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Telegram logo */}
+                        <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                          <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
+                            <path d="M11.944 0A12 12 0 1 0 12 24a12 12 0 0 0-.056-24Zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                          </svg>
+                        </div>
+                        <div className="text-start">
+                          <p className="font-black text-sm leading-tight">@BotFather</p>
+                          <p className="text-[11px] text-white/70 font-medium">{lang === 'ar' ? 'اضغط لفتح على تيليجرام' : 'Tap to open on Telegram'}</p>
+                        </div>
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-white/70 group-hover:text-white transition-all" />
+                    </a>
 
                     <input
                       type="text"
