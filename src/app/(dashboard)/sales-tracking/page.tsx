@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight } from "lucide-react";
+import React, { useState, useEffect, useCallback } from "react";
+import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight, Image as ImageIcon, X, ZoomIn, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -167,6 +167,16 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
     const [filterEmployee, setFilterEmployee] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
+    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+
+    const closeLightbox = useCallback(() => setLightboxUrl(null), []);
+
+    // Close on ESC
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closeLightbox(); };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [closeLightbox]);
 
     const dynamicFieldIds = Array.from(new Set(reports.flatMap(r => Object.keys(r.values))));
 
@@ -267,9 +277,26 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                                     <td className="px-5 py-3">
                                         <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
                                     </td>
-                                    {dynamicFieldIds.map(fid => (
-                                        <td key={fid} className="px-5 py-3 bg-blue-50/20">{r.values[fid] || "-"}</td>
-                                    ))}
+                                    {dynamicFieldIds.map(fid => {
+                                        const field = fields.find(f => f.id === fid);
+                                        const value = r.values[fid] || "";
+                                        const isImage = field?.field_type === "image" || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
+                                        return (
+                                            <td key={fid} className="px-5 py-3 bg-blue-50/20 text-center">
+                                                {isImage && value ? (
+                                                    <button
+                                                        onClick={() => setLightboxUrl(value)}
+                                                        className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#fff1e8] hover:bg-[#ffd4b8] border border-[#ffd4b8] text-[#ff5a00] transition-all hover:scale-105 active:scale-95 group"
+                                                        title="عرض الصورة"
+                                                    >
+                                                        <ImageIcon className="w-4 h-4" />
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-sm text-gray-700">{value || "-"}</span>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
                                     <td className="px-5 py-3 text-gray-500 max-w-[200px] truncate" title={r.notes}>{r.notes || "-"}</td>
                                     <td className="px-5 py-3 text-center">
                                         {r.location_lat ? (
@@ -289,6 +316,38 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                     </table>
                 </div>
             </div>
+
+            {/* Lightbox */}
+            {lightboxUrl && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+                    onClick={closeLightbox}
+                >
+                    <div
+                        className="relative max-w-3xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl animate-in zoom-in-90 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+                            <div className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                                <ImageIcon className="w-4 h-4 text-[#ff5a00]" />
+                                عرض الصورة
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <a href={lightboxUrl} download target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-[#ff5a00] bg-[#fff1e8] hover:bg-[#ffd4b8] px-3 py-1.5 rounded-lg transition-all">
+                                    <Download className="w-3.5 h-3.5" /> تحميل
+                                </a>
+                                <button onClick={closeLightbox} className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-all">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="p-4 flex items-center justify-center bg-[#f9fafb] min-h-[300px]">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={lightboxUrl} alt="صورة التقرير" className="max-w-full max-h-[65vh] object-contain rounded-xl shadow-lg" />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
