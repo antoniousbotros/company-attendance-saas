@@ -36,11 +36,17 @@ export default function BlogPostPage() {
   const title = post.title[lang === "ar" ? "ar" : "en"];
   const content = post.content[lang === "ar" ? "ar" : "en"];
 
+  const [currentUrl, setCurrentUrl] = React.useState("");
+
+  React.useEffect(() => {
+    setCurrentUrl(window.location.href);
+  }, []);
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
         title,
-        url: window.location.href,
+        url: currentUrl,
       }).catch(console.error);
     }
   };
@@ -113,7 +119,7 @@ export default function BlogPostPage() {
               <Share2 className="w-5 h-5" />
             </button>
             <a 
-              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(window.location.href)}`}
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(currentUrl)}`}
               target="_blank" rel="noreferrer"
               title="Twitter"
               className="w-12 h-12 rounded-full border border-[#e5e7eb] flex items-center justify-center text-[#6b7280] hover:text-[#1da1f2] hover:border-[#1da1f2] transition-all bg-white"
@@ -121,7 +127,7 @@ export default function BlogPostPage() {
               <Twitter className="w-5 h-5" />
             </a>
             <a 
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`}
+              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`}
               target="_blank" rel="noreferrer"
               title="LinkedIn"
               className="w-12 h-12 rounded-full border border-[#e5e7eb] flex items-center justify-center text-[#6b7280] hover:text-[#0a66c2] hover:border-[#0a66c2] transition-all bg-white"
@@ -129,7 +135,7 @@ export default function BlogPostPage() {
               <Linkedin className="w-5 h-5" />
             </a>
             <a 
-              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+              href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`}
               target="_blank" rel="noreferrer"
               title="Facebook"
               className="w-12 h-12 rounded-full border border-[#e5e7eb] flex items-center justify-center text-[#6b7280] hover:text-[#1877f2] hover:border-[#1877f2] transition-all bg-white"
