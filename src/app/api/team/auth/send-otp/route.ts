@@ -26,8 +26,8 @@ export async function POST(req: NextRequest) {
     const { data: employees, error } = await query;
 
     if (error || !employees || employees.length === 0) {
-      // Don't reveal if phone exists or not
-      return NextResponse.json({ ok: true, step: "otp_sent" });
+      // DEBUG: temporarily show matching info — REMOVE after debugging
+      return NextResponse.json({ ok: true, step: "otp_sent", _debug: { matched: 0, last9, dbError: error?.message || null } });
     }
 
     // Multiple companies — return list for selection
