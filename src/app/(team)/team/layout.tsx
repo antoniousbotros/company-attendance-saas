@@ -83,12 +83,10 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
   const router = useRouter();
   const [employee, setEmployee] = useState<EmployeeData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  if (pathname === "/team/login") {
-    return <>{children}</>;
-  }
+  const isLoginPage = pathname === "/team/login";
 
   useEffect(() => {
+    if (isLoginPage) { setLoading(false); return; }
     fetch("/api/team/auth/me")
       .then((r) => r.json())
       .then((data) => {
@@ -102,7 +100,11 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
       })
       .catch(() => router.push("/team/login"))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, isLoginPage]);
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   const handleLogout = async () => {
     await fetch("/api/team/auth/logout", { method: "POST" });
