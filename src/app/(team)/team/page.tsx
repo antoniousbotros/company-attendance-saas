@@ -80,7 +80,8 @@ export default function TeamHomePage() {
 
   const getLocation = (): Promise<{ lat: number; lng: number }> =>
     new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject(new Error("Geolocation not supported on this browser"));
+      if (!navigator.geolocation) return reject(new Error("NOT_SUPPORTED"));
+      // On iOS, we must call this synchronously from user tap — no awaits before this
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
         (err) => {
@@ -88,7 +89,7 @@ export default function TeamHomePage() {
           else if (err.code === 2) reject(new Error("POSITION_UNAVAILABLE"));
           else reject(new Error("TIMEOUT"));
         },
-        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
       );
     });
 
@@ -103,14 +104,16 @@ export default function TeamHomePage() {
         try { body = await getLocation(); }
         catch (locErr: any) {
           const msg = locErr?.message;
-          if (msg === "PERMISSION_DENIED") {
+          if (msg === "NOT_SUPPORTED") {
+            setLocationError(isRTL ? "المتصفح لا يدعم تحديد الموقع." : "Browser does not support geolocation.");
+          } else if (msg === "PERMISSION_DENIED") {
             setLocationError(isRTL
-              ? "تم رفض الوصول للموقع. على iOS: الإعدادات ← Safari ← الموقع ← السماح"
-              : "Location denied. On iOS: Settings → Safari → Location → Allow");
+              ? "تم رفض الموقع. اذهب إلى: الإعدادات ← الخصوصية ← خدمات الموقع ← تفعيل Safari"
+              : "Location denied. Go to: Settings → Privacy → Location Services → enable for Safari");
           } else if (msg === "POSITION_UNAVAILABLE") {
-            setLocationError(isRTL ? "تعذر تحديد الموقع. تأكد من تفعيل GPS." : "Location unavailable. Make sure GPS is enabled.");
+            setLocationError(isRTL ? "تعذر تحديد الموقع. تأكد من تفعيل خدمات الموقع." : "Location unavailable. Enable Location Services in Settings.");
           } else {
-            setLocationError(isRTL ? "انتهت مهلة تحديد الموقع. حاول مرة أخرى." : "Location timed out. Try again.");
+            setLocationError(isRTL ? "انتهت مهلة تحديد الموقع. حاول مرة أخرى في مكان مفتوح." : "Location timed out. Try again in an open area.");
           }
           setActionLoading(false); return;
         }
