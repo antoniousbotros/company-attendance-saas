@@ -18,6 +18,7 @@ import {
   Trash2,
   Smartphone,
   MessageCircle,
+  TriangleAlert,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -99,6 +100,7 @@ export default function SettingsPage() {
     sales_tracking_enabled: false,
     auth_mode: "telegram" as "telegram" | "password",
   });
+  const [savedAuthMode, setSavedAuthMode] = useState<"telegram" | "password">("telegram");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const [message, setMessage] = useState<{
@@ -144,6 +146,7 @@ export default function SettingsPage() {
           sales_tracking_enabled: !!data.sales_tracking_enabled,
           auth_mode: (data.auth_mode || "telegram") as "telegram" | "password",
         });
+        setSavedAuthMode((data.auth_mode || "telegram") as "telegram" | "password");
       }
       setLoading(false);
     };
@@ -681,6 +684,23 @@ export default function SettingsPage() {
               </div>
             </button>
           </div>
+
+          {/* Warning: switching from password → telegram */}
+          {savedAuthMode === "password" && formData.auth_mode === "telegram" && (
+            <div className="mt-4 flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in duration-300">
+              <TriangleAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-bold text-amber-800">
+                  {isRTL ? "تحقق قبل التبديل" : "Check before switching"}
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+                  {isRTL
+                    ? "الموظفون الذين لم يربطوا حساب تيليجرام لن يتمكنوا من تسجيل الدخول. تأكد أن كل موظف ربط تيليجرام أولاً."
+                    : "Employees who have not linked their Telegram account will be unable to sign in. Make sure all employees have connected Telegram first."}
+                </p>
+              </div>
+            </div>
+          )}
         </SectionCard>
 
         {/* Telegram Integration */}
