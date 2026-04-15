@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, X, Send, Copy, Check, Pencil } from "lucide-react";
+import { Plus, Trash2, X, Send, Copy, Check, Pencil, KeyRound, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -37,6 +37,9 @@ export default function EmployeesPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [authMode, setAuthMode] = useState<"telegram" | "password">("telegram");
+  const [empPassword, setEmpPassword] = useState("");
+  const [showEmpPassword, setShowEmpPassword] = useState(false);
   
   // Department State
   const [activeTab, setActiveTab] = useState<'employees' | 'departments'>('employees');
@@ -83,10 +86,11 @@ export default function EmployeesPage() {
   const fetchCompany = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: company } = await supabase.from("companies").select("id, bot_name, departments").eq("owner_id", user.id).single();
+    const { data: company } = await supabase.from("companies").select("id, bot_name, departments, auth_mode").eq("owner_id", user.id).single();
     if (company) {
       setBotName(company.bot_name?.replace("@", "") || "");
       setDepartmentsList(company.departments || []);
+      setAuthMode((company.auth_mode || "telegram") as "telegram" | "password");
     }
   };
 
@@ -166,8 +170,17 @@ export default function EmployeesPage() {
           alert(error.message);
       }
     } else {
+      // If password mode and a password was provided, save it
+      if (authMode === "password" && empPassword.trim()) {
+        await fetch("/api/team/employees/set-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ employee_id: editingEmployee.id, password: empPassword.trim() }),
+        });
+      }
       setShowEditModal(false);
       setEditingEmployee(null);
+      setEmpPassword("");
       fetchEmployees();
     }
   };
@@ -422,7 +435,7 @@ export default function EmployeesPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => { setEditingEmployee(emp); setShowEditModal(true); }}
+                          onClick={() => { setEditingEmployee(emp); setEmpPassword(""); setShowEmpPassword(false); setShowEditModal(true); }}
                           className="p-2 rounded-lg text-[#6b7280] hover:text-[#0284c7] hover:bg-[#f0f9ff] transition-all opacity-0 group-hover:opacity-100"
                         >
                           <Pencil className="w-4 h-4" />
@@ -758,6 +771,29 @@ export default function EmployeesPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Password Section — only in password auth mode */}
+              {authMode === "password" && (
+                <div className="pt-4 border-t border-[#eeeeee] space-y-3 text-start" dir={isRTL ? "rtl" : "ltr"}>
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="w-4 h-4 text-[#ff5a00]" />
+                    <h3 className="text-sm font-bold text-[#111]">{isRTL ? "كلمة مرور تسجيل الدخول" : "Login Password"}</h3>
+                  </div>
+                  <p className="text-[11px] text-[#9ca3af]">{isRTL ? "اتركها فارغة للإبقاء على كلمة المرور الحالية." : "Leave blank to keep the current password."}</p>
+                  <div className="flex items-center border border-[#eeeeee] rounded-xl bg-[#f9fafb] focus-within:border-[#ff5a00] focus-within:bg-white transition-all">
+                    <input
+                      type={showEmpPassword ? "text" : "password"}
+                      placeholder={isRTL ? "كلمة مرور جديدة..." : "New password..."}
+                      value={empPassword}
+                      onChange={(e) => setEmpPassword(e.target.value)}
+                      className="flex-1 h-12 px-4 bg-transparent text-sm font-mono text-[#111] outline-none"
+                    />
+                    <button type="button" onClick={() => setShowEmpPassword(v => !v)} className="px-3 text-[#9ca3af] hover:text-[#111] transition-colors">
+                      {showEmpPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center justify-end gap-3 px-6 py-5 border-t border-[#f1f1f1] bg-[#f9fafb]">
