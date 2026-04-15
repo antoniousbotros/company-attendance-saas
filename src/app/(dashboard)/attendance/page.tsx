@@ -256,14 +256,15 @@ export default function AttendancePage() {
                 <th className="text-start font-medium px-6 py-4">{t.employee}</th>
                 <th className="text-start font-medium px-6 py-4">{t.issues}</th>
                 <th className="text-end font-medium px-6 py-4">{t.checkIn}</th>
+                <th className="text-end font-medium px-6 py-4">{t.checkOut}</th>
                 <th className="text-end font-medium px-6 py-4">{t.duration}</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-[#9ca3af] text-sm">...</td></tr>
+                <tr><td colSpan={6} className="px-6 py-16 text-center text-[#9ca3af] text-sm">...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-6 py-16 text-center text-[#9ca3af] text-sm italic">{t.noRecords}</td></tr>
+                <tr><td colSpan={6} className="px-6 py-16 text-center text-[#9ca3af] text-sm italic">{t.noRecords}</td></tr>
               ) : (
                 filtered.map((log) => {
                   const tone = log.status === "present" ? "success" : log.status === "late" ? "warning" : "neutral";
@@ -287,6 +288,9 @@ export default function AttendancePage() {
                       </td>
                       <td className="px-6 py-5 text-end align-top text-sm font-semibold text-[#111]">
                         {log.check_in ? new Date(log.check_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+                      </td>
+                      <td className="px-6 py-5 text-end align-top text-sm font-semibold text-[#111]">
+                        {log.check_out ? new Date(log.check_out).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
                       </td>
                       <td className="px-6 py-5 text-end align-top text-sm font-semibold text-[#111]">
                         {log.working_hours ? `${log.working_hours}h` : "—"}
