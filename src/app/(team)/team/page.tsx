@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useTeam } from "./layout";
-import { LogIn, LogOut, MapPin, AlertTriangle, RefreshCw, TrendingUp, TrendingDown, Clock } from "lucide-react";
+import { LogIn, LogOut, MapPin, AlertTriangle, RefreshCw, TrendingUp, TrendingDown, Clock, CheckSquare, Megaphone } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +40,6 @@ export default function TeamHomePage() {
     loadData();
   }, []);
 
-  // Period-filtered records
   const filteredRecords = useMemo(() => {
     const now = new Date();
     const cutoff = new Date();
@@ -48,7 +47,6 @@ export default function TeamHomePage() {
     return records.filter((r) => new Date(r.date) >= cutoff);
   }, [records, period]);
 
-  // Chart data
   const chartData = useMemo(() => {
     return filteredRecords
       .slice(0, period === "week" ? 7 : 30)
@@ -60,7 +58,6 @@ export default function TeamHomePage() {
       }));
   }, [filteredRecords, period, lang]);
 
-  // Stats
   const stats = useMemo(() => {
     const total = filteredRecords.length;
     const onTime = filteredRecords.filter((r) => r.status === "present").length;
@@ -90,7 +87,6 @@ export default function TeamHomePage() {
   const getLocation = (): Promise<{ lat: number; lng: number }> =>
     new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        // No GPS — try IP fallback
         getLocationFromIP().then(resolve).catch(() => reject(new Error("NOT_SUPPORTED")));
         return;
       }
@@ -100,7 +96,6 @@ export default function TeamHomePage() {
           if (err.code === 1) {
             reject(new Error("PERMISSION_DENIED"));
           } else {
-            // GPS unavailable or timeout — try IP fallback
             getLocationFromIP().then(resolve).catch(() => reject(new Error("POSITION_UNAVAILABLE")));
           }
         },
@@ -164,8 +159,9 @@ export default function TeamHomePage() {
     });
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
-      {/* Header */}
+    <div className="space-y-5 animate-in fade-in duration-500">
+
+      {/* ── Top row: greeting + period selector ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {employee?.companies?.logo_url ? (
@@ -180,157 +176,229 @@ export default function TeamHomePage() {
             <h1 className="text-lg font-black text-[#111] leading-tight">{employee?.name?.split(" ")[0]}</h1>
           </div>
         </div>
-        <button onClick={loadData} className="w-9 h-9 bg-white rounded-xl shadow-sm flex items-center justify-center text-[#6b7280] hover:text-[#111] transition-all">
-          <RefreshCw className="w-4 h-4" />
-        </button>
-      </div>
 
-      {/* Period Selector */}
-      <div className="flex bg-white rounded-full p-1 shadow-sm w-fit">
-        {(["week", "month"] as Period[]).map((p) => (
+        <div className="flex items-center gap-2">
+          {/* Period pills */}
+          <div className="flex bg-white rounded-full p-1 shadow-sm border border-[#f0f0f0]">
+            {(["week", "month"] as Period[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={cn(
+                  "px-4 py-1.5 rounded-full text-xs font-bold transition-all",
+                  period === p ? "bg-[#ff5a00] text-white shadow-sm" : "text-[#6b7280] hover:text-[#111]"
+                )}
+              >
+                {p === "week" ? (isRTL ? "أسبوع" : "Week") : (isRTL ? "شهر" : "Month")}
+              </button>
+            ))}
+          </div>
           <button
-            key={p}
-            onClick={() => setPeriod(p)}
-            className={cn(
-              "px-5 py-1.5 rounded-full text-xs font-bold transition-all",
-              period === p ? "bg-[#ff5a00] text-white shadow-sm" : "text-[#6b7280]"
-            )}
+            onClick={loadData}
+            className="w-9 h-9 bg-white rounded-full shadow-sm border border-[#f0f0f0] flex items-center justify-center text-[#6b7280] hover:text-[#111] transition-all"
           >
-            {p === "week" ? (isRTL ? "أسبوع" : "Week") : (isRTL ? "شهر" : "Month")}
+            <RefreshCw className="w-4 h-4" />
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* Performance Card */}
-      {!loading && (
-        <div className="bg-white rounded-2xl shadow-sm p-5">
-          <p className="text-xs font-semibold text-[#6b7280] mb-1">
-            {isRTL ? "نسبة الحضور" : "Attendance Rate"}
-          </p>
-          <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-3xl font-black text-[#111]">{stats.onTimeRate}%</span>
-            <span className={cn("text-xs font-bold flex items-center gap-0.5", stats.onTimeRate >= 80 ? "text-[#1e8e3e]" : "text-[#b91c1c]")}>
-              {stats.onTimeRate >= 80 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {stats.onTime}/{stats.total} {isRTL ? "يوم" : "days"}
-            </span>
+      {/* ── Desktop: 2-column main area / Mobile: stacked ── */}
+      <div className="lg:grid lg:grid-cols-5 lg:gap-5 space-y-5 lg:space-y-0">
+
+        {/* ── Left (3/5): Chart + Stats ── */}
+        <div className="lg:col-span-3 space-y-5">
+
+          {/* Performance card */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#f0f0f0] p-5">
+            <div className="flex items-start justify-between mb-4">
+              <div>
+                <p className="text-xs font-semibold text-[#9ca3af] mb-1">
+                  {isRTL ? "نسبة الحضور" : "Attendance Rate"}
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-black text-[#111]">{loading ? "—" : `${stats.onTimeRate}%`}</span>
+                  {!loading && (
+                    <span className={cn("text-xs font-bold flex items-center gap-0.5", stats.onTimeRate >= 80 ? "text-[#1e8e3e]" : "text-[#b91c1c]")}>
+                      {stats.onTimeRate >= 80 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                      {stats.onTime}/{stats.total} {isRTL ? "يوم" : "days"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {!loading && chartData.length > 0 ? (
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} barSize={period === "week" ? 28 : 10}>
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={28} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 16px rgba(0,0,0,0.08)", fontSize: 12 }}
+                      labelStyle={{ fontWeight: 700 }}
+                    />
+                    <Bar dataKey="hours" fill="#ff5a00" radius={[4, 4, 0, 0]} name={isRTL ? "ساعات" : "Hours"} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : !loading ? (
+              <div className="h-44 flex items-center justify-center text-sm text-[#9ca3af]">
+                {isRTL ? "لا توجد بيانات" : "No data yet"}
+              </div>
+            ) : (
+              <div className="h-44 flex items-center justify-center">
+                <div className="w-6 h-6 border-2 border-[#ff5a00]/20 border-t-[#ff5a00] rounded-full animate-spin" />
+              </div>
+            )}
           </div>
 
-          {chartData.length > 0 && (
-            <div className="h-36">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} barSize={period === "week" ? 24 : 8}>
-                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={25} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: 12, border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: 12 }}
-                    labelStyle={{ fontWeight: 700 }}
-                  />
-                  <Bar dataKey="hours" fill="#ff5a00" radius={[4, 4, 0, 0]} name={isRTL ? "ساعات" : "Hours"} />
-                </BarChart>
-              </ResponsiveContainer>
+          {/* Stats 4-grid */}
+          {!loading && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-white rounded-2xl border border-[#f0f0f0] shadow-sm p-4">
+                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide mb-1">
+                  {isRTL ? "حضور منتظم" : "On Time"}
+                </p>
+                <p className="text-2xl font-black text-[#1e8e3e]">{stats.onTime}</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#f0f0f0] shadow-sm p-4">
+                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide mb-1">
+                  {isRTL ? "تأخير" : "Late"}
+                </p>
+                <p className="text-2xl font-black text-[#b91c1c]">{stats.late}</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#f0f0f0] shadow-sm p-4">
+                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide mb-1">
+                  {isRTL ? "متوسط الساعات" : "Avg Hours"}
+                </p>
+                <p className="text-2xl font-black text-[#111]">{stats.avgHours}h</p>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#f0f0f0] shadow-sm p-4">
+                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide mb-1">
+                  {isRTL ? "مهام معلقة" : "Pending"}
+                </p>
+                <p className="text-2xl font-black text-[#ff5a00]">{taskCount}</p>
+              </div>
             </div>
           )}
         </div>
-      )}
 
-      {/* Stats Grid */}
-      {!loading && (
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="text-[10px] font-bold text-[#9ca3af] uppercase">{isRTL ? "حضور منتظم" : "On Time"}</p>
-            <p className="text-2xl font-black text-[#1e8e3e] mt-1">{stats.onTime}</p>
+        {/* ── Right (2/5): Check-in card ── */}
+        <div className="lg:col-span-2 flex flex-col gap-5">
+
+          {/* Today's attendance */}
+          <div className="bg-white rounded-2xl shadow-sm border border-[#f0f0f0] p-5 flex-1">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-[#fff4ee] rounded-xl flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-[#ff5a00]" />
+                </div>
+                <p className="text-sm font-bold text-[#111]">{isRTL ? "حضور اليوم" : "Today"}</p>
+              </div>
+              {geofencing && (
+                <span className="text-[9px] text-[#9ca3af] flex items-center gap-0.5">
+                  <MapPin className="w-3 h-3" /> {isRTL ? "موقع مطلوب" : "Location required"}
+                </span>
+              )}
+            </div>
+
+            {/* Time pills */}
+            {todayRecord && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {todayRecord.check_in && (
+                  <div className="bg-[#f5f5f5] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#9ca3af] uppercase">{isRTL ? "حضور" : "In"}</p>
+                    <p className="text-sm font-black text-[#111]">{formatTime(todayRecord.check_in)}</p>
+                  </div>
+                )}
+                {todayRecord.check_out && (
+                  <div className="bg-[#f5f5f5] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#9ca3af] uppercase">{isRTL ? "انصراف" : "Out"}</p>
+                    <p className="text-sm font-black text-[#111]">{formatTime(todayRecord.check_out)}</p>
+                  </div>
+                )}
+                {todayRecord.working_hours && (
+                  <div className="bg-[#f5f5f5] rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-bold text-[#9ca3af] uppercase">{isRTL ? "ساعات" : "Hours"}</p>
+                    <p className="text-sm font-black text-[#111]">{todayRecord.working_hours}h</p>
+                  </div>
+                )}
+                {todayRecord.status === "late" && (
+                  <div className="bg-[#fdf4d8] rounded-xl px-3 py-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-[#b45309]" />
+                    <p className="text-sm font-black text-[#b45309]">{todayRecord.late_minutes}{isRTL ? "د" : "m"}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {actionResult && (
+              <div className={cn("p-3 rounded-xl text-xs font-semibold mb-4", actionResult.ok ? "bg-[#e6f6ec] text-[#1e8e3e]" : "bg-[#fef2f2] text-[#b91c1c]")}>
+                {actionResult.message}
+              </div>
+            )}
+            {locationError && (
+              <div className="bg-[#fdf4d8] text-[#b45309] p-3 rounded-xl text-xs font-semibold mb-4">{locationError}</div>
+            )}
+
+            {shiftDone ? (
+              <div className="text-center py-4 text-sm font-bold text-[#1e8e3e] bg-[#e6f6ec] rounded-xl">
+                {isRTL ? "✓ تم إنهاء الوردية" : "✓ Shift completed"}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {!hasCheckedIn && (
+                  <button
+                    onClick={() => handleAttendance("check-in")}
+                    disabled={actionLoading}
+                    className="w-full bg-[#1e8e3e] text-white font-black py-3.5 rounded-xl hover:bg-[#16753b] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                  >
+                    {actionLoading
+                      ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : <><LogIn className="w-4 h-4" /> {isRTL ? "تسجيل حضور" : "Check In"}</>}
+                  </button>
+                )}
+                {hasCheckedIn && !hasCheckedOut && (
+                  <button
+                    onClick={() => handleAttendance("check-out")}
+                    disabled={actionLoading}
+                    className="w-full bg-[#b91c1c] text-white font-black py-3.5 rounded-xl hover:bg-[#991b1b] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                  >
+                    {actionLoading
+                      ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      : <><LogOut className="w-4 h-4" /> {isRTL ? "تسجيل انصراف" : "Check Out"}</>}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="text-[10px] font-bold text-[#9ca3af] uppercase">{isRTL ? "تأخير" : "Late"}</p>
-            <p className="text-2xl font-black text-[#b91c1c] mt-1">{stats.late}</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="text-[10px] font-bold text-[#9ca3af] uppercase">{isRTL ? "متوسط الساعات" : "Avg Hours"}</p>
-            <p className="text-2xl font-black text-[#111] mt-1">{stats.avgHours}h</p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm p-4">
-            <p className="text-[10px] font-bold text-[#9ca3af] uppercase">{isRTL ? "مهام معلقة" : "Pending Tasks"}</p>
-            <p className="text-2xl font-black text-[#ff5a00] mt-1">{taskCount}</p>
+
+          {/* Quick links: Tasks + Announcements */}
+          <div className="grid grid-cols-2 gap-3">
+            <a href="/team/tasks" className="bg-white rounded-2xl border border-[#f0f0f0] shadow-sm p-4 flex flex-col gap-2 hover:border-[#ff5a00]/30 transition-all group">
+              <div className="w-8 h-8 bg-[#fff4ee] rounded-xl flex items-center justify-center">
+                <CheckSquare className="w-4 h-4 text-[#ff5a00]" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide">
+                  {isRTL ? "المهام" : "Tasks"}
+                </p>
+                <p className="text-xl font-black text-[#111]">{taskCount}</p>
+              </div>
+            </a>
+            <a href="/team/announcements" className="bg-white rounded-2xl border border-[#f0f0f0] shadow-sm p-4 flex flex-col gap-2 hover:border-[#ff5a00]/30 transition-all group">
+              <div className="w-8 h-8 bg-[#fff4ee] rounded-xl flex items-center justify-center">
+                <Megaphone className="w-4 h-4 text-[#ff5a00]" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide">
+                  {isRTL ? "الإعلانات" : "News"}
+                </p>
+                <p className="text-xl font-black text-[#111]">{announcementCount}</p>
+              </div>
+            </a>
           </div>
         </div>
-      )}
-
-      {/* Check In/Out Card */}
-      <div className="bg-white rounded-2xl shadow-sm p-5">
-        <div className="flex items-center gap-3 mb-3">
-          <Clock className="w-5 h-5 text-[#ff5a00]" />
-          <p className="text-sm font-bold text-[#111]">{isRTL ? "حضور اليوم" : "Today"}</p>
-          {geofencing && (
-            <span className="text-[9px] text-[#9ca3af] flex items-center gap-0.5 ms-auto">
-              <MapPin className="w-3 h-3" /> {isRTL ? "موقع مطلوب" : "Location required"}
-            </span>
-          )}
-        </div>
-
-        {todayRecord && (
-          <div className="flex gap-4 mb-3 text-sm">
-            {todayRecord.check_in && (
-              <div>
-                <span className="text-[9px] font-bold text-[#9ca3af] uppercase">{isRTL ? "حضور" : "In"}</span>
-                <p className="font-bold text-[#111]">{formatTime(todayRecord.check_in)}</p>
-              </div>
-            )}
-            {todayRecord.check_out && (
-              <div>
-                <span className="text-[9px] font-bold text-[#9ca3af] uppercase">{isRTL ? "انصراف" : "Out"}</span>
-                <p className="font-bold text-[#111]">{formatTime(todayRecord.check_out)}</p>
-              </div>
-            )}
-            {todayRecord.working_hours && (
-              <div>
-                <span className="text-[9px] font-bold text-[#9ca3af] uppercase">{isRTL ? "ساعات" : "Hours"}</span>
-                <p className="font-bold text-[#111]">{todayRecord.working_hours}h</p>
-              </div>
-            )}
-            {todayRecord.status === "late" && (
-              <div className="flex items-center gap-1 text-[#b45309] text-xs font-bold ms-auto">
-                <AlertTriangle className="w-3 h-3" />
-                {todayRecord.late_minutes}{isRTL ? "د" : "m"}
-              </div>
-            )}
-          </div>
-        )}
-
-        {actionResult && (
-          <div className={cn("p-3 rounded-xl text-xs font-semibold mb-3", actionResult.ok ? "bg-[#e6f6ec] text-[#1e8e3e]" : "bg-[#fef2f2] text-[#b91c1c]")}>
-            {actionResult.message}
-          </div>
-        )}
-        {locationError && (
-          <div className="bg-[#fdf4d8] text-[#b45309] p-3 rounded-xl text-xs font-semibold mb-3">{locationError}</div>
-        )}
-
-        {shiftDone ? (
-          <div className="text-center py-2 text-sm font-bold text-[#1e8e3e]">
-            {isRTL ? "تم إنهاء الوردية" : "Shift completed"}
-          </div>
-        ) : (
-          <div className="flex gap-3">
-            {!hasCheckedIn && (
-              <button
-                onClick={() => handleAttendance("check-in")}
-                disabled={actionLoading}
-                className="flex-1 bg-[#1e8e3e] text-white font-black py-3 rounded-xl hover:bg-[#16753b] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {actionLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogIn className="w-4 h-4" /> {isRTL ? "تسجيل حضور" : "Check In"}</>}
-              </button>
-            )}
-            {hasCheckedIn && !hasCheckedOut && (
-              <button
-                onClick={() => handleAttendance("check-out")}
-                disabled={actionLoading}
-                className="flex-1 bg-[#b91c1c] text-white font-black py-3 rounded-xl hover:bg-[#991b1b] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {actionLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><LogOut className="w-4 h-4" /> {isRTL ? "تسجيل انصراف" : "Check Out"}</>}
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

@@ -160,7 +160,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                     "flex items-center gap-1.5 px-4 h-14 text-[13px] font-semibold transition-all border-b-2",
                     isActive
                       ? "border-[#ff5a00] text-[#ff5a00]"
-                      : "border-transparent text-[#6b7280] hover:text-[#111]"
+                      : "border-transparent text-[#111] hover:text-[#ff5a00]"
                   )}
                 >
                   <item.icon className="w-4 h-4" />
