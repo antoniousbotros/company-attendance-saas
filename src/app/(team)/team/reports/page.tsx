@@ -46,29 +46,44 @@ export default function TeamReportsPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  const fallbackToIP = async () => {
+    try {
+      const res = await fetch("https://get.geojs.io/v1/ip/geo.json");
+      const data = await res.json();
+      if (data.latitude && data.longitude) {
+        setLocation({ lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) });
+        setLocationLoading(false);
+        return;
+      }
+    } catch {}
+    setLocationError(isRTL ? "تعذر تحديد الموقع. أدخل الموقع يدوياً." : "Could not detect location.");
+    setLocationLoading(false);
+  };
+
   const captureLocation = () => {
     setLocationLoading(true);
     setLocationError("");
+
     if (!navigator.geolocation) {
-      setLocationError(isRTL ? "المتصفح لا يدعم تحديد الموقع" : "Browser does not support geolocation");
-      setLocationLoading(false);
+      fallbackToIP();
       return;
     }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => { setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); setLocationLoading(false); },
       (err) => {
         if (err.code === 1) {
+          // Permission denied — don't fallback, show error
           setLocationError(isRTL
-            ? "تم رفض الموقع. اذهب إلى: الإعدادات ← الخصوصية ← خدمات الموقع ← Safari"
-            : "Location denied. Go to: Settings → Privacy → Location Services → Safari");
-        } else if (err.code === 2) {
-          setLocationError(isRTL ? "تعذر تحديد الموقع. فعّل خدمات الموقع." : "Location unavailable. Enable Location Services.");
+            ? "تم رفض الموقع. فعّل الموقع من إعدادات المتصفح."
+            : "Location denied. Enable location in browser settings.");
+          setLocationLoading(false);
         } else {
-          setLocationError(isRTL ? "انتهت المهلة. حاول مرة أخرى." : "Timed out. Try again.");
+          // Unavailable or timeout — try IP fallback
+          fallbackToIP();
         }
-        setLocationLoading(false);
       },
-      { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
     );
   };
 

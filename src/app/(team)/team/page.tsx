@@ -78,18 +78,33 @@ export default function TeamHomePage() {
   const hasCheckedOut = !!todayRecord?.check_out;
   const shiftDone = hasCheckedIn && hasCheckedOut;
 
+  const getLocationFromIP = async (): Promise<{ lat: number; lng: number }> => {
+    const res = await fetch("https://get.geojs.io/v1/ip/geo.json");
+    const data = await res.json();
+    if (data.latitude && data.longitude) {
+      return { lat: parseFloat(data.latitude), lng: parseFloat(data.longitude) };
+    }
+    throw new Error("IP_FAILED");
+  };
+
   const getLocation = (): Promise<{ lat: number; lng: number }> =>
     new Promise((resolve, reject) => {
-      if (!navigator.geolocation) return reject(new Error("NOT_SUPPORTED"));
-      // On iOS, we must call this synchronously from user tap — no awaits before this
+      if (!navigator.geolocation) {
+        // No GPS — try IP fallback
+        getLocationFromIP().then(resolve).catch(() => reject(new Error("NOT_SUPPORTED")));
+        return;
+      }
       navigator.geolocation.getCurrentPosition(
         (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
         (err) => {
-          if (err.code === 1) reject(new Error("PERMISSION_DENIED"));
-          else if (err.code === 2) reject(new Error("POSITION_UNAVAILABLE"));
-          else reject(new Error("TIMEOUT"));
+          if (err.code === 1) {
+            reject(new Error("PERMISSION_DENIED"));
+          } else {
+            // GPS unavailable or timeout — try IP fallback
+            getLocationFromIP().then(resolve).catch(() => reject(new Error("POSITION_UNAVAILABLE")));
+          }
         },
-        { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
       );
     });
 
