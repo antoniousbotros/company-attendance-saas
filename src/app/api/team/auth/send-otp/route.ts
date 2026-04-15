@@ -64,7 +64,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Send OTP via Telegram — lazy import to avoid bundling issues on Vercel
-    const token = (employee.companies as any)?.telegram_token || process.env.TELEGRAM_BOT_TOKEN;
+    const dbToken = (employee.companies as any)?.telegram_token;
+    const envToken = process.env.TELEGRAM_BOT_TOKEN;
+    const token = dbToken || envToken;
+    const tokenSource = dbToken ? "db" : (envToken ? "env" : "none");
     const tgUserId = employee.telegram_user_id;
     let tgStatus = "skipped";
     let tgError = "";
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest) {
     }
 
     // DEBUG: temporarily include debug info — REMOVE before final production
-    return NextResponse.json({ ok: true, step: "otp_sent", _debug: { tgStatus, tgError, hasTgUserId: !!tgUserId, hasToken: !!token } });
+    return NextResponse.json({ ok: true, step: "otp_sent", _debug: { tgStatus, tgError, tokenSource, hasTgUserId: !!tgUserId } });
   } catch (e: unknown) {
     console.error("send-otp error:", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: "Something went wrong" }, { status: 500 });
