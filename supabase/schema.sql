@@ -3,10 +3,10 @@ CREATE TABLE IF NOT EXISTS public.companies (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
     owner_id UUID NOT NULL UNIQUE REFERENCES auth.users(id),
-    plan_id TEXT DEFAULT 'starter' CHECK (plan_id IN ('starter', 'growth', 'pro', 'enterprise')),
-    subscription_status TEXT DEFAULT 'trialing' CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled')),
+    plan_id TEXT DEFAULT 'free' CHECK (plan_id IN ('free', 'starter', 'pro', 'enterprise')),
+    subscription_status TEXT DEFAULT 'active' CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled')),
     onboarding_step INTEGER DEFAULT 1,
-    trial_ends_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '14 days'),
+    trial_ends_at TIMESTAMP WITH TIME ZONE,
     current_period_end TIMESTAMP WITH TIME ZONE,
     telegram_token TEXT,
     bot_name TEXT,
@@ -134,6 +134,25 @@ ADD COLUMN IF NOT EXISTS half_day_hours DECIMAL DEFAULT 4.0;
 
 ALTER TABLE public.payroll
 ADD COLUMN IF NOT EXISTS half_days DECIMAL DEFAULT 0;
+
+-- PRICING CONFIG (Super Admin controlled, single row)
+CREATE TABLE IF NOT EXISTS public.pricing_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    plans JSONB NOT NULL DEFAULT '{
+      "free": { "name": "Free", "nameAr": "مجاني", "price": 0, "employeeLimit": 5 },
+      "starter": { "name": "Starter", "nameAr": "أساسي", "price": 149, "employeeLimit": 10 },
+      "pro": { "name": "Pro", "nameAr": "احترافي", "price": 499, "employeeLimit": 25, "popular": true },
+      "enterprise": { "name": "Enterprise", "nameAr": "شركات", "price": 999, "employeeLimit": 50 }
+    }'::jsonb,
+    features JSONB NOT NULL DEFAULT '["Telegram Bot","Attendance Tracking","Late Arrival Tracking","Daily Reports","CSV Export","Team Notifications","Multi-Admin","Analytics"]'::jsonb,
+    features_ar JSONB NOT NULL DEFAULT '["بوت تليجرام","تتبع الحضور","نظام التأخيرات","تقارير يومية","تصدير CSV","إشعارات الفريق","تعدد المديرين","تحليلات"]'::jsonb,
+    extra_employee_cost INTEGER NOT NULL DEFAULT 50,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Insert default row if none exists
+INSERT INTO public.pricing_config (id) VALUES ('00000000-0000-0000-0000-000000000001')
+ON CONFLICT (id) DO NOTHING;
 
 -- ONBOARDING TRIGGER
 -- This function creates a company record automatically when a user signs up
@@ -269,3 +288,23 @@ CREATE POLICY "Owners can view reports" ON public.reports
     FOR ALL USING (
         company_id IN (SELECT id FROM public.companies WHERE owner_id = auth.uid())
     );
+
+-- EMPLOYEE PORTAL AUTH
+CREATE TABLE IF NOT EXISTS public.employee_otp (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    code VARCHAR(6) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.employee_sessions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    employee_id UUID NOT NULL REFERENCES public.employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);

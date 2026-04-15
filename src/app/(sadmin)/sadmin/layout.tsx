@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Users, LogOut, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Users, LogOut, ShieldAlert, CreditCard } from "lucide-react";
 
 export default function SadminLayout({
   children,
@@ -25,6 +25,7 @@ export default function SadminLayout({
   const navItems = [
     { name: "Overview", icon: LayoutDashboard, href: "/sadmin" },
     { name: "Accounts", icon: Users, href: "/sadmin/accounts" },
+    { name: "Pricing", icon: CreditCard, href: "/sadmin/pricing" },
   ];
 
   return (

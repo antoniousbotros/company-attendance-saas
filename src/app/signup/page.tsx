@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Clock, Mail, Lock, User, Languages, Phone } from "lucide-react";
+import { Clock, Mail, Lock, User, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { type Language } from "@/lib/i18n";
 import { countryCodes } from "@/lib/countryCodes";
@@ -91,7 +91,7 @@ export default function SignupPage() {
         <button 
           type="button"
           onClick={toggleLang}
-          className={cn("absolute top-8 flex items-center gap-2 bg-[#f9fafb] text-[#6b7280] border border-[#eeeeee] px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#f5f5f5] hover:text-[#111] transition-all", isRTL ? "left-8" : "right-8")}
+          className={cn("absolute top-8 flex items-center gap-2 bg-[#f9fafb] text-[#6b7280] border border-[#e0e0e0] px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#f5f5f5] hover:text-[#111] transition-all", isRTL ? "left-8" : "right-8")}
         >
           <Languages className="w-4 h-4" />
           {lang === "en" ? "العربية" : "English"}
@@ -121,7 +121,7 @@ export default function SignupPage() {
           <form onSubmit={handleSignup} className="space-y-5">
             
             {errorMsg && (
-               <div className="bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca] p-4 rounded-xl text-sm font-bold animate-in fade-in">
+               <div className="bg-[#fef2f2] text-[#b91c1c] border border-[#fecaca] p-4 rounded-lg text-sm font-bold animate-in fade-in">
                   {errorMsg}
                </div>
             )}
@@ -143,7 +143,7 @@ export default function SignupPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className={cn(
-                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    "w-full bg-white border border-[#e0e0e0] rounded-lg py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111]",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
                   )}
                   required
@@ -157,7 +157,7 @@ export default function SignupPage() {
               </label>
               <div 
                  className={cn(
-                    "flex bg-white border border-[#eeeeee] rounded-xl focus-within:border-[#ff5a00] focus-within:ring-1 focus-within:ring-[#ff5a00] transition-all shadow-sm items-center",
+                    "flex bg-white border border-[#e0e0e0] rounded-lg focus-within:border-[#ff5a00] focus-within:ring-1 focus-within:ring-[#ff5a00] transition-all items-center",
                     isRTL ? "flex-row" : "flex-row" // Visual standard: country code on left globally, or match RTL
                     // Actually, let's strictly put it left in English, right in Arabic
                  )}
@@ -168,7 +168,7 @@ export default function SignupPage() {
                      onChange={e => setCountryCode(e.target.value)} 
                      className={cn(
                         "appearance-none bg-transparent outline-none py-3.5 text-[#111] font-bold text-center cursor-pointer min-w-[80px]",
-                        isRTL ? "border-l border-[#eeeeee]" : "border-r border-[#eeeeee]"
+                        isRTL ? "border-l border-[#e0e0e0]" : "border-r border-[#e0e0e0]"
                      )}
                      dir="ltr"
                   >
@@ -210,7 +210,7 @@ export default function SignupPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={cn(
-                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    "w-full bg-white border border-[#e0e0e0] rounded-lg py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111]",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
                   )}
                   required
@@ -235,7 +235,7 @@ export default function SignupPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={cn(
-                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    "w-full bg-white border border-[#e0e0e0] rounded-lg py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111]",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
                   )}
                   required
@@ -260,7 +260,7 @@ export default function SignupPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className={cn(
-                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    "w-full bg-white border border-[#e0e0e0] rounded-lg py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111]",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
                   )}
                   required
@@ -279,7 +279,7 @@ export default function SignupPage() {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-[#ff5a00] text-white font-black py-4 rounded-xl hover:bg-[#e04f00] hover:scale-[1.01] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-xl shadow-[#ff5a00]/20 mt-4"
+              className="w-full bg-[#ff5a00] text-white font-black py-4 rounded-lg hover:bg-[#e04f00] hover:scale-[1.01] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-lg shadow-[#ff5a00]/20 mt-4"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

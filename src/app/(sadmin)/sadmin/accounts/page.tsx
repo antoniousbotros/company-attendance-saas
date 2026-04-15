@@ -211,8 +211,8 @@ export default function SadminAccounts() {
                             className="bg-transparent text-white px-2 py-1 outline-none text-xs appearance-none cursor-pointer border-r border-zinc-800 pr-6"
                             style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%23a1a1aa\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'/%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 6px center', backgroundSize: '12px' }}
                           >
+                            <option value="free">Free</option>
                             <option value="starter">Starter</option>
-                            <option value="growth">Growth</option>
                             <option value="pro">Pro</option>
                             <option value="enterprise">Enterprise</option>
                           </select>

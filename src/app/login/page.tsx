@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Clock, Mail, Lock, ArrowRight, Languages } from "lucide-react";
+import { Clock, Mail, Lock, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/i18n";
 
@@ -65,7 +65,7 @@ export default function LoginPage() {
         <button 
           type="button"
           onClick={toggleLang}
-          className={cn("absolute top-8 flex items-center gap-2 bg-[#f9fafb] text-[#6b7280] border border-[#eeeeee] px-4 py-2 rounded-xl font-bold text-sm hover:bg-[#f5f5f5] hover:text-[#111] transition-all", isRTL ? "left-8" : "right-8")}
+          className={cn("absolute top-8 flex items-center gap-2 bg-[#f9fafb] text-[#6b7280] border border-[#e0e0e0] px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#f5f5f5] hover:text-[#111] transition-all", isRTL ? "left-8" : "right-8")}
         >
           <Languages className="w-4 h-4" />
           {lang === "en" ? "العربية" : "English"}
@@ -111,7 +111,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={cn(
-                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    "w-full bg-white border border-[#e0e0e0] rounded-lg py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111]",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
                   )}
                   required
@@ -141,7 +141,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className={cn(
-                    "w-full bg-white border border-[#eeeeee] rounded-xl py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111] shadow-sm",
+                    "w-full bg-white border border-[#e0e0e0] rounded-lg py-3.5 focus:border-[#ff5a00] focus:ring-1 focus:ring-[#ff5a00] outline-none transition-all placeholder:text-[#9ca3af] font-bold text-[#111]",
                     isRTL ? "pr-12 pl-4" : "pl-12 pr-4"
                   )}
                   required
@@ -152,7 +152,7 @@ export default function LoginPage() {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full bg-[#ff5a00] text-white font-black py-4 rounded-xl hover:bg-[#e04f00] hover:scale-[1.01] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-xl shadow-[#ff5a00]/20 mt-8"
+              className="w-full bg-[#ff5a00] text-white font-black py-4 rounded-lg hover:bg-[#e04f00] hover:scale-[1.01] transition-all active:scale-[0.98] flex items-center justify-center gap-2 group shadow-lg shadow-[#ff5a00]/20 mt-8"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

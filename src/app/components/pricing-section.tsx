@@ -1,119 +1,109 @@
 "use client";
 
 import React from "react";
-import { Check, Zap, Sparkles, Building2 } from "lucide-react";
+import { Check, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/LanguageContext";
+import { PLANS, ALL_FEATURES, ALL_FEATURES_AR, EXTRA_EMPLOYEE_COST } from "@/lib/billing";
 
 export default function PricingSection() {
   const { isRTL } = useLanguage();
 
-  const plans = [
-    {
-      name: isRTL ? "البداية" : "Starter",
-      price: "49",
-      icon: Zap,
-      features: isRTL 
-         ? ["وصول لروبوت تليجرام", "تسجيل حضور يومي", "لوحة تحكم بسيطة"]
-         : ["Telegram Bot Access", "Daily Attendance Logs", "Simple Dashboard"],
-      color: "bg-white text-[#111]"
-    },
-    {
-      name: isRTL ? "النمو" : "Growth",
-      price: "399",
-      popular: true,
-      icon: Sparkles,
-      features: isRTL 
-         ? ["كل ميزات البداية", "تتبع التأخيرات بدقة", "تصدير الملفات (CSV)", "إشعارات للفريق"]
-         : ["Everything in Starter", "Late Arrival Tracking", "CSV Export", "Team Notifications"],
-      color: "bg-[#ff5a00] text-white shadow-[#ff5a00]/30",
-      description: isRTL ? "يبدأ من 5 جنيهاً للموظف الإضافي" : "Start from 5 EGP per extra employee"
-    },
-    {
-      name: isRTL ? "الاحترافية" : "Pro",
-      price: "799",
-      icon: Building2,
-      features: isRTL 
-         ? ["كل ميزات النمو", "تحليلات متقدمة", "أداء الموظفين التفصيلي", "تعدد مديري النظام"]
-         : ["Everything in Growth", "Advanced Analytics", "Employee Performance", "Multiple Admins"],
-      color: "bg-white text-[#111]"
-    }
-  ];
+  const planEntries = Object.entries(PLANS);
+  const features = isRTL ? ALL_FEATURES_AR : ALL_FEATURES;
 
   return (
     <section id="pricing" className="py-32 px-6 bg-[#f9fafb]">
-      <div className="max-w-7xl mx-auto">
-        <div className="text-center space-y-4 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+      <div className="max-w-6xl mx-auto">
+        <div className="text-center space-y-4 mb-16 animate-in fade-in slide-in-from-bottom-4 duration-1000">
           <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#111]">
-            {isRTL ? "باقات تناسب نمو شركتك" : "Simple pricing for growing teams"}
+            {isRTL ? "باقات بسيطة، كل الميزات" : "Simple plans, all features included"}
           </h2>
-          <p className="text-[#6b7280] font-bold text-lg">
-            {isRTL ? "أسعار بسيطة، بدون تعقيدات، تدفع فقط لما تستخدمه." : "Simple pricing, no complexity. Scale as you grow."}
+          <p className="text-[#6b7280] font-bold text-lg max-w-xl mx-auto">
+            {isRTL
+              ? "الفرق الوحيد هو عدد الموظفين. كل الميزات متاحة في كل الباقات."
+              : "The only difference is the number of employees. Every feature is included in every plan."}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {plans.map((plan) => (
-            <div 
-              key={plan.name}
+        {/* Shared Features */}
+        <div className="flex flex-wrap justify-center gap-3 mb-12">
+          {features.map((f, i) => (
+            <span key={i} className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#4b5563] bg-white border border-[#eeeeee] px-4 py-2 rounded-lg shadow-sm">
+              <Check className="w-4 h-4 text-[#1e8e3e]" />
+              {f}
+            </span>
+          ))}
+        </div>
+
+        {/* Plan Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+          {planEntries.map(([id, plan]) => (
+            <div
+              key={id}
               className={cn(
-                "relative group h-full rounded-3xl p-10 border transition-all duration-300 transform hover:-translate-y-2",
-                plan.popular 
-                  ? "bg-[#ff5a00] border-[#e04f00] shadow-2xl scale-105" 
-                  : "bg-white border-[#eeeeee] hover:border-[#ff5a00]/50 shadow-sm"
+                "relative rounded-2xl p-6 md:p-8 border transition-all duration-300",
+                plan.popular
+                  ? "bg-[#ff5a00] border-[#e04f00] shadow-xl scale-[1.02]"
+                  : "bg-white border-[#eeeeee] hover:border-[#ff5a00]/40 shadow-sm"
               )}
             >
               {plan.popular && (
-                <div className="flex justify-center absolute -top-4 inset-x-0 mx-auto">
-                  <div className="bg-[#fff1e8] text-[#ff5a00] ring-1 ring-[#ffd4b8] text-[10px] font-black uppercase tracking-[0.2em] px-4 py-1.5 rounded-full shadow-lg">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+                  <div className="bg-[#fff1e8] text-[#ff5a00] ring-1 ring-[#ffd4b8] text-[9px] font-black uppercase tracking-[0.15em] px-3 py-1 rounded-full shadow-md whitespace-nowrap">
                     {isRTL ? "الأكثر طلباً" : "Most Popular"}
                   </div>
                 </div>
               )}
 
-              <div className="mb-8 block">
-                <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center mb-6 ring-1",
-                  plan.popular ? "bg-[#e04f00]/50 text-white ring-white/20" : "bg-[#fff1e8] text-[#ff5a00] ring-[#ffd4b8]"
-                )}>
-                  <plan.icon className={cn("w-8 h-8", plan.popular ? "text-white/80" : "text-[#ff5a00]/80")} />
-                </div>
-                <h3 className={cn("text-2xl font-black mb-2", plan.popular ? "text-white" : "text-[#111]")}>
-                  {plan.name}
+              <div className="mb-6">
+                <h3 className={cn("text-lg font-black mb-2", plan.popular ? "text-white" : "text-[#111]")}>
+                  {isRTL ? plan.nameAr : plan.name}
                 </h3>
                 <div className="flex items-baseline gap-1" dir="ltr">
-                  <span className={cn("text-4xl font-black", plan.popular ? "text-white" : "text-[#111]")}>
-                    {plan.price}
-                  </span>
-                  <span className={plan.popular ? "text-[#fff1e8]" : "text-[#9ca3af] font-bold"}>EGP/mo</span>
+                  {plan.price === 0 ? (
+                    <span className={cn("text-3xl font-black", plan.popular ? "text-white" : "text-[#1e8e3e]")}>
+                      {isRTL ? "مجاني" : "Free"}
+                    </span>
+                  ) : (
+                    <>
+                      <span className={cn("text-3xl font-black", plan.popular ? "text-white" : "text-[#111]")}>
+                        {plan.price}
+                      </span>
+                      <span className={cn("text-sm font-bold", plan.popular ? "text-white/70" : "text-[#9ca3af]")}>
+                        EGP/mo
+                      </span>
+                    </>
+                  )}
                 </div>
-                {plan.description && <p className="text-xs font-bold mt-2 text-[#fff1e8] opacity-90">{plan.description}</p>}
               </div>
 
-              <div className={cn("h-[1px] w-full mb-8", plan.popular ? "bg-white/20" : "bg-[#eeeeee]")} />
-
-              <ul className="space-y-4 mb-10 min-h-[220px]">
-                {plan.features.map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <Check className={cn("w-5 h-5 shrink-0 mt-0.5", plan.popular ? "text-white" : "text-[#ff5a00]")} />
-                    <span className={cn("text-sm font-bold", plan.popular ? "text-white/90" : "text-[#4b5563]")}>
-                      {feature}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className={cn("flex items-center gap-2 mb-6 pb-6 border-b", plan.popular ? "border-white/20" : "border-[#eeeeee]")}>
+                <Users className={cn("w-4 h-4", plan.popular ? "text-white/70" : "text-[#6b7280]")} />
+                <span className={cn("text-sm font-bold", plan.popular ? "text-white/90" : "text-[#4b5563]")}>
+                  {isRTL ? `حتى ${plan.employeeLimit} موظف` : `Up to ${plan.employeeLimit} employees`}
+                </span>
+              </div>
 
               <button className={cn(
-                "w-full py-4 rounded-xl font-black transition-all text-sm shadow-sm",
-                plan.popular 
-                  ? "bg-white text-[#ff5a00] hover:bg-[#fff1e8]" 
+                "w-full py-3 rounded-lg font-black transition-all text-sm",
+                plan.popular
+                  ? "bg-white text-[#ff5a00] hover:bg-[#fff1e8]"
                   : "bg-[#111] text-white hover:bg-[#111]/80"
               )}>
-                {isRTL ? "ابدأ الآن" : "Start Now"}
+                {plan.price === 0
+                  ? (isRTL ? "ابدأ مجاناً" : "Start Free")
+                  : (isRTL ? "ابدأ الآن" : "Get Started")}
               </button>
             </div>
           ))}
         </div>
+
+        <p className="text-center text-sm text-[#6b7280] font-medium mt-8">
+          {isRTL
+            ? `تحتاج موظفين أكثر؟ أضف موظفين إضافيين بـ ${EXTRA_EMPLOYEE_COST} جنيه/شهر لكل موظف.`
+            : `Need more employees? Add extra at ${EXTRA_EMPLOYEE_COST} EGP/month each.`}
+        </p>
       </div>
     </section>
   );

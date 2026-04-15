@@ -22,10 +22,11 @@
 - **Late Policy**: Check-ins after **10:00 AM** are flagged as `late`.
 - **Check-Out**: Updates `check_out` time and calculates `working_hours` (decimal).
 
-### 3. Monetization (Hybrid Model)
-- **Base Plan**: Starter, Growth, Pro, Enterprise.
-- **Usage-Based**: 5 EGP per extra employee over the plan limit.
-- **Trial**: 14-day automatic trial period for all new companies.
+### 3. Monetization (Simplified Model)
+- **Plans**: Free (5 emp), Starter (10 emp, 149 EGP), Pro (25 emp, 499 EGP), Enterprise (50 emp, 999 EGP).
+- **All features included** in every plan — differentiation is employee count only.
+- **Usage-Based**: 50 EGP per extra employee over the plan limit.
+- **No trial**: New signups start on the Free plan (5 employees, all features).
 
 ## UI SYSTEM
 - **Theming**: Light-only theme inspired by the Talabat Partners dashboard. Page bg `#f5f5f5`, white cards with `#eeeeee` borders and ~12px radius, near-black text `#111`, muted gray `#6b7280`.
@@ -51,6 +52,15 @@
 - **Build Crashes**: Supabase clients must have fallbacks for environment variables to prevent crashes during the Vercel pre-rendering phase.
 - **Middleware Convention**: Next.js 16 warns about the `/middleware.ts` file; it may need renaming to `/proxy.ts` in future versions.
 
+### 4. Employee Portal (`team.yawmy.app`)
+- **Auth**: Phone + OTP via Telegram (custom session, not Supabase Auth)
+- **Session**: `team_session` httpOnly cookie → `employee_sessions` DB table (7-day TTL)
+- **Multi-company**: If phone exists in 2+ companies, employee selects which company to login to
+- **Features**: Check-in/out (with geofencing), attendance history, tasks (view/assign/complete), announcements, sales reports
+- **Routing**: `team.` subdomain rewrite in middleware → `src/app/(team)/team/` pages
+- **Data access**: All queries use `supabaseAdmin` with manual `company_id` scoping
+- **Mobile-first**: Bottom nav on mobile, left sidebar on desktop
+
 ## CURRENT TASK
 - [x] Initial SaaS Architecture
 - [x] Multi-step Onboarding Wizard
@@ -58,6 +68,15 @@
 - [x] Production Build Fixes
 - [ ] Payment Gateway Integration (Paymob/Stripe)
 - [ ] Real-time Attendance Live-view Notification
+
+## PARITY RULE
+**Every employee-facing feature must exist on both Telegram bot AND web team portal (`team.yawmy.app`).** A feature that only works on one platform is incomplete. Both platforms hit the same DB tables and must use identical business logic. Web actions must trigger Telegram notifications where applicable.
+
+## KNOWN ISSUES & RISKS (NEW)
+- **Sadmin auth**: Uses a plain-text cookie value `"authorized"`. Pre-existing issue, not introduced in this release. Should be upgraded to signed session tokens in a future sprint.
+- **Sadmin pricing editor vs hardcoded billing.ts**: The sadmin pricing page saves to `pricing_config` DB table, but the customer-facing billing page reads from hardcoded `billing.ts`. These are not yet connected. Admin price changes via sadmin UI do NOT propagate to what customers see. Connecting them requires making the billing page fetch from the DB — planned for a future iteration.
+- **Schema migration**: Existing companies with `plan_id = 'growth'` must be migrated to `'starter'` BEFORE applying the updated CHECK constraint. Run: `UPDATE companies SET plan_id = 'starter' WHERE plan_id = 'growth';`
+- **RLS on new tables**: `employee_otp`, `employee_sessions`, and `pricing_config` do not have RLS enabled. They are only accessed via `supabaseAdmin` (service role) in API routes, but if the anon key is ever used against them, data would be exposed. Consider enabling RLS as defense-in-depth.
 
 ## DECISIONS LOG
 - **2026-04-14**: Switched to `@supabase/ssr` for better Next.js 15+ compatibility and cookie-based auth.
@@ -68,6 +87,15 @@
 - **2026-04-14**: Added `onboarding_step` to `companies` to prevent users from skipping the activation flow.
 - **2026-04-14**: **Dashboard UI redesigned** to a Talabat Partners-inspired light theme with orange (`#ff5a00`) primary. Dropped dark mode entirely. Introduced shared primitives in `src/app/components/talabat-ui.tsx`. Sidebar reduced to 6 honest routes grouped into two sections — no stub pages for features we don't have. Business logic (Supabase queries, RLS, billing math, phone normalization, Telegram webhook) unchanged.
 
+## DECISIONS LOG (NEW)
+- **2026-04-15**: Simplified pricing to 4 plans (Free/Starter/Pro/Enterprise) — all features included, only employee limit differs. Removed `growth` plan. Extra cost raised to 50 EGP/employee.
+- **2026-04-15**: Replaced 14-day trial with permanent Free plan (5 employees).
+- **2026-04-15**: Built employee web portal at `team.yawmy.app` — custom phone+OTP auth, mirrors all Telegram bot features.
+- **2026-04-15**: Established parity rule — every employee feature must exist on both Telegram and web.
+- **2026-04-15**: Added sadmin pricing control page (`/sadmin/pricing`) with DB-backed `pricing_config` table.
+- **2026-04-15**: Security hardening — added `company_id` scoping to all team API queries, try/catch on all routes, sanitized error messages, crypto-secure OTP generation.
+
 ## CHANGE LOG
+- **v2.0.0**: Employee Portal (`team.yawmy.app`), simplified pricing (4 plans, all features), sadmin pricing control, security hardening.
 - **v1.1.0**: Major UI overhaul (Notion Style), Cookie-based Auth, and multi-tenant bot support.
 - **v1.0.0**: Initial release of SyncTime SaaS.

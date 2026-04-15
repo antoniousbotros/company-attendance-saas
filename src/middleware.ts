@@ -13,9 +13,16 @@ export async function middleware(request: NextRequest) {
 
   // 1. Subdomain Check: sadmin.yawmy.app or sadmin.localhost
   if (hostname.startsWith("sadmin.") && !url.pathname.startsWith("/api")) {
-    // If they are not already accessing the /sadmin path under the hood
     if (!url.pathname.startsWith("/sadmin")) {
       url.pathname = `/sadmin${url.pathname === "/" ? "" : url.pathname}`;
+      response = NextResponse.rewrite(url);
+    }
+  }
+
+  // 1b. Subdomain Check: team.yawmy.app or team.localhost
+  if (hostname.startsWith("team.") && !url.pathname.startsWith("/api")) {
+    if (!url.pathname.startsWith("/team")) {
+      url.pathname = `/team${url.pathname === "/" ? "" : url.pathname}`;
       response = NextResponse.rewrite(url);
     }
   }
@@ -29,12 +36,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
+  // 2b. Protect Team Routes
+  if (url.pathname.startsWith("/team") && !url.pathname.startsWith("/team/login")) {
+    const teamSession = request.cookies.get("team_session");
+    if (!teamSession) {
+      url.pathname = "/team/login";
+      return NextResponse.redirect(url);
+    }
+  }
+
   // Basic check to see if we have URLs
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
     console.error("Middleware Error: Missing Supabase Environment Variables");
+    return response;
+  }
+
+  // Skip Supabase Auth for team portal (uses custom session)
+  if (url.pathname.startsWith("/team")) {
     return response;
   }
 

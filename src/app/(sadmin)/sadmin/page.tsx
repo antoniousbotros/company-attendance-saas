@@ -8,10 +8,10 @@ import {
 } from "lucide-react";
 
 const PLAN_PRICES = {
-  starter: 29,
-  growth: 99,
-  pro: 199,
-  enterprise: 499,
+  free: 0,
+  starter: 149,
+  pro: 499,
+  enterprise: 999,
 };
 
 export default function SadminOverview() {
