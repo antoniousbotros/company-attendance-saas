@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { BarChart3, MapPin, Send, FileText } from "lucide-react";
+import { BarChart3, MapPin, Send, FileText, User } from "lucide-react";
+
+type Tab = "submit" | "my_reports" | "team_reports";
 
 export default function TeamReportsPage() {
-  const [tab, setTab] = useState<"submit" | "history">("submit");
+  const [tab, setTab] = useState<Tab>("submit");
   const [team, setTeam] = useState<any>(null);
   const [fields, setFields] = useState<any[]>([]);
-  const [reports, setReports] = useState<any[]>([]);
+  const [myReports, setMyReports] = useState<any[]>([]);
+  const [teamReports, setTeamReports] = useState<any[]>([]);
+  const [reportFields, setReportFields] = useState<any[]>([]);
+  const [isLeader, setIsLeader] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // Form state
@@ -18,16 +23,23 @@ export default function TeamReportsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  useEffect(() => {
+  const loadData = () => {
     Promise.all([
       fetch("/api/team/reports/fields").then((r) => r.json()),
       fetch("/api/team/reports/history").then((r) => r.json()),
     ]).then(([fieldsRes, historyRes]) => {
       setTeam(fieldsRes.team);
       setFields(fieldsRes.fields || []);
-      setReports(historyRes.reports || []);
+      setMyReports(historyRes.reports || []);
+      setReportFields(historyRes.fields || []);
+      setIsLeader(historyRes.isLeader || false);
+      setTeamReports(historyRes.teamReports || []);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
 
   const captureLocation = () => {
@@ -68,11 +80,57 @@ export default function TeamReportsPage() {
     setFieldValues({});
     setNotes("");
     setLocation(null);
-
-    // Refresh history
-    const historyRes = await fetch("/api/team/reports/history").then((r) => r.json());
-    setReports(historyRes.reports || []);
+    loadData();
   };
+
+  const getFieldLabel = (fieldId: string) => {
+    const f = reportFields.find((rf: any) => rf.id === fieldId);
+    return f?.label || fieldId;
+  };
+
+  const ReportCard = ({ r, showEmployee }: { r: any; showEmployee?: boolean }) => (
+    <div className="bg-white rounded-xl border border-[#e0e0e0] p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-[#111]">
+            {new Date(r.date).toLocaleDateString("en-US", {
+              weekday: "short", month: "short", day: "numeric",
+            })}
+          </p>
+          {showEmployee && (
+            <p className="text-xs text-[#ff5a00] font-semibold flex items-center gap-1 mt-0.5">
+              <User className="w-3 h-3" /> {r.employee_name}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {r.location_lat && (
+            <a
+              href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[10px] font-bold text-[#ff5a00] hover:underline flex items-center gap-0.5"
+            >
+              <MapPin className="w-3 h-3" /> Map
+            </a>
+          )}
+        </div>
+      </div>
+      {/* Field values */}
+      {r.report_values && r.report_values.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {r.report_values.map((v: any, i: number) => (
+            <span key={i} className="text-[10px] font-semibold bg-[#f5f5f5] text-[#4b5563] px-2 py-1 rounded">
+              {getFieldLabel(v.field_id)}: {v.value}
+            </span>
+          ))}
+        </div>
+      )}
+      {r.notes && (
+        <p className="text-xs text-[#6b7280] italic">{r.notes}</p>
+      )}
+    </div>
+  );
 
   if (loading) {
     return <div className="text-center py-12 text-sm text-[#6b7280]">Loading...</div>;
@@ -107,15 +165,26 @@ export default function TeamReportsPage() {
           Submit
         </button>
         <button
-          onClick={() => setTab("history")}
+          onClick={() => setTab("my_reports")}
           className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
-            tab === "history" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]"
+            tab === "my_reports" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]"
           }`}
         >
-          History
+          My Reports
         </button>
+        {isLeader && (
+          <button
+            onClick={() => setTab("team_reports")}
+            className={`flex-1 py-2 rounded-md text-xs font-bold transition-all ${
+              tab === "team_reports" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]"
+            }`}
+          >
+            Team
+          </button>
+        )}
       </div>
 
+      {/* Submit Tab */}
       {tab === "submit" && (
         <div className="bg-white rounded-xl border border-[#e0e0e0] p-5 space-y-4">
           {submitted ? (
@@ -133,7 +202,6 @@ export default function TeamReportsPage() {
             </div>
           ) : (
             <>
-              {/* Location */}
               <div>
                 <label className="text-xs font-bold text-[#111] block mb-1.5">Location</label>
                 {location ? (
@@ -153,32 +221,25 @@ export default function TeamReportsPage() {
                 )}
               </div>
 
-              {/* Dynamic Fields */}
               {fields.map((f) => (
                 <div key={f.id}>
                   <label className="text-xs font-bold text-[#111] block mb-1.5">{f.label}</label>
                   {f.field_type === "select" ? (
                     <select
                       value={fieldValues[f.id] || ""}
-                      onChange={(e) =>
-                        setFieldValues({ ...fieldValues, [f.id]: e.target.value })
-                      }
+                      onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })}
                       className="w-full border border-[#e0e0e0] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00]"
                     >
                       <option value="">Select</option>
                       {(f.options || []).map((opt: string, i: number) => (
-                        <option key={i} value={opt}>
-                          {opt}
-                        </option>
+                        <option key={i} value={opt}>{opt}</option>
                       ))}
                     </select>
                   ) : (
                     <input
                       type={f.field_type === "number" ? "number" : "text"}
                       value={fieldValues[f.id] || ""}
-                      onChange={(e) =>
-                        setFieldValues({ ...fieldValues, [f.id]: e.target.value })
-                      }
+                      onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })}
                       placeholder={f.label}
                       className="w-full border border-[#e0e0e0] rounded-lg px-3 py-2.5 text-sm font-semibold text-[#111] placeholder:text-[#9ca3af] outline-none focus:border-[#ff5a00]"
                     />
@@ -186,7 +247,6 @@ export default function TeamReportsPage() {
                 </div>
               ))}
 
-              {/* Notes */}
               {team.show_notes !== false && (
                 <div>
                   <label className="text-xs font-bold text-[#111] block mb-1.5">
@@ -214,45 +274,24 @@ export default function TeamReportsPage() {
         </div>
       )}
 
-      {tab === "history" && (
+      {/* My Reports Tab */}
+      {tab === "my_reports" && (
         <div className="space-y-2">
-          {reports.length === 0 ? (
+          {myReports.length === 0 ? (
             <div className="text-center py-12 text-sm text-[#6b7280]">No reports yet.</div>
           ) : (
-            reports.map((r) => (
-              <div
-                key={r.id}
-                className="bg-white rounded-xl border border-[#e0e0e0] p-4 flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-sm font-bold text-[#111]">
-                    {new Date(r.date).toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </p>
-                  {r.notes && (
-                    <p className="text-xs text-[#6b7280] mt-0.5 truncate max-w-[200px]">
-                      {r.notes}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {r.location_lat && (
-                    <a
-                      href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-[10px] font-bold text-[#ff5a00] hover:underline"
-                    >
-                      <MapPin className="w-3 h-3 inline" /> Map
-                    </a>
-                  )}
-                  <FileText className="w-4 h-4 text-[#9ca3af]" />
-                </div>
-              </div>
-            ))
+            myReports.map((r) => <ReportCard key={r.id} r={r} />)
+          )}
+        </div>
+      )}
+
+      {/* Team Reports Tab (leaders only) */}
+      {tab === "team_reports" && isLeader && (
+        <div className="space-y-2">
+          {teamReports.length === 0 ? (
+            <div className="text-center py-12 text-sm text-[#6b7280]">No team reports yet.</div>
+          ) : (
+            teamReports.map((r) => <ReportCard key={r.id} r={r} showEmployee />)
           )}
         </div>
       )}
