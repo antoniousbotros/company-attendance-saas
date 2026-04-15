@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useTeam } from "../layout";
-import { CheckSquare, Plus, X, Clock, User, Check, Loader2 } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, User, Check, Loader2, ChevronDown, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "my_tasks" | "assigned_by_me";
@@ -15,15 +15,18 @@ export default function TeamTasksPage() {
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [assignedByMe, setAssignedByMe] = useState<any[]>([]);
   const [coworkers, setCoworkers] = useState<any[]>([]);
+  const [coworkersLoaded, setCoworkersLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showAssign, setShowAssign] = useState(false);
-  const [assignTo, setAssignTo] = useState("");
-  const [taskTitle, setTaskTitle] = useState("");
-  const [taskDeadline, setTaskDeadline] = useState("");
+
+  // Unified task composer state
+  const [title, setTitle] = useState("");
+  const [assignTo, setAssignTo] = useState(""); // "" = personal, else coworker ID
+  const [deadline, setDeadline] = useState("");
+  const [showAssignPanel, setShowAssignPanel] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Task interaction
   const [toggling, setToggling] = useState<string | null>(null);
-  const [personalTask, setPersonalTask] = useState("");
-  const [addingPersonal, setAddingPersonal] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const loadTasks = () => {
@@ -38,42 +41,47 @@ export default function TeamTasksPage() {
 
   useEffect(() => { loadTasks(); }, []);
 
-  const activeTasks = tab === "my_tasks" ? myTasks : assignedByMe;
-  const filteredTasks = useMemo(() => {
-    if (statusFilter === "all") return activeTasks;
-    return activeTasks.filter((t) => t.status === statusFilter);
-  }, [activeTasks, statusFilter]);
-
-  const openAssignModal = async () => {
-    setShowAssign(true);
+  // Preload coworkers lazily when user focuses the input
+  const ensureCoworkers = async () => {
+    if (coworkersLoaded) return;
     const res = await fetch("/api/team/tasks/coworkers").then((r) => r.json());
     setCoworkers(res.employees || []);
+    setCoworkersLoaded(true);
   };
 
-  const handleAssign = async () => {
-    if (!assignTo || !taskTitle) return;
+  const handleFocusInput = () => { ensureCoworkers(); };
+
+  const handleToggleAssignPanel = async () => {
+    await ensureCoworkers();
+    setShowAssignPanel((v) => !v);
+    if (showAssignPanel) { setAssignTo(""); setDeadline(""); }
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim() || submitting) return;
     setSubmitting(true);
-    await fetch("/api/team/tasks/assign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assigned_to: assignTo, title: taskTitle, deadline: taskDeadline || null }),
-    });
-    setShowAssign(false);
-    setAssignTo(""); setTaskTitle(""); setTaskDeadline("");
-    setSubmitting(false);
-    loadTasks();
-  };
 
-  const handleAddPersonal = async () => {
-    if (!personalTask.trim() || addingPersonal) return;
-    setAddingPersonal(true);
-    await fetch("/api/team/tasks/self", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: personalTask.trim() }),
-    });
-    setPersonalTask("");
-    setAddingPersonal(false);
+    const isAssigning = assignTo !== "";
+
+    if (isAssigning) {
+      await fetch("/api/team/tasks/assign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assigned_to: assignTo, title: title.trim(), deadline: deadline || null }),
+      });
+    } else {
+      await fetch("/api/team/tasks/self", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: title.trim(), deadline: deadline || null }),
+      });
+    }
+
+    setTitle("");
+    setAssignTo("");
+    setDeadline("");
+    setShowAssignPanel(false);
+    setSubmitting(false);
     loadTasks();
     inputRef.current?.focus();
   };
@@ -102,6 +110,12 @@ export default function TeamTasksPage() {
     loadTasks();
   };
 
+  const activeTasks = tab === "my_tasks" ? myTasks : assignedByMe;
+  const filteredTasks = useMemo(() => {
+    if (statusFilter === "all") return activeTasks;
+    return activeTasks.filter((t) => t.status === statusFilter);
+  }, [activeTasks, statusFilter]);
+
   const statusStyle = (s: string) => {
     if (s === "in_progress") return "bg-[#fff1e8] text-[#ff5a00]";
     if (s === "completed") return "bg-[#e6f6ec] text-[#1e8e3e]";
@@ -126,21 +140,16 @@ export default function TeamTasksPage() {
     { key: "completed", label: isRTL ? "مكتمل" : "Done" },
   ];
 
+  const selectedCoworker = coworkers.find((c) => c.id === assignTo);
+  const isAssigning = assignTo !== "";
+
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CheckSquare className="w-5 h-5 text-[#ff5a00]" />
-          <h1 className="text-lg font-black text-[#111]">{isRTL ? "المهام" : "Tasks"}</h1>
-        </div>
-        <button
-          onClick={openAssignModal}
-          className="bg-[#ff5a00] text-white font-bold text-[11px] px-3 py-2 rounded-xl hover:bg-[#e04f00] transition-all flex items-center gap-1"
-        >
-          <Plus className="w-3.5 h-3.5" /> {isRTL ? "تكليف" : "Assign"}
-        </button>
+      <div className="flex items-center gap-2">
+        <CheckSquare className="w-5 h-5 text-[#ff5a00]" />
+        <h1 className="text-lg font-black text-[#111]">{isRTL ? "المهام" : "Tasks"}</h1>
       </div>
 
       {/* Main Tabs */}
@@ -175,30 +184,109 @@ export default function TeamTasksPage() {
         ))}
       </div>
 
-      {/* Add Personal Task – inline input (My Tasks only) */}
+      {/* ── UNIFIED TASK COMPOSER (My Tasks tab only) ── */}
       {tab === "my_tasks" && (
-        <div className="flex items-center gap-2 bg-white rounded-2xl shadow-sm px-4 py-3 border border-dashed border-[#e0e0e0]">
-          <div className="w-5 h-5 rounded-full border-2 border-[#d1d5db] flex-shrink-0" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={personalTask}
-            onChange={(e) => setPersonalTask(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddPersonal()}
-            placeholder={isRTL ? "أضف مهمة لنفسك..." : "Add a task for yourself..."}
-            className="flex-1 text-sm font-medium text-[#111] placeholder:text-[#bbb] outline-none bg-transparent"
-          />
-          <button
-            onClick={handleAddPersonal}
-            disabled={!personalTask.trim() || addingPersonal}
-            className="w-7 h-7 rounded-lg bg-[#ff5a00] flex items-center justify-center disabled:opacity-30 hover:bg-[#e04f00] transition-all flex-shrink-0"
-          >
-            {addingPersonal ? (
-              <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-            ) : (
-              <Plus className="w-3.5 h-3.5 text-white" />
-            )}
-          </button>
+        <div className={cn("bg-white rounded-2xl shadow-sm border transition-all duration-200", showAssignPanel ? "border-[#ff5a00] ring-1 ring-[#ff5a00]/20" : "border-dashed border-[#e0e0e0]")}>
+
+          {/* Row 1: title input */}
+          <div className="flex items-center gap-2 px-4 py-3">
+            <div className="w-5 h-5 rounded-full border-2 border-[#d1d5db] flex-shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onFocus={handleFocusInput}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              placeholder={isRTL ? "أضف مهمة لنفسك..." : "Add a task for yourself..."}
+              className="flex-1 text-sm font-medium text-[#111] placeholder:text-[#bbb] outline-none bg-transparent"
+              dir="auto"
+            />
+
+            {/* Assign to coworker toggle */}
+            <button
+              onClick={handleToggleAssignPanel}
+              title={isRTL ? "تكليف لزميل" : "Assign to coworker"}
+              className={cn(
+                "flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all border",
+                isAssigning
+                  ? "bg-[#ff5a00] text-white border-[#ff5a00]"
+                  : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]"
+              )}
+            >
+              <UserPlus className="w-3 h-3" />
+              {isAssigning
+                ? (selectedCoworker?.name || (isRTL ? "تعيين" : "Assign"))
+                : (isRTL ? "تكليف" : "Assign")}
+            </button>
+
+            {/* Submit button */}
+            <button
+              onClick={handleSubmit}
+              disabled={!title.trim() || submitting}
+              className="w-7 h-7 rounded-lg bg-[#ff5a00] flex items-center justify-center disabled:opacity-30 hover:bg-[#e04f00] transition-all flex-shrink-0"
+            >
+              {submitting ? (
+                <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+              ) : (
+                <Plus className="w-3.5 h-3.5 text-white" />
+              )}
+            </button>
+          </div>
+
+          {/* Row 2: Assign panel (slides in) */}
+          {showAssignPanel && (
+            <div className="px-4 pb-3 border-t border-[#f5f5f5] pt-3 space-y-2 animate-in slide-in-from-top-2 duration-200">
+              <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide">
+                {isRTL ? "تكليف المهمة إلى:" : "Assign task to:"}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {/* Personal option */}
+                <button
+                  onClick={() => setAssignTo("")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all",
+                    assignTo === ""
+                      ? "bg-[#7c3aed] text-white border-[#7c3aed]"
+                      : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#7c3aed] hover:text-[#7c3aed]"
+                  )}
+                >
+                  {isRTL ? "🙋 شخصي" : "🙋 Personal"}
+                </button>
+                {/* Coworkers */}
+                {coworkers.length === 0 ? (
+                  <span className="text-[11px] text-[#9ca3af] py-1.5">{isRTL ? "لا يوجد زملاء" : "No coworkers"}</span>
+                ) : (
+                  coworkers.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setAssignTo(c.id)}
+                      className={cn(
+                        "px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all",
+                        assignTo === c.id
+                          ? "bg-[#ff5a00] text-white border-[#ff5a00]"
+                          : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]"
+                      )}
+                    >
+                      {c.name}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Deadline (optional) */}
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-[#9ca3af] flex-shrink-0" />
+                <input
+                  type="date"
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  className="flex-1 text-[12px] font-medium text-[#111] outline-none bg-transparent border-b border-[#e0e0e0] focus:border-[#ff5a00] pb-0.5 transition-colors"
+                />
+                <span className="text-[10px] text-[#9ca3af] font-medium">{isRTL ? "الموعد النهائي (اختياري)" : "Deadline (optional)"}</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -229,7 +317,7 @@ export default function TeamTasksPage() {
                   isDone && "opacity-55"
                 )}
               >
-                {/* Checkbox (My Tasks tab: togglable. Assigned tab: static status dot) */}
+                {/* Checkbox (My Tasks: togglable. Assigned tab: static dot) */}
                 {tab === "my_tasks" ? (
                   <button
                     onClick={() => handleToggle(t)}
@@ -265,8 +353,6 @@ export default function TeamTasksPage() {
                     )}>
                       {t.title}
                     </h3>
-
-                    {/* Badge */}
                     {isSelf ? (
                       <span className="flex-shrink-0 text-[8px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#f3f0ff] text-[#7c3aed]">
                         {isRTL ? "شخصي" : "Personal"}
@@ -278,7 +364,6 @@ export default function TeamTasksPage() {
                     )}
                   </div>
 
-                  {/* Meta */}
                   <div className="flex flex-wrap gap-3 text-[11px] text-[#9ca3af] font-medium">
                     {!isSelf && (
                       <span className="flex items-center gap-1">
@@ -301,7 +386,6 @@ export default function TeamTasksPage() {
                     )}
                   </div>
 
-                  {/* Start button for assigned pending tasks */}
                   {tab === "my_tasks" && t.status === "pending" && !isSelf && (
                     <button
                       onClick={() => handleStart(t.id)}
@@ -316,60 +400,6 @@ export default function TeamTasksPage() {
               </div>
             );
           })}
-        </div>
-      )}
-
-      {/* Assign Modal */}
-      {showAssign && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-end lg:items-center justify-center p-4">
-          <div className="bg-white rounded-t-2xl lg:rounded-2xl w-full max-w-sm p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-black text-[#111]">{isRTL ? "تكليف مهمة" : "Assign Task"}</h2>
-              <button onClick={() => setShowAssign(false)} className="text-[#9ca3af] hover:text-[#111]">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1">{isRTL ? "تكليف إلى" : "Assign to"}</label>
-              <select
-                value={assignTo}
-                onChange={(e) => setAssignTo(e.target.value)}
-                className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00]"
-              >
-                <option value="">{isRTL ? "اختر زميل" : "Select coworker"}</option>
-                {coworkers.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name} {c.department ? `(${c.department})` : ""}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1">{isRTL ? "عنوان المهمة" : "Task title"}</label>
-              <input
-                type="text"
-                value={taskTitle}
-                onChange={(e) => setTaskTitle(e.target.value)}
-                placeholder={isRTL ? "ما المطلوب؟" : "What needs to be done?"}
-                className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] placeholder:text-[#9ca3af] outline-none focus:border-[#ff5a00]"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1">{isRTL ? "الموعد النهائي" : "Deadline"}</label>
-              <input
-                type="date"
-                value={taskDeadline}
-                onChange={(e) => setTaskDeadline(e.target.value)}
-                className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00]"
-              />
-            </div>
-            <button
-              onClick={handleAssign}
-              disabled={submitting || !assignTo || !taskTitle}
-              className="w-full bg-[#ff5a00] text-white font-black py-3 rounded-xl hover:bg-[#e04f00] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {submitting ? (isRTL ? "جاري التكليف..." : "Assigning...") : (isRTL ? "تكليف" : "Assign Task")}
-            </button>
-          </div>
         </div>
       )}
     </div>
