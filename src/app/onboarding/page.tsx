@@ -389,7 +389,7 @@ export default function OnboardingPage() {
 
                     <div className="flex gap-3 mt-4">
                       <button
-                        onClick={() => advanceStep(4)}
+                        onClick={handleFinish}
                         className="flex-1 border border-[#e5e7eb] text-[#6b7280] font-bold py-3 rounded-xl hover:bg-[#f9f9f9] transition-all text-sm"
                       >
                         {t.skip}
