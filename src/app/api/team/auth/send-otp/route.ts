@@ -13,7 +13,6 @@ export async function POST(req: NextRequest) {
 
     const last9 = matchPhone(phone);
 
-    // Find employees matching this phone
     let query = supabaseAdmin
       .from("employees")
       .select("id, name, company_id, telegram_user_id, companies(id, name, telegram_token)")
@@ -26,11 +25,9 @@ export async function POST(req: NextRequest) {
     const { data: employees, error } = await query;
 
     if (error || !employees || employees.length === 0) {
-      // DEBUG: temporarily show matching info — REMOVE after debugging
-      return NextResponse.json({ ok: true, step: "otp_sent", _debug: { matched: 0, last9, dbError: error?.message || null } });
+      return NextResponse.json({ ok: true, step: "otp_sent" });
     }
 
-    // Multiple companies — return list for selection
     if (employees.length > 1 && !company_id) {
       const companies = employees.map((e) => ({
         company_id: e.company_id,
@@ -48,7 +45,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Generate and store OTP
     const code = generateOTP();
     const expires_at = new Date(Date.now() + 5 * 60 * 1000).toISOString();
 
@@ -59,42 +55,26 @@ export async function POST(req: NextRequest) {
       expires_at,
     });
     if (otpError) {
-      console.error("OTP insert error:", otpError.message);
       return NextResponse.json({ ok: false, error: "Failed to generate code. Please try again." }, { status: 500 });
     }
 
-    // Send OTP via Telegram — lazy import to avoid bundling issues on Vercel
-    const dbToken = (employee.companies as any)?.telegram_token;
-    const envToken = process.env.TELEGRAM_BOT_TOKEN;
-    const token = dbToken || envToken;
-    const tokenSource = dbToken ? "db" : (envToken ? "env" : "none");
-    const tgUserId = employee.telegram_user_id;
-    let tgStatus = "skipped";
-    let tgError = "";
-
-    if (token && tgUserId) {
+    const token = (employee.companies as any)?.telegram_token || process.env.TELEGRAM_BOT_TOKEN;
+    if (token && employee.telegram_user_id) {
       try {
         const { Telegraf } = await import("telegraf");
         const bot = new Telegraf(token);
         await bot.telegram.sendMessage(
-          tgUserId.toString(),
+          employee.telegram_user_id.toString(),
           `🔐 Your login code: <b>${code}</b>\n\nThis code expires in 5 minutes. Do not share it.`,
           { parse_mode: "HTML" }
         );
-        tgStatus = "sent";
-      } catch (tgErr: unknown) {
-        tgStatus = "failed";
-        tgError = tgErr instanceof Error ? tgErr.message : String(tgErr);
-        console.error("Telegram send error:", tgError);
+      } catch {
+        // OTP is stored — user can still verify even if Telegram fails
       }
-    } else {
-      tgStatus = !token ? "no_token" : "no_telegram_user_id";
     }
 
-    // DEBUG: temporarily include debug info — REMOVE before final production
-    return NextResponse.json({ ok: true, step: "otp_sent", _debug: { tgStatus, tgError, tokenSource, hasTgUserId: !!tgUserId } });
-  } catch (e: unknown) {
-    console.error("send-otp error:", e instanceof Error ? e.message : e);
+    return NextResponse.json({ ok: true, step: "otp_sent" });
+  } catch {
     return NextResponse.json({ ok: false, error: "Something went wrong" }, { status: 500 });
   }
 }
