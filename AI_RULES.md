@@ -22,6 +22,8 @@ You are an AI engineer working on a production SaaS. You must follow these rules
 6. **Self-Audit**: Verify the build passes and document the changes in `ENGINEERING_BRAIN.md`.
 
 ### 4. PARITY RULE — TELEGRAM + WEB TEAM PORTAL (MANDATORY)
+**This rule MUST be checked at the START of every session and BEFORE every deployment.**
+
 - Every employee-facing feature MUST be implemented on BOTH platforms simultaneously:
   1. **Telegram Bot** (`src/app/api/telegram/webhook/route.ts`)
   2. **Web Team Portal** (`src/app/api/team/` + `src/app/(team)/team/`)
@@ -29,6 +31,10 @@ You are an AI engineer working on a production SaaS. You must follow these rules
 - Both platforms share the same database tables — ensure identical business logic (late calculation, geofencing, task notifications, announcement targeting, report validation).
 - When adding a new action: create the API route under `src/app/api/team/`, add the UI in `src/app/(team)/team/`, AND add the handler in the Telegram webhook.
 - Telegram notifications must fire from web actions (task assign, task status change) just as they do from the bot.
+- Before any deploy, run a mental parity check:
+  - List all Telegram bot commands/features
+  - Verify each has a web equivalent
+  - If ANY gap exists, fix it BEFORE deploying
 - Test both flows before marking any feature as done.
 
 ### 5. TELEGRAM BOT CARE
