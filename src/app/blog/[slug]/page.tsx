@@ -163,6 +163,29 @@ export default function BlogPostPage() {
           </div>
         </div>
       </article>
+
+      {/* Footer CTA to Dashboard */}
+      <footer className="mt-20 border-t border-[#eeeeee] bg-white">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="bg-[#fff1e8] rounded-3xl p-8 md:p-12 text-center border border-[#ffd4b8] max-w-4xl mx-auto shadow-xl shadow-[#ff5a00]/5 flex flex-col items-center">
+            <h2 className="text-3xl font-black text-[#111] mb-4">
+              {isRTL ? "مستعد لتحويل إدارة فريقك؟" : "Ready to transform your team management?"}
+            </h2>
+            <p className="text-[#ff5a00] font-bold text-lg mb-8 max-w-xl">
+              {isRTL 
+                ? "انضم الآن إلى أكثر الشركات كفاءة وتحكم بحضور فريقك مباشرة من تليجرام." 
+                : "Join the most efficient companies and control your team's attendance directly from Telegram."}
+            </p>
+            <Link 
+              href="/overview"
+              className="bg-[#ff5a00] hover:bg-[#e04f00] text-white px-8 py-4 rounded-xl font-black transition-all shadow-xl shadow-[#ff5a00]/20 flex items-center gap-2 group transform hover:-translate-y-1"
+            >
+              {isRTL ? "انتقل إلى لوحة التحكم" : "Go to Dashboard"}
+              <ArrowRight className={cn("w-5 h-5 transition-transform", isRTL && "rotate-180 group-hover:-translate-x-1", !isRTL && "group-hover:translate-x-1")} />
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
