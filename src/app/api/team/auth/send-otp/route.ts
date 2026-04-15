@@ -65,22 +65,31 @@ export async function POST(req: NextRequest) {
 
     // Send OTP via Telegram — lazy import to avoid bundling issues on Vercel
     const token = (employee.companies as any)?.telegram_token || process.env.TELEGRAM_BOT_TOKEN;
-    if (token && employee.telegram_user_id) {
+    const tgUserId = employee.telegram_user_id;
+    let tgStatus = "skipped";
+    let tgError = "";
+
+    if (token && tgUserId) {
       try {
         const { Telegraf } = await import("telegraf");
         const bot = new Telegraf(token);
         await bot.telegram.sendMessage(
-          employee.telegram_user_id.toString(),
+          tgUserId.toString(),
           `🔐 Your login code: <b>${code}</b>\n\nThis code expires in 5 minutes. Do not share it.`,
           { parse_mode: "HTML" }
         );
-      } catch (tgErr) {
-        console.error("Telegram send error:", tgErr);
-        // OTP is already stored — let user proceed even if Telegram fails
+        tgStatus = "sent";
+      } catch (tgErr: unknown) {
+        tgStatus = "failed";
+        tgError = tgErr instanceof Error ? tgErr.message : String(tgErr);
+        console.error("Telegram send error:", tgError);
       }
+    } else {
+      tgStatus = !token ? "no_token" : "no_telegram_user_id";
     }
 
-    return NextResponse.json({ ok: true, step: "otp_sent" });
+    // DEBUG: temporarily include debug info — REMOVE before final production
+    return NextResponse.json({ ok: true, step: "otp_sent", _debug: { tgStatus, tgError, hasTgUserId: !!tgUserId, hasToken: !!token } });
   } catch (e: unknown) {
     console.error("send-otp error:", e instanceof Error ? e.message : e);
     return NextResponse.json({ ok: false, error: "Something went wrong" }, { status: 500 });
