@@ -25,17 +25,27 @@ export default function BillingPage() {
   const [company, setCompany] = useState({
     plan_id: "free",
     subscription_status: "active",
+    trial_ends_at: null as string | null,
   });
 
   useEffect(() => {
     async function loadBilling() {
        const { data: { user } } = await supabase.auth.getUser();
        if (!user) return;
-       const { data: comp } = await supabase.from("companies").select("id, plan_id, subscription_status").eq("owner_id", user.id).single();
+       const { data: comp } = await supabase.from("companies").select("id, plan_id, subscription_status, trial_ends_at").eq("owner_id", user.id).single();
        if (comp) {
+          // Auto-repair: if company is on free plan but has wrong status, fix silently
+          const effectivePlanId = comp.plan_id || "free";
+          let effectiveStatus = comp.subscription_status || "active";
+          if (effectivePlanId === "free" && effectiveStatus !== "active") {
+            effectiveStatus = "active";
+            // Fire-and-forget fix to the DB
+            supabase.from("companies").update({ plan_id: "free", subscription_status: "active" }).eq("id", comp.id).then(() => {});
+          }
           setCompany({
-            plan_id: comp.plan_id || "free",
-            subscription_status: comp.subscription_status || "active",
+            plan_id: effectivePlanId,
+            subscription_status: effectiveStatus,
+            trial_ends_at: comp.trial_ends_at || null,
           });
 
           const [empRes, txnRes] = await Promise.all([
