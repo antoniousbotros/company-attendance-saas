@@ -49,7 +49,6 @@ function SwipeableTask({
   const revealRight = clampedDx < -20; // delete (swipe left → show delete on right)
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (tab !== "my_tasks") return;
     startX.current = e.clientX;
     setIsDragging(true);
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -652,7 +651,7 @@ export default function TeamTasksPage() {
       </div>
 
       {/* Swipe hint banner */}
-      {tab === "my_tasks" && !loading && filteredTasks.length > 0 && (
+      {(tab === "my_tasks" || tab === "assigned_by_me") && !loading && filteredTasks.length > 0 && (
         <div className="flex items-center justify-between text-[10px] text-[#9ca3af] font-medium px-1">
           <span className="flex items-center gap-1">
             <span className="text-[#1e8e3e]">←</span> {isRTL ? "يمين: تعديل" : "Right: Edit"}
