@@ -7,7 +7,7 @@ import {
   X, ChevronDown, User, ChevronLeft, ChevronRight, LayoutList
 } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
-import { cn } from "@/lib/utils";
+import { cn, compressImageFile } from "@/lib/utils";
 import { PageHeader, SectionCard, PrimaryButton, StatusPill } from "@/app/components/talabat-ui";
 
 type Employee = { id: string; name: string };
@@ -274,15 +274,19 @@ export default function TasksPage() {
     let finalLink = form.link;
 
     if (form.file) {
-      if (form.file.size > 2 * 1024 * 1024) {
-        setIsUploading(false);
-        alert(isRTL ? "عذراً، الحد الأقصى لحجم الملف هو ٢ ميجابايت." : "Max file size is 2MB.");
-        return;
+      let finalFile = form.file;
+      try {
+        if (finalFile.type.startsWith("image/")) {
+          finalFile = await compressImageFile(finalFile);
+        }
+      } catch (err) {
+        console.error("Compression failed:", err);
       }
-      const fileExt = form.file.name.split(".").pop();
+      
+      const fileExt = finalFile.name.split(".").pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `${company.id}/tasks/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from("task-attachments").upload(filePath, form.file);
+      const { error: uploadError } = await supabase.storage.from("task-attachments").upload(filePath, finalFile);
       if (uploadError) { setIsUploading(false); alert(isRTL ? "فشل رفع الملف." : "File upload failed."); return; }
       const { data: { publicUrl } } = supabase.storage.from("task-attachments").getPublicUrl(filePath);
       finalLink = publicUrl;
@@ -381,10 +385,6 @@ export default function TasksPage() {
                   type="file"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file && file.size > 2 * 1024 * 1024) {
-                      alert(isRTL ? "عذراً، الحد الأقصى لحجم الملف هو ٢ ميجابايت." : "Max file size is 2MB.");
-                      e.target.value = ""; return;
-                    }
                     setForm({ ...form, file: file || null });
                   }}
                   className={cn("w-full bg-white h-12 px-4 py-2.5 rounded-xl border border-[#ffd4b8] outline-none text-sm file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#ff5a00]/10 file:text-[#ff5a00] hover:file:bg-[#ff5a00]/20 max-w-full disabled:opacity-50", isRTL && "file:ml-4 file:mr-0 text-end flex-row-reverse")}

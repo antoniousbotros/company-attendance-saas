@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useTeam } from "../layout";
 import { CheckSquare, Plus, X, Clock, User, Check, Loader2, UserPlus, Trash2, Pencil, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Camera, ImageIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, compressImageFile } from "@/lib/utils";
 
 type Tab = "my_tasks" | "assigned_by_me" | "calendar";
 type StatusFilter = "all" | "pending" | "in_progress" | "completed";
@@ -478,50 +478,17 @@ export default function TeamTasksPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_DIM = 1920;
-        let width = img.width;
-        let height = img.height;
-
-        if (width > height && width > MAX_DIM) {
-          height *= MAX_DIM / width;
-          width = MAX_DIM;
-        } else if (height > MAX_DIM) {
-          width *= MAX_DIM / height;
-          height = MAX_DIM;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            if (!blob) return;
-            const ext = file.name.split('.').pop() || 'jpg';
-            const compressedFile = new File([blob], `capture.${ext}`, {
-              type: "image/jpeg",
-              lastModified: Date.now(),
-            });
-            setImageFile(compressedFile);
-            setImagePreview(URL.createObjectURL(compressedFile));
-          },
-          "image/jpeg",
-          0.85
-        );
-      };
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressedFile = await compressImageFile(file);
+      setImageFile(compressedFile);
+      setImagePreview(URL.createObjectURL(compressedFile));
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // Task actions

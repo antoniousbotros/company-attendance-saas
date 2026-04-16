@@ -23,10 +23,12 @@ import {
   Eye,
   EyeOff,
   AtSign,
+  Camera,
+  Shield,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
-import { cn } from "@/lib/utils";
+import { cn, compressImageFile } from "@/lib/utils";
 import {
   PageHeader,
   SectionCard,
@@ -173,10 +175,11 @@ export default function SettingsPage() {
   }, []);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    let file = e.target.files?.[0];
     if (!file) return;
     setLogoUploading(true);
     try {
+      file = await compressImageFile(file, 800, 0.9); // Logos can be smaller dimensions
       const fd = new FormData();
       fd.append("logo", file);
       const res = await fetch("/api/companies/upload-logo", { method: "POST", body: fd });

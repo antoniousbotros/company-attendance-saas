@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useTeam } from "../layout";
 import { BarChart3, MapPin, Send, User, Download, Camera, Image as ImageIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, compressImageFile } from "@/lib/utils";
 
 type Tab = "submit" | "my_reports" | "team_reports";
 
@@ -261,15 +261,20 @@ export default function TeamReportsPage() {
                               <Camera className="w-4 h-4" />
                               {isRTL ? "التقاط صورة" : "Take Photo"}
                               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
-                                const file = e.target.files?.[0]; if (!file) return;
+                                let file = e.target.files?.[0]; if (!file) return;
                                 setUploadingField(f.id); setUploadError("");
-                                const fd = new FormData(); fd.append("image", file);
+                                
                                 try {
+                                  file = await compressImageFile(file);
+                                  const fd = new FormData(); fd.append("image", file);
                                   const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
                                   const data = await res.json();
                                   if (data.ok) { setFieldValues((prev) => ({ ...prev, [f.id]: data.url })); }
                                   else { setUploadError(data.error || (isRTL ? "فشل رفع الصورة" : "Upload failed")); }
-                                } catch { setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); }
+                                } catch (error) { 
+                                  console.error(error);
+                                  setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); 
+                                }
                                 setUploadingField(null);
                               }} />
                             </label>
@@ -277,15 +282,20 @@ export default function TeamReportsPage() {
                               <ImageIcon className="w-4 h-4" />
                               {isRTL ? "رفع صورة" : "Upload"}
                               <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
-                                const file = e.target.files?.[0]; if (!file) return;
+                                let file = e.target.files?.[0]; if (!file) return;
                                 setUploadingField(f.id); setUploadError("");
-                                const fd = new FormData(); fd.append("image", file);
+                                
                                 try {
+                                  file = await compressImageFile(file);
+                                  const fd = new FormData(); fd.append("image", file);
                                   const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
                                   const data = await res.json();
                                   if (data.ok) { setFieldValues((prev) => ({ ...prev, [f.id]: data.url })); }
                                   else { setUploadError(data.error || (isRTL ? "فشل رفع الصورة" : "Upload failed")); }
-                                } catch { setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); }
+                                } catch (error) { 
+                                  console.error(error);
+                                  setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); 
+                                }
                                 setUploadingField(null);
                               }} />
                             </label>
