@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   ListTodo, Plus, Search, Calendar, Link as LinkIcon,
-  X, ChevronDown, User
+  X, ChevronDown, User, ChevronLeft, ChevronRight, LayoutList
 } from "lucide-react";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -54,6 +54,111 @@ function getDateRange(preset: DatePreset, customFrom: string, customTo: string):
   return { from: null, to: null };
 }
 
+function AdminCalendarView({
+  tasks,
+  isRTL,
+  selectedDate,
+  setSelectedDate,
+}: {
+  tasks: Task[];
+  isRTL: boolean;
+  selectedDate: Date;
+  setSelectedDate: (d: Date) => void;
+}) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  
+  const paddingDays = Array.from({ length: firstDay }).map((_, i) => i);
+  const monthDays = Array.from({ length: daysInMonth }).map((_, i) => i + 1);
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const isSameDay = (d1: Date, d2: Date) => 
+    d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+
+  const calendarTasks = tasks.filter(t => t.deadline);
+  const tasksForDay = (day: number) => {
+    const dayDate = new Date(year, month, day);
+    return calendarTasks.filter(t => isSameDay(new Date(t.deadline), dayDate));
+  };
+
+  const weekDaysAr = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  const weekDaysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekDays = isRTL ? weekDaysAr : weekDaysEn;
+
+  return (
+    <div className="bg-white border-b border-[#eeeeee] p-5 animate-in fade-in slide-in-from-top-4 duration-500">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-black text-[#111]">
+          {currentDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })}
+        </h2>
+        <div className="flex gap-2">
+          <button onClick={isRTL ? nextMonth : prevMonth} className="p-2 rounded-xl border border-[#e0e0e0] hover:bg-gray-50 transition-colors">
+            <ChevronLeft className="w-5 h-5 text-[#6b7280]" />
+          </button>
+          <button onClick={isRTL ? prevMonth : nextMonth} className="p-2 rounded-xl border border-[#e0e0e0] hover:bg-gray-50 transition-colors">
+            <ChevronRight className="w-5 h-5 text-[#6b7280]" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-2">
+        {weekDays.map(d => (
+          <div key={d} className="text-center text-xs font-bold text-[#9ca3af] uppercase tracking-wider py-2">
+            {d}
+          </div>
+        ))}
+        
+        {paddingDays.map(i => <div key={`pad-${i}`} className="p-2" />)}
+        
+        {monthDays.map(day => {
+          const dayDate = new Date(year, month, day);
+          const isSelected = isSameDay(dayDate, selectedDate);
+          const isToday = isSameDay(dayDate, new Date());
+          const dayTasks = tasksForDay(day);
+
+          return (
+            <button
+              key={day}
+              onClick={() => setSelectedDate(dayDate)}
+              className={cn(
+                "h-14 rounded-2xl flex flex-col items-center justify-center relative transition-all border",
+                isSelected
+                  ? "bg-[#111] text-white font-black border-[#111] shadow-md scale-105 z-10"
+                  : isToday
+                  ? "bg-[#fff1e8] text-[#ff5a00] font-bold border-[#ffd4b8]"
+                  : "bg-white hover:bg-gray-50 text-[#4b5563] font-medium border-[#eeeeee]"
+              )}
+            >
+              <span className="text-sm">{day}</span>
+              {dayTasks.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1 justify-center max-w-[80%]">
+                  {dayTasks.slice(0, 3).map((t, i) => (
+                    <div key={i} className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      isSelected ? "bg-[#ff5a00]" : t.status === "completed" ? "bg-[#10b981]" : t.status === "in_progress" ? "bg-[#3b82f6]" : "bg-[#f59e0b]"
+                    )} />
+                  ))}
+                  {dayTasks.length > 3 && <span className="text-[8px] font-bold opacity-70">+{dayTasks.length - 3}</span>}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function TasksPage() {
   const { t, isRTL } = useLanguage();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -74,10 +179,12 @@ export default function TasksPage() {
     title: "",
     description: "",
     link: "",
-    deadline: new Date().toISOString().split("T")[0],
+    deadline: new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16),
     assigned_to: "",
     file: null as File | null,
   });
+
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   const loadData = async () => {
     setLoading(true);
@@ -100,9 +207,20 @@ export default function TasksPage() {
 
   useEffect(() => { loadData(); }, []);
 
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+
   // Derived: filtered tasks
   const filteredTasks = useMemo(() => {
     let result = [...tasks];
+
+    if (viewMode === "calendar") {
+      result = result.filter(t => {
+        if (!t.deadline) return false;
+        const d1 = new Date(t.deadline);
+        return d1.getFullYear() === calendarDate.getFullYear() && d1.getMonth() === calendarDate.getMonth() && d1.getDate() === calendarDate.getDate();
+      });
+      return result;
+    }
 
     // Search
     if (search.trim()) {
@@ -129,7 +247,7 @@ export default function TasksPage() {
     }
 
     return result;
-  }, [tasks, search, employeeFilter, datePreset, customFrom, customTo]);
+  }, [tasks, search, employeeFilter, datePreset, customFrom, customTo, viewMode, calendarDate]);
 
   const hasFilters = search || employeeFilter !== "all" || datePreset !== "all";
 
@@ -244,7 +362,7 @@ export default function TasksPage() {
               </div>
               <div>
                 <label className="block text-xs font-bold text-[#6b7280] mb-1">{isRTL ? "تاريخ الاستحقاق *" : "Deadline *"}</label>
-                <input disabled={isUploading} type="date" required value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50" />
+                <input disabled={isUploading} type="datetime-local" required value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} className="w-full h-12 px-4 rounded-xl border border-[#ffd4b8] outline-none disabled:opacity-50" />
               </div>
             </div>
             <div className={isRTL ? "text-end" : "text-start"}>
@@ -376,18 +494,32 @@ export default function TasksPage() {
       {/* Task Table */}
       <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
         <div className={cn("p-5 border-b border-[#eeeeee] flex items-center justify-between bg-[#f9fafb]", isRTL && "flex-row-reverse")}>
-          <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
-            <h3 className="font-bold text-[#111] text-sm">{isRTL ? "سجل المهام" : "Task Board"}</h3>
-            <span className="text-[10px] font-bold text-[#9ca3af] bg-white border border-[#e0e0e0] px-2 py-0.5 rounded-full">
-              {filteredTasks.length} / {tasks.length}
-            </span>
+          <div className={cn("flex items-center gap-4", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex items-center gap-2", isRTL && "flex-row-reverse")}>
+              <h3 className="font-bold text-[#111] text-sm">{isRTL ? "سجل المهام" : "Task Board"}</h3>
+              <span className="text-[10px] font-bold text-[#9ca3af] bg-white border border-[#e0e0e0] px-2 py-0.5 rounded-full">
+                {filteredTasks.length} / {tasks.length}
+              </span>
+            </div>
+            <div className="flex bg-[#e0e0e0] rounded-lg p-0.5">
+              <button onClick={() => setViewMode("list")} className={cn("p-1.5 rounded-md transition-all", viewMode === "list" ? "bg-white shadow-sm text-[#111]" : "text-[#6b7280] hover:text-[#111]")}>
+                <LayoutList className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => setViewMode("calendar")} className={cn("p-1.5 rounded-md transition-all", viewMode === "calendar" ? "bg-white shadow-sm text-[#111]" : "text-[#6b7280] hover:text-[#111]")}>
+                <Calendar className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-2">
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-yellow-100 text-yellow-800">{isRTL ? "قيد الانتظار" : "Pending"}</span>
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-blue-100 text-blue-800">{isRTL ? "قيد التنفيذ" : "In Prog."}</span>
             <span className="text-[10px] font-bold uppercase px-2 py-1 rounded bg-green-100 text-green-800">{isRTL ? "مكتمل" : "Completed"}</span>
           </div>
         </div>
+
+        {viewMode === "calendar" && (
+          <AdminCalendarView tasks={tasks} isRTL={isRTL} selectedDate={calendarDate} setSelectedDate={setCalendarDate} />
+        )}
 
         <div className="overflow-x-auto">
           <table className="w-full text-start">
