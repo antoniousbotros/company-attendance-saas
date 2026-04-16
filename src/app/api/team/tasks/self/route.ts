@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });
 
   try {
-    const { title, deadline } = await req.json();
+    const { title, deadline, link } = await req.json();
     if (!title?.trim()) {
       return NextResponse.json({ ok: false, error: "Title required" }, { status: 400 });
     }
@@ -22,6 +22,7 @@ export async function POST(req: NextRequest) {
         assigned_to: session.employee_id,
         title: title.trim(),
         deadline: deadline || null,
+        link: link || null,
         status: "pending",
       })
       .select("id")

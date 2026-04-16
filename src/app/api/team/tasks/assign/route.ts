@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });
 
   try {
-    const { assigned_to, title, deadline } = await req.json();
+    const { assigned_to, title, deadline, link } = await req.json();
     if (!assigned_to || !title) {
       return NextResponse.json({ ok: false, error: "Title and assignee required" }, { status: 400 });
     }
@@ -31,6 +31,7 @@ export async function POST(req: NextRequest) {
       assigned_to,
       title,
       deadline: deadline || null,
+      link: link || null,
       status: "pending",
     }).select("id").single();
 

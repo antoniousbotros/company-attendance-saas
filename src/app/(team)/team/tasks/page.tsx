@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useTeam } from "../layout";
-import { CheckSquare, Plus, X, Clock, User, Check, Loader2, UserPlus, Trash2, Pencil, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, User, Check, Loader2, UserPlus, Trash2, Pencil, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Camera, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Tab = "my_tasks" | "assigned_by_me" | "calendar";
@@ -176,8 +176,9 @@ function SwipeableTask({
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className={cn("text-sm font-bold text-[#111] leading-tight flex-1", isDone && "line-through text-[#9ca3af]")}>
+            <h3 className={cn("text-sm font-bold text-[#111] leading-snug truncate", isDone && "line-through opacity-70 flex items-center gap-2")}>
               {task.title}
+              {task.link && <ImageIcon className="w-3.5 h-3.5 text-[#ff5a00] inline-block ms-1" />}
             </h3>
             {isSelf ? (
               <span className="flex-shrink-0 text-[8px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#f3f0ff] text-[#7c3aed]">
@@ -475,6 +476,57 @@ export default function TeamTasksPage() {
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Image Upload State
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_DIM = 1920;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > MAX_DIM) {
+          height *= MAX_DIM / width;
+          width = MAX_DIM;
+        } else if (height > MAX_DIM) {
+          width *= MAX_DIM / height;
+          height = MAX_DIM;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return;
+            const ext = file.name.split('.').pop() || 'jpg';
+            const compressedFile = new File([blob], `capture.${ext}`, {
+              type: "image/jpeg",
+              lastModified: Date.now(),
+            });
+            setImageFile(compressedFile);
+            setImagePreview(URL.createObjectURL(compressedFile));
+          },
+          "image/jpeg",
+          0.85
+        );
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Task actions
   const [toggling, setToggling] = useState<string | null>(null);
   const [editTask, setEditTask] = useState<any | null>(null);
@@ -516,20 +568,34 @@ export default function TeamTasksPage() {
   const handleSubmit = async () => {
     if (!title.trim() || submitting) return;
     setSubmitting(true);
+
+    let finalLink = "";
+    if (imageFile) {
+      const formData = new FormData();
+      formData.append("image", imageFile);
+      try {
+        const res = await fetch("/api/team/tasks/upload-image", { method: "POST", body: formData }).then(r => r.json());
+        if (res.ok) finalLink = res.url;
+      } catch (err) {
+        console.error("Upload error", err);
+      }
+    }
+
     if (assignTo) {
       await fetch("/api/team/tasks/assign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assigned_to: assignTo, title: title.trim(), deadline: deadline || null }),
+        body: JSON.stringify({ assigned_to: assignTo, title: title.trim(), deadline: deadline || null, link: finalLink || null }),
       });
     } else {
       await fetch("/api/team/tasks/self", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: title.trim(), deadline: deadline || null }),
+        body: JSON.stringify({ title: title.trim(), deadline: deadline || null, link: finalLink || null }),
       });
     }
     setTitle(""); setAssignTo(""); setDeadline(""); setShowAssignPanel(false); setSubmitting(false);
+    setImageFile(null); setImagePreview(null);
     loadTasks();
     inputRef.current?.focus();
   };
@@ -625,17 +691,39 @@ export default function TeamTasksPage() {
         <div className={cn("bg-white rounded-2xl shadow-sm border transition-all duration-200", showAssignPanel ? "border-[#ff5a00] ring-1 ring-[#ff5a00]/20" : "border-dashed border-[#e0e0e0]")}>
           <div className="flex items-center gap-2 px-4 py-3">
             <div className="w-5 h-5 rounded-full border-2 border-[#d1d5db] flex-shrink-0" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onFocus={ensureCoworkers}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder={isRTL ? "أضف مهمة لنفسك..." : "Add a task for yourself..."}
-              className="flex-1 text-sm font-medium text-[#111] placeholder:text-[#bbb] outline-none bg-transparent"
-              dir="auto"
+            <div className="flex-1 flex items-center bg-transparent border-b border-transparent focus-within:border-[#e0e0e0] transition-colors relative">
+              {imagePreview && (
+                <div className="relative w-7 h-7 flex-shrink-0 rounded-md overflow-hidden ring-1 ring-[#e0e0e0] inline-block me-2">
+                  <img src={imagePreview} alt="upload" className="w-full h-full object-cover" />
+                  <button onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute -top-1 -right-1 bg-white text-red-500 rounded-full shadow-sm"><X className="w-3 h-3" /></button>
+                </div>
+              )}
+              <input
+                ref={inputRef}
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                onFocus={ensureCoworkers}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                placeholder={isRTL ? "أضف مهمة لنفسك..." : "Add a task for yourself..."}
+                className="flex-1 min-w-0 text-sm font-medium text-[#111] placeholder:text-[#bbb] outline-none bg-transparent h-8"
+                dir="auto"
+              />
+            </div>
+            <input 
+              type="file" 
+              accept="image/*" 
+              capture="environment" 
+              hidden 
+              ref={fileInputRef} 
+              onChange={handleImageCapture}
             />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-shrink-0 p-1.5 rounded-lg text-[#6b7280] hover:text-[#ff5a00] hover:bg-[#fff1e8] transition-colors"
+            >
+              <Camera className="w-4 h-4" />
+            </button>
             <button
               onClick={async () => { await ensureCoworkers(); setShowAssignPanel((v) => !v); if (showAssignPanel) { setAssignTo(""); setDeadline(""); } }}
               className={cn("flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all border", isAssigning ? "bg-[#ff5a00] text-white border-[#ff5a00]" : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]")}
