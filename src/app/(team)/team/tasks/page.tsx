@@ -689,9 +689,9 @@ export default function TeamTasksPage() {
       {/* Unified Composer */}
       {tab === "my_tasks" && (
         <div className={cn("bg-white rounded-2xl shadow-sm border transition-all duration-200", showAssignPanel ? "border-[#ff5a00] ring-1 ring-[#ff5a00]/20" : "border-dashed border-[#e0e0e0]")}>
-          <div className="flex items-center gap-2 px-4 py-3">
-            <div className="w-5 h-5 rounded-full border-2 border-[#d1d5db] flex-shrink-0" />
-            <div className="flex-1 flex items-center bg-transparent border-b border-transparent focus-within:border-[#e0e0e0] transition-colors relative">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3">
+            <div className="w-5 h-5 rounded-full border-2 border-[#d1d5db] flex-shrink-0 hidden sm:block" />
+            <div className="flex-1 min-w-0 flex items-center bg-transparent border-b border-transparent focus-within:border-[#e0e0e0] transition-colors relative">
               {imagePreview && (
                 <div className="relative w-7 h-7 flex-shrink-0 rounded-md overflow-hidden ring-1 ring-[#e0e0e0] inline-block me-2">
                   <img src={imagePreview} alt="upload" className="w-full h-full object-cover" />
@@ -726,7 +726,7 @@ export default function TeamTasksPage() {
             </button>
             <button
               onClick={async () => { await ensureCoworkers(); setShowAssignPanel((v) => !v); if (showAssignPanel) { setAssignTo(""); setDeadline(""); } }}
-              className={cn("flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-all border", isAssigning ? "bg-[#ff5a00] text-white border-[#ff5a00]" : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]")}
+              className={cn("flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all border", isAssigning ? "bg-[#ff5a00] text-white border-[#ff5a00]" : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]")}
             >
               <UserPlus className="w-3 h-3" />
               {isAssigning ? (selectedCoworker?.name || (isRTL ? "تعيين" : "Assign")) : (isRTL ? "تكليف" : "Assign")}
