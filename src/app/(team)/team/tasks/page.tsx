@@ -2,10 +2,10 @@
 
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useTeam } from "../layout";
-import { CheckSquare, Plus, X, Clock, User, Check, Loader2, UserPlus, Trash2, Pencil } from "lucide-react";
+import { CheckSquare, Plus, X, Clock, User, Check, Loader2, UserPlus, Trash2, Pencil, Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Tab = "my_tasks" | "assigned_by_me";
+type Tab = "my_tasks" | "assigned_by_me" | "calendar";
 type StatusFilter = "all" | "pending" | "in_progress" | "completed";
 
 // ─── Swipeable Task Card ───────────────────────────────────────────────────────
@@ -199,7 +199,10 @@ function SwipeableTask({
               </span>
             )}
             {task.deadline && (
-              <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(task.deadline).toLocaleDateString()}</span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(task.deadline).toLocaleString(isRTL ? "ar-EG" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+              </span>
             )}
             {isDone && task.completed_at && (
               <span className="text-[#1e8e3e]">{isRTL ? "أُنجز" : "Done"} {new Date(task.completed_at).toLocaleDateString()}</span>
@@ -230,6 +233,151 @@ function SwipeableTask({
   );
 }
 
+// ─── Calendar View ─────────────────────────────────────────────────────────────
+function CalendarView({
+  tasks,
+  isRTL,
+  handleToggle,
+  handleStart,
+  handleDelete,
+  setEditTask,
+}: {
+  tasks: any[];
+  isRTL: boolean;
+  handleToggle: (t: any) => void;
+  handleStart: (id: string) => void;
+  handleDelete: (id: string) => void;
+  setEditTask: (t: any) => void;
+}) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfMonth(year, month);
+  
+  // Adjusted for Sunday=0 to Saturday=6
+  const paddingDays = Array.from({ length: firstDay }).map((_, i) => i);
+  const monthDays = Array.from({ length: daysInMonth }).map((_, i) => i + 1);
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const isSameDay = (d1: Date, d2: Date) => 
+    d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+
+  // Normalize all tasks that have a deadline
+  const calendarTasks = tasks.filter(t => t.deadline);
+
+  const tasksForDay = (day: number) => {
+    const dayDate = new Date(year, month, day);
+    return calendarTasks.filter(t => isSameDay(new Date(t.deadline), dayDate));
+  };
+
+  const selectedDayTasks = calendarTasks.filter(t => isSameDay(new Date(t.deadline), selectedDate));
+
+  const weekDaysAr = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+  const weekDaysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekDays = isRTL ? weekDaysAr : weekDaysEn;
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between mb-4 px-2">
+        <h2 className="text-sm font-black text-[#111]">
+          {currentDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })}
+        </h2>
+        <div className="flex gap-2">
+          <button onClick={isRTL ? nextMonth : prevMonth} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <ChevronLeft className="w-5 h-5 text-[#6b7280]" />
+          </button>
+          <button onClick={isRTL ? prevMonth : nextMonth} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
+            <ChevronRight className="w-5 h-5 text-[#6b7280]" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-4">
+        {weekDays.map(d => (
+          <div key={d} className="text-center text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide py-2">
+            {d}
+          </div>
+        ))}
+        
+        {paddingDays.map(i => <div key={`pad-${i}`} className="p-2" />)}
+        
+        {monthDays.map(day => {
+          const dayDate = new Date(year, month, day);
+          const isSelected = isSameDay(dayDate, selectedDate);
+          const isToday = isSameDay(dayDate, new Date());
+          const dayTasks = tasksForDay(day);
+
+          return (
+            <button
+              key={day}
+              onClick={() => setSelectedDate(dayDate)}
+              className={cn(
+                "h-10 rounded-xl flex flex-col items-center justify-center relative transition-all",
+                isSelected
+                  ? "bg-[#ff5a00] text-white font-black shadow-md"
+                  : isToday
+                  ? "bg-[#fff1e8] text-[#ff5a00] font-bold"
+                  : "hover:bg-gray-50 text-[#4b5563] font-medium"
+              )}
+            >
+              <span className="text-sm">{day}</span>
+              {dayTasks.length > 0 && (
+                <div className="flex flex-wrap gap-0.5 mt-0.5 justify-center">
+                  {dayTasks.slice(0, 3).map((t, i) => (
+                    <div key={i} className={cn(
+                      "w-1 h-1 rounded-full",
+                      isSelected ? "bg-white/80" : t.status === "completed" ? "bg-[#1e8e3e]" : t.status === "in_progress" ? "bg-[#ff5a00]" : "bg-[#d1d5db]"
+                    )} />
+                  ))}
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-[#f5f5f5] pt-4 mt-2">
+        <h3 className="text-xs font-bold text-[#6b7280] mb-3">
+          {isRTL ? "مهام يوم" : "Tasks for"}{" "}
+          <span className="text-[#111]">{selectedDate.toLocaleDateString(isRTL ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
+        </h3>
+        
+        {selectedDayTasks.length === 0 ? (
+          <div className="text-center py-6">
+            <span className="text-2xl mb-1 block">🏖️</span>
+            <p className="text-[11px] text-[#9ca3af] font-medium">{isRTL ? "لا توجد مهام في هذا اليوم" : "No tasks scheduled for this day."}</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {selectedDayTasks.map(t => (
+              <SwipeableTask
+                key={t.id}
+                task={t}
+                tab="my_tasks"
+                isRTL={isRTL}
+                toggling={null}
+                onToggle={handleToggle}
+                onStart={handleStart}
+                onDelete={handleDelete}
+                onEdit={setEditTask}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Edit Modal ──────────────────────────────────────────────────────────────
 function EditTaskModal({
   task,
@@ -243,7 +391,10 @@ function EditTaskModal({
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(task.title);
-  const [deadline, setDeadline] = useState(task.deadline || "");
+  const initDeadline = task.deadline 
+    ? new Date(new Date(task.deadline).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+    : "";
+  const [deadline, setDeadline] = useState(initDeadline);
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -281,7 +432,7 @@ function EditTaskModal({
         <div>
           <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1">{isRTL ? "الموعد النهائي" : "Deadline"}</label>
           <input
-            type="date"
+            type="datetime-local"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
             className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#1e8e3e]"
@@ -454,6 +605,10 @@ export default function TeamTasksPage() {
         <button onClick={() => setTab("assigned_by_me")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all", tab === "assigned_by_me" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
           {isRTL ? "كلفت بها" : "I Assigned"} ({assignedByMe.length})
         </button>
+        <button onClick={() => setTab("calendar")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center justify-center gap-1", tab === "calendar" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
+          <CalendarIcon className="w-3 h-3" />
+          {isRTL ? "التقويم" : "Calendar"}
+        </button>
       </div>
 
       {/* Filters */}
@@ -507,7 +662,7 @@ export default function TeamTasksPage() {
               </div>
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-[#9ca3af] flex-shrink-0" />
-                <input type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="flex-1 text-[12px] font-medium text-[#111] outline-none bg-transparent border-b border-[#e0e0e0] focus:border-[#ff5a00] pb-0.5 transition-colors" />
+                <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="flex-1 text-[12px] font-medium text-[#111] outline-none bg-transparent border-b border-[#e0e0e0] focus:border-[#ff5a00] pb-0.5 transition-colors" />
                 <span className="text-[10px] text-[#9ca3af] font-medium">{isRTL ? "الموعد (اختياري)" : "Deadline (optional)"}</span>
               </div>
             </div>
@@ -515,9 +670,11 @@ export default function TeamTasksPage() {
         </div>
       )}
 
-      {/* Task List */}
+      {/* Task List or Calendar */}
       {loading ? (
         <div className="text-center py-12 text-sm text-[#6b7280]">{isRTL ? "جاري التحميل..." : "Loading..."}</div>
+      ) : tab === "calendar" ? (
+        <CalendarView tasks={[...myTasks, ...assignedByMe]} isRTL={isRTL} handleToggle={handleToggle} handleStart={handleStart} handleDelete={handleDelete} setEditTask={setEditTask} />
       ) : filteredTasks.length === 0 ? (
         <div className="text-center py-12"><div className="text-3xl mb-2">🎉</div><p className="text-sm text-[#6b7280] font-medium">{isRTL ? "لا توجد مهام" : "No tasks here."}</p></div>
       ) : (

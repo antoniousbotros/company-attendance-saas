@@ -50,7 +50,12 @@ export async function POST(req: NextRequest) {
       if (token) {
         const { Telegraf } = await import("telegraf");
         const bot = new Telegraf(token as string);
-        const deadlineStr = deadline ? `\n📅 ${deadline}` : "";
+        let deadlineStr = "";
+        if (deadline) {
+          const d = new Date(deadline);
+          const formatted = d.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+          deadlineStr = `\n📅 ${formatted}`;
+        }
         const msg = lang === "ar"
           ? `📌 <b>مهمة جديدة!</b>\n\nمن: ${assignerName}\nالمهمة: <b>${title}</b>${deadlineStr}`
           : `📌 <b>New Task Assigned!</b>\n\nFrom: ${assignerName}\nTask: <b>${title}</b>${deadlineStr}`;

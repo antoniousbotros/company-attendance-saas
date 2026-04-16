@@ -59,6 +59,7 @@ function useNav(): NavGroup[] {
         { name: isRTL ? "التقارير الميدانية" : "Sales Tracking", href: "/sales-tracking", icon: LocateFixed },
         { name: (t as any).payroll, href: "/payroll", icon: CreditCard },
         { name: t.billing, href: "/billing", icon: CreditCard },
+        { name: isRTL ? "مدونة يومي" : "Yawmy Blog", href: "/blog", icon: Globe },
         { name: t.settings, href: "/settings", icon: SettingsIcon },
       ],
     },
