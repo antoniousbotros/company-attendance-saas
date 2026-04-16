@@ -106,8 +106,7 @@ function SwipeableTask({
     <div className="relative rounded-2xl overflow-hidden" style={{ height: isDeleting ? 0 : undefined, transition: isDeleting ? "height 0.28s ease" : undefined }}>
 
       {/* Action background layers */}
-      {tab === "my_tasks" && (
-        <>
+      <>
           {/* Right swipe → Edit (green) */}
           <div className={cn(
             "absolute inset-y-0 left-0 flex items-center px-5 rounded-l-2xl transition-opacity bg-[#1e8e3e]",
@@ -130,7 +129,6 @@ function SwipeableTask({
             </div>
           </div>
         </>
-      )}
 
       {/* Card */}
       <div
@@ -148,7 +146,7 @@ function SwipeableTask({
         className={cn(
           "bg-white rounded-2xl shadow-sm p-4 flex items-start gap-3",
           isDone && "opacity-55",
-          tab === "my_tasks" && "cursor-grab active:cursor-grabbing"
+          "cursor-grab active:cursor-grabbing"
         )}
       >
         {/* Checkbox */}
