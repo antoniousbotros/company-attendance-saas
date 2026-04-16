@@ -61,7 +61,11 @@ export async function POST(req: NextRequest) {
           ? `📌 <b>مهمة جديدة!</b>\n\nمن: ${assignerName}\nالمهمة: <b>${title}</b>${deadlineStr}`
           : `📌 <b>New Task Assigned!</b>\n\nFrom: ${assignerName}\nTask: <b>${title}</b>${deadlineStr}`;
 
-        bot.telegram.sendMessage(assignee.telegram_user_id.toString(), msg, { parse_mode: "HTML" }).catch(console.error);
+        if (link && link.trim() !== "") {
+          bot.telegram.sendPhoto(assignee.telegram_user_id.toString(), link, { caption: msg, parse_mode: "HTML" }).catch(console.error);
+        } else {
+          bot.telegram.sendMessage(assignee.telegram_user_id.toString(), msg, { parse_mode: "HTML" }).catch(console.error);
+        }
       }
     }
 
