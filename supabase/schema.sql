@@ -309,3 +309,21 @@ CREATE TABLE IF NOT EXISTS public.employee_sessions (
     expires_at TIMESTAMPTZ NOT NULL,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-------------------------------------------------------------------------------
+-- DATABASE PERFORMANCE TUNING (MULTI-TENANT COMPOSITE B-TREE INDEXING)
+-------------------------------------------------------------------------------
+-- These indices transform standard full-table sequential scans across massive SaaS 
+-- data sets (O(N)) into localized isolated tenant tree lookups (O(log N)).
+
+-- 1. Attendance: heavily queried by company_id, then date
+CREATE INDEX IF NOT EXISTS idx_attendance_tenant_date ON public.attendance(company_id, date);
+
+-- 2. Tasks: heavily queried by company dashboard viewing assignments
+CREATE INDEX IF NOT EXISTS idx_tasks_tenant_assignee ON public.tasks(company_id, assigned_to);
+
+-- 3. Reports: multi-tenant fast lookups
+CREATE INDEX IF NOT EXISTS idx_reports_tenant_date ON public.reports(company_id, date);
+
+-- 4. Payroll tracking arrays
+CREATE INDEX IF NOT EXISTS idx_payroll_tenant_month ON public.payroll(company_id, month);
