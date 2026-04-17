@@ -11,6 +11,15 @@ export async function middleware(request: NextRequest) {
   const url = request.nextUrl.clone();
   const hostname = request.headers.get("host") || "";
 
+  // 0. Cloudflare Zero-Bypass WAF Protector
+  // Prevents Host-Header Injection by forcing all traffic to prove it passed through Cloudflare's secure proxy
+  const proxySecret = process.env.CLOUDFLARE_PROXY_SECRET;
+  if (proxySecret && process.env.NODE_ENV === "production") {
+    if (request.headers.get("x-saas-proxy-auth") !== proxySecret) {
+       return new NextResponse("Access Denied: Direct origin routing prohibited. Please connect via app.yawmy", { status: 403 });
+    }
+  }
+
   // 1. Subdomain Check: sadmin.yawmy.app or sadmin.localhost
   if (hostname.startsWith("sadmin.") && !url.pathname.startsWith("/api")) {
     if (!url.pathname.startsWith("/sadmin")) {
