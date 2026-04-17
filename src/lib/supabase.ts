@@ -27,3 +27,23 @@ export const supabaseAdmin = createClient(
     }
   }
 );
+
+// RLS Enforcer client for backend operations
+// Uses the provided employee JWT token to instantiate a localized database connection boundary via Row Level Security (RLS) constraints.
+export const createTeamClient = (token: string) => {
+  return createClient(
+    supabaseUrl || 'https://MISSING_URL.supabase.co',
+    supabaseAnonKey || 'MISSING_KEY',
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      }
+    }
+  );
+};

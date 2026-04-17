@@ -327,3 +327,24 @@ CREATE INDEX IF NOT EXISTS idx_reports_tenant_date ON public.reports(company_id,
 
 -- 4. Payroll tracking arrays
 CREATE INDEX IF NOT EXISTS idx_payroll_tenant_month ON public.payroll(company_id, month);
+
+-------------------------------------------------------------------------------
+-- ZERO-TRUST RLS IMPLEMENTATION (EDGE JWT BOUNDARIES)
+-------------------------------------------------------------------------------
+-- These policies securely allow employees utilizing Custom Edge JWTs to interact 
+-- with backend APIs without triggering God-Mode (supabaseAdmin) leakages.
+
+CREATE POLICY "Edge JWT Isolation: Employees" ON public.employees
+  FOR ALL USING (company_id::text = auth.jwt()->>'company_id');
+
+CREATE POLICY "Edge JWT Isolation: Attendance" ON public.attendance
+  FOR ALL USING (company_id::text = auth.jwt()->>'company_id');
+
+CREATE POLICY "Edge JWT Isolation: Tasks" ON public.tasks
+  FOR ALL USING (company_id::text = auth.jwt()->>'company_id');
+
+CREATE POLICY "Edge JWT Isolation: Reports" ON public.reports
+  FOR ALL USING (company_id::text = auth.jwt()->>'company_id');
+
+CREATE POLICY "Edge JWT Isolation: Announcements" ON public.announcements
+  FOR ALL USING (company_id::text = auth.jwt()->>'company_id');

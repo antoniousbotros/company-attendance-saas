@@ -36,7 +36,7 @@ export function verifyPassword(password: string, dbHash: string): boolean {
 
 // ========== NATIVE ZERO-DEPENDENCY JWT ENGINE ==========
 function getJwtSecret() {
-  return process.env.JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "yawmy_default_fallback_secret_key";
+  return process.env.SUPABASE_JWT_SECRET || process.env.JWT_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "yawmy_default_fallback_secret_key";
 }
 
 function base64UrlEncode(str: string) {
@@ -52,7 +52,14 @@ function base64UrlDecode(str: string) {
 export function generateJWT(payload: any): string {
   const header = { alg: "HS256", typ: "JWT" };
   const head64 = base64UrlEncode(JSON.stringify(header));
-  const pay64 = base64UrlEncode(JSON.stringify({ ...payload, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
+  // Postgres 'authenticated' requires role and sub (subject ID) to process RLS effectively
+  const claims = { 
+    ...payload, 
+    role: "authenticated", 
+    sub: payload.employee_id,
+    exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) 
+  };
+  const pay64 = base64UrlEncode(JSON.stringify(claims));
   const signature = crypto.createHmac("sha256", getJwtSecret()).update(`${head64}.${pay64}`).digest("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   return `${head64}.${pay64}.${signature}`;
 }
@@ -65,7 +72,8 @@ export function verifyJWT(token: string): any | null {
     const signature = crypto.createHmac("sha256", getJwtSecret()).update(`${h}.${p}`).digest("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     if (signature !== s) return null;
     const payload = JSON.parse(base64UrlDecode(p));
-    if (payload.exp && payload.exp < Date.now()) return null;
+    // JWT standard uses seconds
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) return null;
     return payload;
   } catch {
     return null;
