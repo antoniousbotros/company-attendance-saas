@@ -18,6 +18,7 @@ export default function TeamHomePage() {
   const [actionResult, setActionResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [locationError, setLocationError] = useState("");
   const [period, setPeriod] = useState<Period>("week");
+  const [wfhModal, setWfhModal] = useState(false);
 
   const company = employee?.companies;
   const geofencing = company?.enable_geofencing;
@@ -103,15 +104,22 @@ export default function TeamHomePage() {
       );
     });
 
-  const handleAttendance = async (type: "check-in" | "check-out") => {
+  const handleAttendance = async (type: "check-in" | "check-out", dayType: "office" | "wfh" = "office") => {
     setActionLoading(true);
     setActionResult(null);
     setLocationError("");
+    setWfhModal(false);
 
     try {
-      let body: any = {};
-      if (geofencing) {
-        try { body = await getLocation(); }
+      let body: any = { dayType };
+      const isWfh = dayType === "wfh" && company?.enable_wfh;
+      
+      if (!isWfh && geofencing) {
+        try { 
+           const loc = await getLocation(); 
+           body.lat = loc.lat;
+           body.lng = loc.lng;
+        }
         catch (locErr: any) {
           const msg = locErr?.message;
           if (msg === "NOT_SUPPORTED") {
@@ -347,9 +355,12 @@ export default function TeamHomePage() {
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {!hasCheckedIn && (
+                {!hasCheckedIn && !wfhModal && (
                   <button
-                    onClick={() => handleAttendance("check-in")}
+                    onClick={() => {
+                        if (company?.enable_wfh) setWfhModal(true);
+                        else handleAttendance("check-in");
+                    }}
                     disabled={actionLoading}
                     className="w-full bg-[#1e8e3e] text-white font-black py-3.5 rounded-xl hover:bg-[#16753b] transition-all flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
                   >
@@ -357,6 +368,25 @@ export default function TeamHomePage() {
                       ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                       : <><LogIn className="w-4 h-4" /> {isRTL ? "تسجيل حضور" : "Check In"}</>}
                   </button>
+                )}
+                
+                {!hasCheckedIn && wfhModal && (
+                   <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAttendance("check-in", "office")}
+                        disabled={actionLoading}
+                        className="flex-1 bg-[#1e8e3e] text-white font-black py-3.5 rounded-xl hover:bg-[#16753b] transition-all flex flex-col items-center justify-center disabled:opacity-50 text-xs"
+                      >
+                         🏢 {isRTL ? "المكتب" : "Office"}
+                      </button>
+                      <button
+                        onClick={() => handleAttendance("check-in", "wfh")}
+                        disabled={actionLoading}
+                        className="flex-1 bg-black text-white font-black py-3.5 rounded-xl hover:bg-[#333] transition-all flex flex-col items-center justify-center disabled:opacity-50 text-xs"
+                      >
+                         🏠 {isRTL ? "المنزل" : "WFH"}
+                      </button>
+                   </div>
                 )}
                 {hasCheckedIn && !hasCheckedOut && (
                   <button

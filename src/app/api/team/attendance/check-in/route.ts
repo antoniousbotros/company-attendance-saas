@@ -9,11 +9,11 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ ok: false }, { status: 401 });
 
   try {
-    const { lat, lng } = await req.json().catch(() => ({ lat: null, lng: null }));
+    const { lat, lng, dayType = "office" } = await req.json().catch(() => ({ lat: null, lng: null, dayType: "office" }));
 
     const { data: employee } = await supabaseAdmin
       .from("employees")
-      .select("id, company_id, allowed_late_minutes, companies(enable_geofencing, office_lat, office_lng, office_radius, work_start_time, late_threshold)")
+      .select("id, company_id, allowed_late_minutes, companies(enable_geofencing, office_lat, office_lng, office_radius, work_start_time, late_threshold, enable_wfh, wfh_ignore_late)")
       .eq("id", session.employee_id)
       .eq("company_id", session.company_id)
       .single();
@@ -23,8 +23,10 @@ export async function POST(req: NextRequest) {
     const company = employee.companies as any;
     if (!company) return NextResponse.json({ ok: false, error: "Company not found" }, { status: 404 });
 
+    const isWfh = dayType === "wfh" && company.enable_wfh;
+
     // Geofencing check
-    if (company.enable_geofencing) {
+    if (!isWfh && company.enable_geofencing) {
       if (!lat || !lng) {
         return NextResponse.json({ ok: false, error: "Location required" }, { status: 400 });
       }
@@ -57,7 +59,10 @@ export async function POST(req: NextRequest) {
     // Late calculation
     let isLate = false;
     let lateMins = 0;
-    if (company.work_start_time) {
+    
+    if (isWfh && company.wfh_ignore_late) {
+        // Skip lateness check completely
+    } else if (company.work_start_time) {
       const [startH, startM] = company.work_start_time.split(":").map(Number);
       const threshold = employee.allowed_late_minutes ?? company.late_threshold ?? 15;
       const workStart = new Date(now);
@@ -79,6 +84,8 @@ export async function POST(req: NextRequest) {
       check_in: now.toISOString(),
       status,
       late_minutes: lateMins,
+      day_type: isWfh ? "wfh" : "office",
+      source: "bot"
     });
 
     const timeStr = now.toLocaleTimeString("en-US", {
