@@ -225,6 +225,7 @@ export default function TeamAnnouncementsPage() {
             })()}
           </div>
         </div>
+      )}
     </div>
   );
 }
