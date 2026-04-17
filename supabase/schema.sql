@@ -87,9 +87,13 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     company_id UUID REFERENCES public.companies(id),
     stripe_id TEXT,
+    paymob_order_id TEXT,
+    paymob_transaction_id TEXT,
+    merchant_order_id TEXT,
     amount NUMERIC,
     currency TEXT DEFAULT 'EGP',
     status TEXT,
+    hmac_verified BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 

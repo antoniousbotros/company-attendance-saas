@@ -18,15 +18,42 @@ export default function BillingPage() {
   const { t, isRTL } = useLanguage();
 
   const [loading, setLoading] = useState(true);
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const [currency] = useState("EGP");
   const [employeeCount, setEmployeeCount] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
 
   const [company, setCompany] = useState({
+    id: "",
     plan_id: "free",
     subscription_status: "active",
     trial_ends_at: null as string | null,
   });
+
+  const handleUpgrade = async (planId: string) => {
+    try {
+      setIsUpgrading(true);
+      const res = await fetch("/api/billing/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_id: (await supabase.auth.getUser()).data.user?.id,
+          plan_id: planId,
+          extra_cost: extraCost,
+        })
+      });
+      const data = await res.json();
+      if (data.ok && data.iframeUrl) {
+        window.location.href = data.iframeUrl;
+      } else {
+        alert(data.error || "Failed to initialize payment");
+        setIsUpgrading(false);
+      }
+    } catch(err) {
+      console.error(err);
+      setIsUpgrading(false);
+    }
+  };
 
   useEffect(() => {
     async function loadBilling() {
@@ -43,6 +70,7 @@ export default function BillingPage() {
             supabase.from("companies").update({ plan_id: "free", subscription_status: "active" }).eq("id", comp.id).then(() => {});
           }
           setCompany({
+            id: comp.id,
             plan_id: effectivePlanId,
             subscription_status: effectiveStatus,
             trial_ends_at: comp.trial_ends_at || null,
@@ -178,8 +206,12 @@ export default function BillingPage() {
                 </div>
 
                 <div className="mt-4">
-                  <PrimaryButton disabled={isCurrent} className="w-full text-xs">
-                    {isCurrent
+                  <PrimaryButton 
+                    disabled={isCurrent || isUpgrading} 
+                    onClick={() => handleUpgrade(id)}
+                    className="w-full text-xs"
+                  >
+                    {isUpgrading && !isCurrent ? (isRTL ? "جاري..." : "Processing...") : isCurrent
                       ? (isRTL ? "باقتك الحالية" : "Current")
                       : (isRTL ? "ترقية" : "Upgrade")}
                   </PrimaryButton>
@@ -237,7 +269,7 @@ export default function BillingPage() {
                          />
                        </td>
                        <td className="px-6 py-4 text-xs text-[#9ca3af] font-mono">
-                         {tx.stripe_id || tx.id.substring(0, 8) + '...'}
+                         {tx.paymob_order_id || tx.merchant_order_id || tx.stripe_id || tx.id.substring(0, 8) + '...'}
                        </td>
                      </tr>
                    ))}
