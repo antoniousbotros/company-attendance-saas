@@ -84,68 +84,79 @@ export async function POST(req: NextRequest) {
       let lateMinutes = 0;
       let overtimeHours = 0;
       let halfDaysCount = 0;
+      let missingHours = 0;
+
+      const workingHoursReq = Number(emp.working_hours_per_day || 8);
 
       if (attendance) {
         for (const record of attendance) {
           if (record.status === 'present' || record.status === 'late') {
             const dailyHours = Number(record.working_hours || 0);
             
-            if (halfDayEnabled && dailyHours > 0 && dailyHours < halfDayHours) {
-              halfDaysCount++;
-            } else {
-              presentDays++;
+            // Handle missing checkouts rigorously (0 hours recorded defaults to absent functionally)
+            if (dailyHours > 0) {
+                if (halfDayEnabled && dailyHours < halfDayHours) {
+                  halfDaysCount++;
+                } else {
+                  presentDays++;
+                }
+
+                // Shortage Hours Engine
+                if (dailyHours < workingHoursReq) {
+                   missingHours += (workingHoursReq - dailyHours);
+                }
+
+                // Overtime Engine
+                if (overtimeEnabled && dailyHours > workingHoursReq) {
+                  overtimeHours += (dailyHours - workingHoursReq);
+                }
             }
           }
           totalHours += Number(record.working_hours || 0);
           lateMinutes += Number(record.late_minutes || 0);
-
-          // Calculate daily overtime if enabled
-          if (overtimeEnabled && emp.working_hours_per_day) {
-            const dailyHours = Number(record.working_hours || 0);
-            if (dailyHours > emp.working_hours_per_day) {
-              overtimeHours += (dailyHours - emp.working_hours_per_day);
-            }
-          }
         }
       }
 
-      // Salary Calculation
+      // Salary Calculation Rates
       let baseSalaryCalc = 0;
       let dailyRateForDeduction = 0;
+      let hourlyRateForDeduction = 0;
       const contractBase = Number(emp.base_salary || 0);
       const otRate = Number(emp.overtime_rate || 1.5);
 
       if (emp.salary_type === "monthly") {
         baseSalaryCalc = contractBase;
         dailyRateForDeduction = expectedWorkingDays > 0 ? (contractBase / expectedWorkingDays) : 0;
+        hourlyRateForDeduction = dailyRateForDeduction / workingHoursReq;
       } else if (emp.salary_type === "daily") {
         baseSalaryCalc = presentDays * contractBase;
         dailyRateForDeduction = contractBase;
+        hourlyRateForDeduction = dailyRateForDeduction / workingHoursReq;
       } else if (emp.salary_type === "hourly") {
         baseSalaryCalc = totalHours * contractBase;
         dailyRateForDeduction = 0;
+        hourlyRateForDeduction = 0;
       } else {
         baseSalaryCalc = contractBase;
       }
 
-      // Deductions
-      // Absent days = Expected - (Full Present + Half Days)
-      // Because a half day is still a day they showed up, so it covers 1 expected day, but we penalize it separately.
+      // Deductions Engine
       let absentDays = expectedWorkingDays - (presentDays + halfDaysCount);
       if (absentDays < 0) absentDays = 0;
 
       let absenceDeduction = absentDays * dailyRateForDeduction * absencePenaltyConf;
       let halfDayDeduction = halfDaysCount * (0.5 * dailyRateForDeduction * absencePenaltyConf);
       let lateDeduction = lateMinutes * latePenaltyConf;
+      let missingHoursDeduction = missingHours * hourlyRateForDeduction;
       
-      // If daily/hourly, they don't get technically "deducted" for absence as base is lower, 
-      // but maybe penalty applies if absencePenaltyConf > 1.0. Let's keep it standard.
+      // Hourly and daily base limits
       if (emp.salary_type !== "monthly") {
          absenceDeduction = 0;
          halfDayDeduction = 0;
+         missingHoursDeduction = 0; // Already absorbed via inherently lower totalHours string variables
       }
 
-      const totalDeductions = absenceDeduction + halfDayDeduction + lateDeduction;
+      const totalDeductions = absenceDeduction + halfDayDeduction + lateDeduction + missingHoursDeduction;
 
       // Bonuses
       const overtimePay = overtimeEnabled ? (overtimeHours * otRate) : 0;
