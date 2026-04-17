@@ -82,7 +82,8 @@ export async function middleware(request: NextRequest) {
       }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
 
     // Protected routes list
     const protectedRoutes = ['/overview', '/employees', '/attendance', '/reports', '/billing', '/onboarding'];
@@ -96,18 +97,27 @@ export async function middleware(request: NextRequest) {
 
     // 2. If user exists, check onboarding
     if (user && !url.pathname.startsWith('/api') && !url.pathname.startsWith('/_next')) {
-      const { data: company, error: companyError } = await supabase
-        .from('companies')
-        .select('onboarding_step')
-        .eq('owner_id', user.id)
-        .single();
+      const onbDone = request.cookies.get('onb_done')?.value;
+      
+      if (!onbDone) {
+        // Cache completely missed. Query database and set the cache limit to avoid spamming the DB pool.
+        const { data: company, error: companyError } = await supabase
+          .from('companies')
+          .select('onboarding_step')
+          .eq('owner_id', user.id)
+          .single();
 
-      if (!companyError && company) {
-         // If company hasn't finished onboarding and not already on onboarding page -> Onboarding
-         if ((!company.onboarding_step || company.onboarding_step < 4) && !url.pathname.startsWith('/onboarding')) {
-           url.pathname = '/onboarding';
-           return NextResponse.redirect(url);
-         }
+        if (!companyError && company) {
+           if (!company.onboarding_step || company.onboarding_step < 4) {
+             if (!url.pathname.startsWith('/onboarding')) {
+               url.pathname = '/onboarding';
+               return NextResponse.redirect(url);
+             }
+           } else {
+             // They finished onboarding! Inject 'onb_done=1' instantly so we never do this DB check on this device again.
+             response.cookies.set('onb_done', '1', { path: '/', maxAge: 30 * 24 * 60 * 60 });
+           }
+        }
       }
 
       // If user is logged in and tries to access login/signup -> Dashboard
