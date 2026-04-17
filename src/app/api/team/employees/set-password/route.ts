@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { hashPassword } from "../../_helpers";
+import { hashPasswordV1 } from "../../_helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "employee_id and password required" }, { status: 400 });
     }
 
-    const hashed = hashPassword(password.trim());
+    const hashed = hashPasswordV1(password.trim());
 
     const { error } = await supabaseAdmin
       .from("employees")

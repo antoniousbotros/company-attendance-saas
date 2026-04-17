@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { hashPassword, matchPhone, generateToken } from "../../_helpers";
+import { verifyPassword, hashPasswordV1, matchPhone, generateToken } from "../../_helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -34,8 +34,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Check password
-    if (!employee.login_password || employee.login_password !== hashPassword(password)) {
+    if (!employee.login_password || !verifyPassword(password, employee.login_password)) {
       return NextResponse.json({ ok: false, error: "Invalid phone or password" }, { status: 401 });
+    }
+
+    // AUTO-MIGRATION: If the hash they authenticated against is an old legacy format, seamlessly upgrade it in the background!
+    if (!employee.login_password.startsWith("v1:")) {
+      const newSecureHash = hashPasswordV1(password);
+      await supabaseAdmin.from("employees").update({ login_password: newSecureHash }).eq("id", employee.id);
     }
 
     // Create session

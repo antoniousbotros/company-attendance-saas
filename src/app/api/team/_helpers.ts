@@ -7,9 +7,31 @@ export interface TeamSession {
   company_id: string;
 }
 
-// Simple deterministic hash — sufficient for owner-set employee PINs/passwords
-export function hashPassword(password: string): string {
+// LEGACY: Old simple SHA-256 hash (Vulnerable to offline cracking; kept for migration only)
+export function hashPasswordLegacy(password: string): string {
   return crypto.createHash("sha256").update(`yawmy::${password}`).digest("hex");
+}
+
+// V1: Modern Memory-Hard Scrypt Hashing with Unique Salts
+export function hashPasswordV1(password: string): string {
+  const salt = crypto.randomBytes(16).toString("hex");
+  // Scrypt configuration: N=16384 (cost), r=8 (block size), p=1 (parallelization)
+  const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+  return `v1:${salt}:${hash}`;
+}
+
+// Universal Verifier: Checks both new secure hashes and transparently catches old legacy hashes
+export function verifyPassword(password: string, dbHash: string): boolean {
+  if (!dbHash) return false;
+  
+  if (dbHash.startsWith("v1:")) {
+    const [, salt, originalHash] = dbHash.split(":");
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+    return hash === originalHash;
+  }
+  
+  // Fallback to legacy
+  return hashPasswordLegacy(password) === dbHash;
 }
 
 export async function getTeamSession(req: NextRequest): Promise<TeamSession | null> {
