@@ -61,53 +61,65 @@ export default function TeamAnnouncementsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {announcements.map((a) => {
-            const recent = isRecent(a.created_at || a.expire_at); // fallback logic
-            return (
-              <div 
-                key={a.id} 
-                className="group relative bg-white rounded-3xl p-6 md:p-7 shadow-sm border border-[#f1f1f1] hover:border-[#ff5a00]/30 hover:shadow-lg transition-all duration-300 flex flex-col text-start"
-              >
-                {/* Decorative Accent Bar */}
-                <div className="absolute top-0 left-6 right-6 h-1 bg-gradient-to-r from-[#ff5a00] to-[#ff8c42] rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                <div className="flex items-start justify-between mb-4">
-                  <div className={cn(
-                    "p-2.5 rounded-xl border flex-shrink-0",
-                    recent ? "bg-[#fff1e8] border-[#ffe4d1] text-[#ff5a00]" : "bg-[#f9fafb] border-[#e5e7eb] text-[#6b7280]"
-                  )}>
-                    <Pin className="w-5 h-5" />
-                  </div>
-                  {recent && (
-                    <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider font-extrabold text-[#ff5a00] bg-[#fff1e8] px-2.5 py-1 rounded-full">
-                      <AlertCircle className="w-3 h-3" />
-                      {isRTL ? "جديد" : "New"}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="text-lg font-bold text-[#111] mb-2.5 leading-snug group-hover:text-[#ff5a00] transition-colors">
-                    {a.title}
-                  </h3>
-                  <p className="text-sm text-[#4b5563] leading-relaxed whitespace-pre-wrap line-clamp-4">
-                    {a.message}
-                  </p>
-                </div>
-
-                <div className="mt-6 pt-4 border-t border-[#f1f1f1] flex items-center justify-between text-xs font-semibold text-[#9ca3af]">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 text-[#d1d5db]" />
-                    <span>{isRTL ? "صالحة حتى" : "Valid until"}</span>
-                  </div>
-                  <span className="text-[#111]">
-                    {new Date(a.expire_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric" })}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+        <div className="bg-white rounded-3xl shadow-sm border border-[#f1f1f1] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="overflow-x-auto">
+            <table className="w-full text-start" dir={isRTL ? "rtl" : "ltr"}>
+              <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
+                <tr>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                    {isRTL ? "العنوان" : "Title"}
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start w-1/2">
+                    {isRTL ? "التفاصيل" : "Message"}
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                    {isRTL ? "تاريخ الإنتهاء" : "Expires"}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#f1f1f1]">
+                {announcements.map((a) => {
+                  const recent = isRecent(a.created_at || a.expire_at);
+                  return (
+                    <tr key={a.id} className="hover:bg-[#fff9f5] transition-colors group align-top">
+                      <td className="px-6 py-5">
+                        <div className="flex items-start gap-3">
+                          <div className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mt-0.5",
+                            recent ? "bg-[#fff1e8] text-[#ff5a00] ring-1 ring-[#ffd4b8]" : "bg-[#f3f4f6] text-[#6b7280]"
+                          )}>
+                            <Pin className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-bold text-[#111] group-hover:text-[#ff5a00] transition-colors">{a.title}</span>
+                            {recent && (
+                              <span className="inline-flex w-fit items-center gap-1 text-[10px] uppercase font-extrabold text-[#ff5a00] mt-1 bg-[#fff1e8] px-2 py-0.5 rounded-lg">
+                                <AlertCircle className="w-3 h-3" />
+                                {isRTL ? "جديد" : "New"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-sm text-[#4b5563] whitespace-pre-line leading-relaxed max-w-xl">
+                          {a.message}
+                        </p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2 mt-1">
+                          <Clock className="w-4 h-4 text-[#d1d5db]" />
+                          <span className="text-xs font-bold text-[#6b7280]">
+                            {new Date(a.expire_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
