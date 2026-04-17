@@ -23,6 +23,7 @@ type Employee = {
   salary_type?: string;
   working_hours_per_day?: number;
   overtime_rate?: number;
+  birth_date?: string | null;
   created_at?: string;
 };
 
@@ -71,7 +72,8 @@ export default function EmployeesPage() {
     base_salary: 0,
     salary_type: "monthly",
     working_hours_per_day: 8,
-    overtime_rate: 1.5
+    overtime_rate: 1.5,
+    birth_date: ""
   });
 
   const fetchEmployees = async () => {
@@ -123,6 +125,7 @@ export default function EmployeesPage() {
       salary_type: newEmployee.salary_type,
       working_hours_per_day: newEmployee.working_hours_per_day,
       overtime_rate: newEmployee.overtime_rate,
+      birth_date: newEmployee.birth_date || null
     });
 
     setSaving(false);
@@ -141,7 +144,8 @@ export default function EmployeesPage() {
         base_salary: 0,
         salary_type: "monthly",
         working_hours_per_day: 8,
-        overtime_rate: 1.5
+        overtime_rate: 1.5,
+        birth_date: ""
       });
       fetchEmployees();
     }
@@ -160,6 +164,7 @@ export default function EmployeesPage() {
       salary_type: editingEmployee.salary_type,
       working_hours_per_day: editingEmployee.working_hours_per_day,
       overtime_rate: editingEmployee.overtime_rate,
+      birth_date: editingEmployee.birth_date || null
     }).eq("id", editingEmployee.id);
 
     setSaving(false);
@@ -567,6 +572,20 @@ export default function EmployeesPage() {
                     : "Include country code, digits only (e.g. 201234567890)"}
                 </p>
               </div>
+
+              <div className="space-y-1.5 align-end">
+                <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                  {isRTL ? "تاريخ الميلاد (اختياري)" : "Birth Date (Optional)"}
+                </label>
+                <input
+                  type="date"
+                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                  value={newEmployee.birth_date || ""}
+                  onChange={(e) =>
+                    setNewEmployee({ ...newEmployee, birth_date: e.target.value })
+                  }
+                />
+              </div>
               
               {/* HR & Payroll Fields */}
               <div className="pt-4 border-t border-[#eeeeee] space-y-6">
@@ -708,6 +727,20 @@ export default function EmployeesPage() {
                   value={editingEmployee.phone}
                   onChange={(e) =>
                     setEditingEmployee({ ...editingEmployee, phone: e.target.value })
+                  }
+                />
+              </div>
+              
+              <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
+                <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
+                  {isRTL ? "تاريخ الميلاد (اختياري)" : "Birth Date (Optional)"}
+                </label>
+                <input
+                  type="date"
+                  className="w-full h-12 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm text-[#111] font-bold outline-none focus:bg-white focus:border-[#ff5a00] transition-all"
+                  value={editingEmployee.birth_date || ""}
+                  onChange={(e) =>
+                    setEditingEmployee({ ...editingEmployee, birth_date: e.target.value })
                   }
                 />
               </div>

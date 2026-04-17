@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import { useTeam } from "../layout";
-import { Megaphone, Clock, AlertCircle, Sparkles, Pin } from "lucide-react";
+import { Megaphone, Clock, AlertCircle, Sparkles, Pin, PartyPopper } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function TeamAnnouncementsPage() {
   const { isRTL, lang } = useTeam();
   const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [birthdays, setBirthdays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export default function TeamAnnouncementsPage() {
       .then((r) => r.json())
       .then((data) => {
         setAnnouncements(data.announcements || []);
+        setBirthdays(data.birthdays || []);
         setLoading(false);
       });
   }, []);
@@ -114,6 +116,71 @@ export default function TeamAnnouncementsPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Birthday Table Block */}
+      {!loading && birthdays.length > 0 && (
+        <div className="mt-12 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-150">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#ff5a00] to-[#ff8c42] rounded-xl flex items-center justify-center shadow-md">
+              <PartyPopper className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-[#111] tracking-tight text-start">
+                {isRTL ? "أعياد ميلاد هذا الشهر!" : "This Month's Birthdays!"}
+              </h2>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-sm border border-[#f1f1f1] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-start" dir={isRTL ? "rtl" : "ltr"}>
+                <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                      {isRTL ? "الموظف" : "Employee"}
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                      {isRTL ? "القسم" : "Department"}
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                      {isRTL ? "التاريخ" : "Date"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#f1f1f1]">
+                  {birthdays.map((b) => (
+                    <tr key={b.id} className="hover:bg-[#fff9f5] transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold ring-1 ring-[#ffd4b8] group-hover:scale-110 transition-transform">
+                            {b.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-bold text-[#111]">{b.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="inline-flex py-1 px-2.5 rounded-lg bg-[#f3f4f6] text-[#4b5563] text-xs font-bold">
+                          {b.department || (isRTL ? "غير محدد" : "Unassigned")}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-[#ff5a00]">
+                            {new Date(b.birth_date).getDate()}
+                          </span>
+                          <span className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                            {new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "long" })}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
     </div>

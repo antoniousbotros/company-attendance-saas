@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS public.employees (
     working_hours_per_day DECIMAL DEFAULT 8,
     allowed_late_minutes INTEGER DEFAULT NULL,
     overtime_rate DECIMAL DEFAULT 1.5,
+    birth_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
