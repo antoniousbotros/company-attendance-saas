@@ -320,31 +320,58 @@ export async function POST(req: NextRequest) {
         .eq("company_id", employee.company_id)
         .eq("is_active", true);
 
-      if (error || !announcements || announcements.length === 0) {
-         return ctx.reply(lang === 'ar' ? "🎉 لا توجد إعلانات نشطة حالياً." : "🎉 No active announcements at the moment.");
+      // Birthday logic
+      const currentMonth = new Date().getMonth() + 1;
+      const { data: allEmployees } = await supabaseAdmin
+        .from("employees")
+        .select("id, name, department, birth_date")
+        .eq("company_id", employee.company_id)
+        .not("birth_date", "is", null);
+
+      const birthdays = (allEmployees || []).filter(e => {
+        if (!e.birth_date) return false;
+        const d = new Date(e.birth_date);
+        return (d.getMonth() + 1) === currentMonth;
+      }).sort((a, b) => new Date(a.birth_date).getDate() - new Date(b.birth_date).getDate());
+
+      const noAnnouncements = error || !announcements || announcements.length === 0;
+
+      let activeAnnouncements: any[] = [];
+      if (!noAnnouncements) {
+        activeAnnouncements = announcements.filter(a => {
+           if (new Date(a.expire_at) < new Date()) return false;
+           if (a.target_type === 'all') return true;
+           if (a.target_type === 'specific') {
+               return a.announcement_targets.some((t: any) => t.employee_id === employee.id);
+           }
+           if (a.target_type === 'department') {
+               return a.announcement_targets.some((t: any) => t.department === employee.department);
+           }
+           return false;
+        });
       }
 
-      const activeAnnouncements = announcements.filter(a => {
-         if (new Date(a.expire_at) < new Date()) return false;
-         if (a.target_type === 'all') return true;
-         if (a.target_type === 'specific') {
-             return a.announcement_targets.some((t: any) => t.employee_id === employee.id);
-         }
-         if (a.target_type === 'department') {
-             return a.announcement_targets.some((t: any) => t.department === employee.department);
-         }
-         return false;
-      });
-
-      if (activeAnnouncements.length === 0) {
-         return ctx.reply(lang === 'ar' ? "🎉 لا توجد إعلانات نشطة حالياً." : "🎉 No active announcements at the moment.");
+      if (activeAnnouncements.length === 0 && birthdays.length === 0) {
+         return ctx.reply(lang === 'ar' ? "🎉 لا توجد إعلانات أو أعياد ميلاد هذا الشهر." : "🎉 No active announcements or birthdays this month.");
       }
 
-      await ctx.reply(lang === 'ar' ? `لديك ${activeAnnouncements.length} إعلانات نشطة:` : `You have ${activeAnnouncements.length} active announcements:`);
+      if (activeAnnouncements.length > 0) {
+        await ctx.reply(lang === 'ar' ? `لديك ${activeAnnouncements.length} إعلانات نشطة:` : `You have ${activeAnnouncements.length} active announcements:`);
+        for (const a of activeAnnouncements) {
+           const msg = `📢 <b>${a.title}</b>\n\n${a.message}\n\n<i>${lang === 'ar' ? 'ينتهي في' : 'Expires'}: ${new Date(a.expire_at).toDateString()}</i>`;
+           await ctx.replyWithHTML(msg);
+        }
+      }
 
-      for (const a of activeAnnouncements) {
-         const msg = `📢 <b>${a.title}</b>\n\n${a.message}\n\n<i>${lang === 'ar' ? 'ينتهي في' : 'Expires'}: ${new Date(a.expire_at).toDateString()}</i>`;
-         await ctx.replyWithHTML(msg);
+      if (birthdays.length > 0) {
+        let birthdayMsg = lang === 'ar' ? "🎉 <b>أعياد ميلاد هذا الشهر!</b>\n\n" : "🎉 <b>This Month's Birthdays!</b>\n\n";
+        birthdays.forEach(b => {
+           const bDate = new Date(b.birth_date);
+           const bDay = bDate.getDate();
+           const bMonthStr = bDate.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "long" });
+           birthdayMsg += `🎂 ${b.name} - ${bDay} ${bMonthStr}\n`;
+        });
+        await ctx.replyWithHTML(birthdayMsg);
       }
     });
 
