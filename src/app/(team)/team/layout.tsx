@@ -43,6 +43,7 @@ interface CompanyData {
   late_threshold: number;
   sales_tracking_enabled: boolean;
   bot_language: string;
+  enable_wfh?: boolean;
 }
 
 interface EmployeeData {
