@@ -46,6 +46,8 @@ export default function EmployeesPage() {
   const [activeTab, setActiveTab] = useState<'employees' | 'departments'>('employees');
   const [departmentsList, setDepartmentsList] = useState<string[]>([]);
   const [newDepartment, setNewDepartment] = useState("");
+  const [editingDept, setEditingDept] = useState<string | null>(null);
+  const [editDeptValue, setEditDeptValue] = useState("");
   
   // Bulk Assign State
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
@@ -223,6 +225,32 @@ export default function EmployeesPage() {
              setDepartmentsList(updatedList);
          }
      }
+  };
+
+  const handleRenameDepartment = async (oldName: string) => {
+     if (!editDeptValue.trim() || editDeptValue.trim() === oldName) {
+        setEditingDept(null);
+        return;
+     }
+     setSaving(true);
+     try {
+       const res = await fetch("/api/team/departments/rename", {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ oldName, newName: editDeptValue.trim() })
+       });
+       if (res.ok) {
+         const data = await res.json();
+         setDepartmentsList(data.departments || []);
+         setEditingDept(null);
+         fetchEmployees(); // Resync employees that were changed.
+       } else {
+         alert(isRTL ? "حدث خطأ أثناء تعديل القسم." : "Error modifying department.");
+       }
+     } catch (err) {
+       alert("Error!");
+     }
+     setSaving(false);
   };
 
   const handleBulkAssign = async () => {
@@ -485,15 +513,45 @@ export default function EmployeesPage() {
                      </div>
                   ) : departmentsList.map(dept => (
                      <div key={dept} className={cn("flex items-center justify-between p-4 bg-[#f9fafb] border border-[#eeeeee] rounded-xl hover:bg-white transition-colors group space-x-reverse", isRTL && "flex-row-reverse")}>
-                         <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
-                             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs ring-1 ring-indigo-100/50">
-                                {dept.substring(0, 1)}
-                             </div>
-                             <span className="font-bold text-sm text-[#111]">{dept}</span>
+                       {editingDept === dept ? (
+                         <div className={cn("flex flex-1 items-center gap-3", isRTL && "flex-row-reverse mr-12")}>
+                            <input 
+                              autoFocus
+                              type="text" 
+                              value={editDeptValue} 
+                              onChange={(e) => setEditDeptValue(e.target.value)}
+                              className={cn("flex-1 h-9 px-3 text-sm font-bold border border-[#ff5a00] outline-none rounded bg-white", isRTL && "text-right")}
+                              disabled={saving}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleRenameDepartment(dept);
+                                if (e.key === 'Escape') setEditingDept(null);
+                              }}
+                            />
+                            <button disabled={saving} onClick={() => handleRenameDepartment(dept)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors">
+                               <Check className="w-4 h-4" />
+                            </button>
+                            <button disabled={saving} onClick={() => setEditingDept(null)} className="p-1.5 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                               <X className="w-4 h-4" />
+                            </button>
                          </div>
-                         <button onClick={() => handleRemoveDepartment(dept)} className="p-2 text-[#9ca3af] hover:text-[#b91c1c] hover:bg-[#fef1f1] rounded-lg transition-colors opacity-0 group-hover:opacity-100">
-                            <Trash2 className="w-4 h-4" />
-                         </button>
+                       ) : (
+                         <>
+                           <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                               <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs ring-1 ring-indigo-100/50">
+                                  {dept.substring(0, 1)}
+                               </div>
+                               <span className="font-bold text-sm text-[#111]">{dept}</span>
+                           </div>
+                           <div className={cn("flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity", isRTL && "flex-row-reverse")}>
+                             <button onClick={() => { setEditingDept(dept); setEditDeptValue(dept); }} className="p-2 text-[#9ca3af] hover:text-[#0284c7] hover:bg-[#f0f9ff] rounded-lg transition-colors">
+                                <Pencil className="w-4 h-4" />
+                             </button>
+                             <button onClick={() => handleRemoveDepartment(dept)} className="p-2 text-[#9ca3af] hover:text-[#b91c1c] hover:bg-[#fef1f1] rounded-lg transition-colors">
+                                <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
+                         </>
+                       )}
                      </div>
                   ))}
                </div>
