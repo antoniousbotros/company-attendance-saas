@@ -20,6 +20,7 @@ type AttendanceRow = {
   check_in: string | null;
   check_out: string | null;
   status: string;
+  day_type?: string;
   working_hours: number | null;
   employees?: { name: string; phone?: string } | null;
 };
@@ -152,11 +153,12 @@ export default function AttendancePage() {
   }, [filtered]);
 
   const handleExport = () => {
-    const header = [t.employee, t.phone, t.date, t.checkIn, t.checkOut, t.duration, t.status];
+    const header = [t.employee, t.phone, t.date, "Type", t.checkIn, t.checkOut, t.duration, t.status];
     const rows = filtered.map((l) => [
       l.employees?.name ?? "",
       l.employees?.phone ?? "",
       l.date,
+      l.day_type === 'wfh' ? 'WFH' : 'Office',
       l.check_in ? new Date(l.check_in).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
       l.check_out ? new Date(l.check_out).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "",
       l.working_hours ? `${l.working_hours}h` : "",
@@ -254,6 +256,7 @@ export default function AttendancePage() {
               <tr className="text-[#6b7280] text-xs">
                 <th className="text-start font-medium px-6 py-4 w-[120px]">{t.status}</th>
                 <th className="text-start font-medium px-6 py-4">{t.employee}</th>
+                <th className="text-start font-medium px-6 py-4">{isRTL ? "موقع العمل" : "Type"}</th>
                 <th className="text-start font-medium px-6 py-4">{t.issues}</th>
                 <th className="text-end font-medium px-6 py-4">{t.checkIn}</th>
                 <th className="text-end font-medium px-6 py-4">{t.checkOut}</th>
@@ -280,6 +283,11 @@ export default function AttendancePage() {
                       <td className="px-6 py-5 align-top">
                         <p className="text-[15px] font-semibold text-[#111]">{log.employees?.name ?? "—"}</p>
                         {checkIn && <p className="text-xs text-[#6b7280] mt-0.5">{checkIn.weekday}, {checkIn.date} at {checkIn.time}</p>}
+                      </td>
+                      <td className="px-6 py-5 align-top">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#f9fafb] border border-[#e5e7eb] text-xs font-semibold text-[#111]">
+                            {log.day_type === 'wfh' ? '🏠 WFH' : '🏢 Office'}
+                        </div>
                       </td>
                       <td className="px-6 py-5 align-top">
                         {issues.length > 0 ? (

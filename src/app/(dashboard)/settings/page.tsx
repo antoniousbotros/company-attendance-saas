@@ -25,6 +25,7 @@ import {
   AtSign,
   Camera,
   Shield,
+  Home,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
@@ -100,6 +101,9 @@ export default function SettingsPage() {
     late_penalty_per_minute: 1.0,
     absence_penalty_per_day: 1.0,
     overtime_enabled: false,
+    enable_wfh: false,
+    wfh_fixed_hours: 8.0,
+    wfh_ignore_late: false,
     currency: "EGP",
     half_day_enabled: false,
     half_day_hours: 4.0,
@@ -161,6 +165,9 @@ export default function SettingsPage() {
           late_penalty_per_minute: data.late_penalty_per_minute || 1.0,
           absence_penalty_per_day: data.absence_penalty_per_day || 1.0,
           overtime_enabled: !!data.overtime_enabled,
+          enable_wfh: !!data.enable_wfh,
+          wfh_fixed_hours: data.wfh_fixed_hours || 8.0,
+          wfh_ignore_late: !!data.wfh_ignore_late,
           currency: data.currency || "EGP",
           half_day_enabled: !!data.half_day_enabled,
           half_day_hours: data.half_day_hours || 4.0,
@@ -229,6 +236,9 @@ export default function SettingsPage() {
         late_penalty_per_minute: formData.late_penalty_per_minute,
         absence_penalty_per_day: formData.absence_penalty_per_day,
         overtime_enabled: formData.overtime_enabled,
+        enable_wfh: formData.enable_wfh,
+        wfh_fixed_hours: formData.wfh_fixed_hours,
+        wfh_ignore_late: formData.wfh_ignore_late,
         currency: formData.currency,
         half_day_enabled: formData.half_day_enabled,
         half_day_hours: formData.half_day_hours,
@@ -625,6 +635,48 @@ export default function SettingsPage() {
                 className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
                 placeholder="200"
               />
+            </Field>
+          </div>
+        </SectionCard>
+
+        {/* Work From Home Configuration */}
+        <SectionCard>
+          <div className="flex items-start justify-between">
+            <SectionHeader
+              icon={Home}
+              title={isRTL ? "العمل من المنزل (WFH)" : "Work From Home (WFH)"}
+              subtitle={isRTL ? "تفعيل خيارات العمل عن بعد داخل البوت الخاص بالموظفين" : "Enable remote work selection inside the Telegram Bot"}
+            />
+            <label className="flex items-center cursor-pointer mt-1">
+              <div className="relative">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={formData.enable_wfh}
+                  onChange={(e) => setFormData({ ...formData, enable_wfh: e.target.checked })}
+                />
+                <div className={cn("block w-14 h-8 rounded-full transition-colors", formData.enable_wfh ? "bg-[#1e8e3e]" : "bg-[#e5e7eb]")}></div>
+                <div className={cn("dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform", formData.enable_wfh && "transform translate-x-6")}></div>
+              </div>
+            </label>
+          </div>
+          
+          <div className={cn("grid grid-cols-1 md:grid-cols-2 gap-8 transition-opacity", !formData.enable_wfh && "opacity-50 pointer-events-none")}>
+            <div className="flex items-center justify-between col-span-1 md:col-span-2 p-4 bg-[#f9fafb] border border-[#e5e7eb] rounded-xl">
+              <div>
+                <p className="text-sm font-bold text-[#111]">{isRTL ? "إلغاء خصم التأخير للمنزل" : "Ignore Lateness Penalty for WFH"}</p>
+                <p className="text-xs text-[#6b7280]">{isRTL ? "لا تطبق قوانين التأخير إذا عمل الموظف من المنزل" : "Do not apply late minute rules when shifting remotely"}</p>
+              </div>
+              <label className="flex items-center cursor-pointer">
+                <div className="relative">
+                  <input type="checkbox" className="sr-only" checked={formData.wfh_ignore_late} onChange={(e) => setFormData({ ...formData, wfh_ignore_late: e.target.checked })} />
+                  <div className={cn("block w-12 h-7 rounded-full transition-colors", formData.wfh_ignore_late ? "bg-black" : "bg-[#e5e7eb]")}></div>
+                  <div className={cn("dot absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform", formData.wfh_ignore_late && "transform translate-x-5")}></div>
+                </div>
+              </label>
+            </div>
+            <Field label={isRTL ? "ساعات الوردية للمنزل" : "Fixed WFH Shift Hours"} hint={isRTL ? "الساعات المعتمدة في الرواتب" : "Hours granted automatically upon WFH check-out"}>
+              <input type="number" step="0.5" value={formData.wfh_fixed_hours} onChange={(e) => setFormData({ ...formData, wfh_fixed_hours: parseFloat(e.target.value) })} className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors" placeholder="8.0" />
             </Field>
           </div>
         </SectionCard>

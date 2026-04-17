@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS public.companies (
     late_penalty_per_minute DECIMAL DEFAULT 1.0,
     absence_penalty_per_day DECIMAL DEFAULT 1.0,
     overtime_enabled BOOLEAN DEFAULT false,
+    enable_wfh BOOLEAN DEFAULT false,
+    wfh_ignore_late BOOLEAN DEFAULT false,
+    wfh_requires_checkin BOOLEAN DEFAULT true,
+    wfh_fixed_hours DECIMAL DEFAULT 8.0,
     departments JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -56,8 +60,20 @@ CREATE TABLE IF NOT EXISTS public.attendance (
     working_hours NUMERIC(5,2),
     late_minutes INTEGER DEFAULT 0,
     status TEXT CHECK (status IN ('present', 'late', 'absent', 'holiday')) DEFAULT 'present',
+    day_type TEXT CHECK (day_type IN ('office', 'wfh', 'leave', 'holiday')) DEFAULT 'office',
+    source TEXT CHECK (source IN ('bot', 'admin_override')) DEFAULT 'bot',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     UNIQUE(employee_id, date)
+);
+
+CREATE TABLE IF NOT EXISTS public.special_days (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    type TEXT CHECK (type IN ('holiday')) DEFAULT 'holiday',
+    note TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(company_id, date)
 );
 
 -- RLS POLICIES (Simplified for dev, but important for production)

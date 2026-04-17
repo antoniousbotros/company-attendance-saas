@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
     const overtimeEnabled = company.overtime_enabled || false;
     const halfDayEnabled = company.half_day_enabled || false;
     const halfDayHours = company.half_day_hours || 4.0;
+    const wfhFixedHours = company.wfh_fixed_hours || 8.0;
+    const wfhIgnoreLate = company.wfh_ignore_late || false;
 
     const { totalDays: expectedWorkingDays, expectedDates } = getExpectedWorkingDays(month, workingDaysCfg, holidaysCfg);
 
@@ -91,7 +93,9 @@ export async function POST(req: NextRequest) {
       if (attendance) {
         for (const record of attendance) {
           if (record.status === 'present' || record.status === 'late') {
-            const dailyHours = Number(record.working_hours || 0);
+            const dailyHoursRaw = Number(record.working_hours || 0);
+            const isWfh = record.day_type === 'wfh';
+            const dailyHours = isWfh ? wfhFixedHours : dailyHoursRaw;
             
             // Handle missing checkouts rigorously (0 hours recorded defaults to absent functionally)
             if (dailyHours > 0) {
@@ -112,8 +116,14 @@ export async function POST(req: NextRequest) {
                 }
             }
           }
-          totalHours += Number(record.working_hours || 0);
-          lateMinutes += Number(record.late_minutes || 0);
+          const isWfhBase = record.day_type === 'wfh';
+          totalHours += isWfhBase ? wfhFixedHours : Number(record.working_hours || 0);
+          
+          if (isWfhBase && wfhIgnoreLate) {
+             // WFH ignores late minutes fully
+          } else {
+             lateMinutes += Number(record.late_minutes || 0);
+          }
         }
       }
 

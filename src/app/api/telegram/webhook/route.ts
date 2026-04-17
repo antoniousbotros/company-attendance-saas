@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
       return ctx.reply(successMsg, getMainMenu(employee.companies));
     });
 
-    const processAttendance = async (ctx: any, employee: any, explicitlyLocation: boolean = false) => {
+    const processAttendance = async (ctx: any, employee: any, explicitlyLocation: boolean = false, dayType: string = "office") => {
       const now = new Date();
       const today = now.toISOString().split("T")[0];
       const company = (employee.companies as any);
@@ -124,7 +124,12 @@ export async function POST(req: NextRequest) {
       if (!attendance || !attendance.check_in) {
         let isLate = false;
         let lateMins = 0;
-        if (company.work_start_time) {
+        
+        if (dayType === "wfh" && company.wfh_ignore_late) {
+           // Skip lateness check for WFH completely
+           isLate = false; 
+           lateMins = 0;
+        } else if (company.work_start_time) {
           const [startH, startM] = company.work_start_time.split(':').map(Number);
           const thresholdMin = employee.allowed_late_minutes !== null ? employee.allowed_late_minutes : (company.late_threshold || 15);
           const workStart = new Date(now);
@@ -137,10 +142,10 @@ export async function POST(req: NextRequest) {
         }
         
         const status = isLate ? "late" : "present";
-        await supabaseAdmin.from("attendance").upsert({ employee_id: employee.id, company_id: employee.company_id, date: today, check_in: now.toISOString(), status: status, late_minutes: lateMins });
+        await supabaseAdmin.from("attendance").upsert({ employee_id: employee.id, company_id: employee.company_id, date: today, check_in: now.toISOString(), status: status, late_minutes: lateMins, day_type: dayType, source: 'bot' });
         
         const timeStr = now.toLocaleTimeString("en-US", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: true });
-        const inMsg = lang === 'ar' ? `✅ تم تسجيل الحضور الساعة ${timeStr}.${isLate ? `\n⚠️ لقد تأخرت ${lateMins} دقيقة.` : ""}` : `✅ Checked In at ${timeStr}.${isLate ? `\n⚠️ You are ${lateMins} minutes late.` : ""}`;
+        const inMsg = lang === 'ar' ? `✅ تم تسجيل الحضور (${dayType === 'wfh' ? 'المنزل 🏠' : 'المكتب 🏢'}) الساعة ${timeStr}.${isLate ? `\n⚠️ لقد تأخرت ${lateMins} دقيقة.` : ""}` : `✅ Checked In (${dayType === 'wfh' ? 'WFH 🏠' : 'Office 🏢'}) at ${timeStr}.${isLate ? `\n⚠️ You are ${lateMins} minutes late.` : ""}`;
         return ctx.reply(inMsg);
       }
 
@@ -156,6 +161,24 @@ export async function POST(req: NextRequest) {
 
       return ctx.reply(lang === 'ar' ? "لقد أتممت ورديتك اليوم بالفعل!" : "You have already completed your shift today!");
     };
+
+    bot.action("wfh_action_office", async (ctx) => {
+      await ctx.answerCbQuery();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
+      if (!employee) return;
+      const lang = employee.companies.bot_language || 'en';
+      if (employee.companies.enable_geofencing) {
+        return ctx.reply(lang === 'ar' ? "⚠️ يرجى إرسال الموقع '📍 إرسال الموقع'." : "⚠️ Please use the '📍 Send Location' button.", getMainMenu(employee.companies));
+      }
+      await processAttendance(ctx, employee, false, "office");
+    });
+
+    bot.action("wfh_action_wfh", async (ctx) => {
+      await ctx.answerCbQuery();
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
+      if (!employee) return;
+      await processAttendance(ctx, employee, false, "wfh");
+    });
 
     const runNextReportStep = async (ctx: any, employee: any, draftReport: any) => {
         const lang = employee.companies.bot_language || 'en';
@@ -287,12 +310,40 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    bot.hears(["✅ Check In", "✅ تسجيل حضور", "🚪 Check Out", "🚪 تسجيل انصراف"], async (ctx) => {
+    bot.hears(["✅ Check In", "✅ تسجيل حضور"], async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
+      if (!employee) return ctx.reply("Please /start and link your account first.");
+      const company = employee.companies as any;
+      const lang = company.bot_language || 'en';
+
+      const now = new Date();
+      const today = now.toISOString().split("T")[0];
+      const { data: attendance } = await supabaseAdmin.from("attendance").select("check_in").eq("employee_id", employee.id).eq("date", today).single();
+
+      // Only ask for WFH vs Office on initial check-ins without an active record
+      if (!attendance?.check_in && company.enable_wfh) {
+        return ctx.reply(
+          lang === 'ar' ? "أين تعمل اليوم؟" : "Where are you working today?",
+          Markup.inlineKeyboard([
+            [Markup.button.callback(lang === 'ar' ? "🏢 من المكتب" : "🏢 Office", "wfh_action_office")],
+            [Markup.button.callback(lang === 'ar' ? "🏠 من المنزل (WFH)" : "🏠 Work From Home", "wfh_action_wfh")]
+          ])
+        );
+      }
+
+      if (company.enable_geofencing) {
+        return ctx.reply(lang === 'ar' ? "⚠️ يرجى إرسال الموقع '📍 إرسال الموقع'." : "⚠️ Please use the '📍 Send Location' button.", getMainMenu(company));
+      }
+      await processAttendance(ctx, employee);
+    });
+
+    bot.hears(["🚪 Check Out", "🚪 تسجيل انصراف"], async (ctx) => {
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return ctx.reply("Please /start and link your account first.");
       const lang = employee.companies.bot_language || 'en';
       if (employee.companies.enable_geofencing) {
-        return ctx.reply(lang === 'ar' ? "⚠️ يرجى إرسال الموقع '📍 إرسال الموقع'." : "⚠️ Please use the '📍 Send Location' button.", getMainMenu(employee.companies));
+        // Technically check-out might also need geofencing, but we map standard behavior depending on your preference. We'll default to standard for now.
+        return ctx.reply(lang === 'ar' ? "⚠️ يرجى إرسال الموقع '📍 إرسال الموقع' لتسجيل الانصراف." : "⚠️ Please use the '📍 Send Location' button to complete shift.", getMainMenu(employee.companies));
       }
       await processAttendance(ctx, employee);
     });
