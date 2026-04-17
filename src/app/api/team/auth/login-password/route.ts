@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { verifyPassword, hashPasswordV1, matchPhone, generateToken } from "../../_helpers";
+import { verifyPassword, hashPasswordV1, matchPhone, generateJWT } from "../../_helpers";
 
 export const dynamic = "force-dynamic";
 
@@ -44,16 +44,8 @@ export async function POST(req: NextRequest) {
       await supabaseAdmin.from("employees").update({ login_password: newSecureHash }).eq("id", employee.id);
     }
 
-    // Create session
-    const token = generateToken();
-    const expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
-    await supabaseAdmin.from("employee_sessions").insert({
-      employee_id: employee.id,
-      company_id: employee.company_id,
-      token,
-      expires_at,
-    });
+    // Create stateless edge session
+    const token = generateJWT({ employee_id: employee.id, company_id: employee.company_id });
 
     const response = NextResponse.json({ ok: true });
     response.cookies.set("team_session", token, {
