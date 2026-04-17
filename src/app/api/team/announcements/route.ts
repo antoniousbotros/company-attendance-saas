@@ -24,18 +24,13 @@ export async function GET(req: NextRequest) {
       .gt("expire_at", new Date().toISOString())
       .order("created_at", { ascending: false });
 
-    const currentMonth = new Date().getMonth() + 1;
     const { data: allEmployees } = await supabaseAdmin
       .from("employees")
       .select("id, name, department, birth_date")
       .eq("company_id", session.company_id)
       .not("birth_date", "is", null);
 
-    const birthdays = (allEmployees || []).filter(e => {
-      if (!e.birth_date) return false;
-      const d = new Date(e.birth_date);
-      return (d.getMonth() + 1) === currentMonth;
-    }).sort((a, b) => new Date(a.birth_date).getDate() - new Date(b.birth_date).getDate());
+    const birthdays = (allEmployees || []).filter(e => e.birth_date).sort((a, b) => new Date(a.birth_date).getDate() - new Date(b.birth_date).getDate());
 
     const visible: typeof announcements = [];
     for (const ann of announcements || []) {

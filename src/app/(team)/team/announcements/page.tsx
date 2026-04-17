@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 export default function TeamAnnouncementsPage() {
   const { isRTL, lang } = useTeam();
   const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [birthdays, setBirthdays] = useState<any[]>([]);
+  const [allBirthdays, setAllBirthdays] = useState<any[]>([]);
+  const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth() + 1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,7 +17,7 @@ export default function TeamAnnouncementsPage() {
       .then((r) => r.json())
       .then((data) => {
         setAnnouncements(data.announcements || []);
-        setBirthdays(data.birthdays || []);
+        setAllBirthdays(data.birthdays || []);
         setLoading(false);
       });
   }, []);
@@ -120,69 +121,110 @@ export default function TeamAnnouncementsPage() {
       )}
 
       {/* Birthday Table Block */}
-      {!loading && birthdays.length > 0 && (
+      {!loading && (
         <div className="mt-12 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-150">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-gradient-to-br from-[#ff5a00] to-[#ff8c42] rounded-xl flex items-center justify-center shadow-md">
-              <PartyPopper className="w-5 h-5 text-white" />
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#ff5a00] to-[#ff8c42] rounded-xl flex items-center justify-center shadow-md">
+                <PartyPopper className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-black text-[#111] tracking-tight text-start">
+                  {isRTL ? "أعياد ميلاد الموظفين" : "Employee Birthdays"}
+                </h2>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-black text-[#111] tracking-tight text-start">
-                {isRTL ? "أعياد ميلاد هذا الشهر!" : "This Month's Birthdays!"}
-              </h2>
+
+            {/* Scrollable Month Selector */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide md:max-w-md w-full" dir={isRTL ? "rtl" : "ltr"}>
+              {Array.from({ length: 12 }).map((_, i) => {
+                const monthNum = i + 1;
+                const d = new Date(2000, i, 1);
+                const monthName = d.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" });
+                const isActive = activeMonth === monthNum;
+                return (
+                  <button
+                    key={monthNum}
+                    onClick={() => setActiveMonth(monthNum)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
+                      isActive 
+                        ? "bg-[#111] text-white shadow-md border-transparent" 
+                        : "bg-[#f9fafb] text-[#6b7280] border border-[#f1f1f1] hover:bg-[#ff5a00]/10 hover:text-[#ff5a00] hover:border-[#ff5a00]/30"
+                    )}
+                  >
+                    {monthName}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <div className="bg-white rounded-3xl shadow-sm border border-[#f1f1f1] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-start" dir={isRTL ? "rtl" : "ltr"}>
-                <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
-                  <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                      {isRTL ? "الموظف" : "Employee"}
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                      {isRTL ? "القسم" : "Department"}
-                    </th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                      {isRTL ? "التاريخ" : "Date"}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#f1f1f1]">
-                  {birthdays.map((b) => (
-                    <tr key={b.id} className="hover:bg-[#fff9f5] transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold ring-1 ring-[#ffd4b8] group-hover:scale-110 transition-transform">
-                            {b.name.substring(0, 2).toUpperCase()}
-                          </div>
-                          <span className="text-sm font-bold text-[#111]">{b.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex py-1 px-2.5 rounded-lg bg-[#f3f4f6] text-[#4b5563] text-xs font-bold">
-                          {b.department || (isRTL ? "غير محدد" : "Unassigned")}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-[#ff5a00]">
-                            {new Date(b.birth_date).getDate()}
-                          </span>
-                          <span className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">
-                            {new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "long" })}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {(() => {
+              const filteredBirthdays = allBirthdays.filter((b) => new Date(b.birth_date).getMonth() + 1 === activeMonth).sort((a, b) => new Date(a.birth_date).getDate() - new Date(b.birth_date).getDate());
+              
+              if (filteredBirthdays.length === 0) {
+                return (
+                  <div className="flex flex-col items-center justify-center p-12 text-center">
+                    <p className="text-sm font-bold text-[#9ca3af]">
+                      {isRTL ? "لا توجد أعياد ميلاد مسجلة في هذا الشهر." : "No birthdays recorded for this month."}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-start" dir={isRTL ? "rtl" : "ltr"}>
+                    <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
+                      <tr>
+                        <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                          {isRTL ? "الموظف" : "Employee"}
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                          {isRTL ? "القسم" : "Department"}
+                        </th>
+                        <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
+                          {isRTL ? "التاريخ" : "Date"}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#f1f1f1]">
+                      {filteredBirthdays.map((b) => (
+                        <tr key={b.id} className="hover:bg-[#fff9f5] transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold ring-1 ring-[#ffd4b8] group-hover:scale-110 transition-transform">
+                                {b.name.substring(0, 2).toUpperCase()}
+                              </div>
+                              <span className="text-sm font-bold text-[#111]">{b.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex py-1 px-2.5 rounded-lg bg-[#f3f4f6] text-[#4b5563] text-xs font-bold">
+                              {b.department || (isRTL ? "غير محدد" : "Unassigned")}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-black text-[#ff5a00]">
+                                {new Date(b.birth_date).getDate()}
+                              </span>
+                              <span className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                                {new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "long" })}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
           </div>
         </div>
-      )}
     </div>
   );
 }
