@@ -67,11 +67,17 @@ export async function POST(req: NextRequest) {
     // 3. Process Each Employee
     for (const emp of employees) {
       // Get all attendance for the month
+      const [year, m] = month.split('-');
+      const lastDay = new Date(Number(year), Number(m), 0).getDate();
+      const startDate = `${year}-${m}-01`;
+      const endDate = `${year}-${m}-${lastDay}`;
+
       const { data: attendance } = await supabaseAdmin
         .from("attendance")
         .select("*")
         .eq("employee_id", emp.id)
-        .like("date", `${month}-%`);
+        .gte("date", startDate)
+        .lte("date", endDate);
 
       let presentDays = 0;
       let totalHours = 0;

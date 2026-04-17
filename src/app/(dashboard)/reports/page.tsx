@@ -84,7 +84,11 @@ export default function ReportsPage() {
       const companyId = company.id;
       const { count: empCount } = await supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", companyId);
       const currentMonthStr = new Date().toISOString().slice(0, 7);
-      const { data: attendance } = await supabase.from("attendance").select("working_hours, status, date").eq("company_id", companyId).like("date", `${currentMonthStr}-%`);
+      const [y, m] = currentMonthStr.split('-');
+      const lastDay = new Date(Number(y), Number(m), 0).getDate();
+      const startM = `${currentMonthStr}-01`;
+      const endM = `${currentMonthStr}-${lastDay}`;
+      const { data: attendance } = await supabase.from("attendance").select("working_hours, status, date").eq("company_id", companyId).gte("date", startM).lte("date", endM);
 
       let totalHours = 0, presentCounts = 0, lateCounts = 0;
       const uniqueDays = new Set<string>();
@@ -114,10 +118,13 @@ export default function ReportsPage() {
     const { data: company } = await supabase.from("companies").select("id").eq("owner_id", user.id).single();
     if (!company) return;
 
+    const [yR, mR] = selectedMonth.split('-');
+    const lDR = new Date(Number(yR), Number(mR), 0).getDate();
     const { data } = await supabase.from("attendance")
       .select("date, check_in, check_out, working_hours, late_minutes, status, employees(name)")
       .eq("company_id", company.id)
-      .like("date", `${selectedMonth}-%`)
+      .gte("date", `${selectedMonth}-01`)
+      .lte("date", `${selectedMonth}-${lDR}`)
       .order("date", { ascending: true });
 
     setExporting(false);
@@ -144,7 +151,9 @@ export default function ReportsPage() {
     
     if (company) {
        const currentMonthStr = new Date().toISOString().slice(0, 7);
-       const { data } = await supabase.from("attendance").select("status, employees(name)").eq("company_id", company.id).like("date", `${currentMonthStr}-%`);
+       const [yA, mA] = currentMonthStr.split('-');
+       const lDA = new Date(Number(yA), Number(mA), 0).getDate();
+       const { data } = await supabase.from("attendance").select("status, employees(name)").eq("company_id", company.id).gte("date", `${currentMonthStr}-01`).lte("date", `${currentMonthStr}-${lDA}`);
        if (data && data.length > 0) {
          const flags: Record<string, { late: 0, absent: 0 }> = {};
          data.forEach((r: any) => {
