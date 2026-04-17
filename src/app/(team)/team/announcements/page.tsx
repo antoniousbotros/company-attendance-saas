@@ -30,26 +30,17 @@ export default function TeamAnnouncementsPage() {
 
   return (
     <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      {/* Premium Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#111] to-[#222] rounded-3xl p-6 md:p-8 shadow-xl border border-[#333]">
-        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-          <Megaphone className="w-48 h-48 text-white transform rotate-[-20deg]" />
-        </div>
-        <div className="relative z-10 flex flex-col items-start gap-4 text-start">
-          <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10">
-            <Megaphone className="w-6 h-6 text-[#ff5a00]" />
-          </div>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-              {isRTL ? "إعلانات الشركة" : "Company Announcements"}
-            </h1>
-            <p className="text-sm md:text-base text-[#9ca3af] mt-1.5 font-medium max-w-md">
-              {isRTL 
-                ? "ابق على اطلاع بآخر أخبار وقرارات الشركة المهمة" 
-                : "Stay updated with the latest news, policies, and important updates."}
-            </p>
-          </div>
-        </div>
+      {/* Minimal Header */}
+      <div className="flex flex-col items-start gap-1.5 text-start mb-2">
+        <h1 className="text-2xl font-black text-[#111] tracking-tight flex items-center gap-2.5">
+          <Megaphone className="w-5 h-5 text-[#ff5a00]" />
+          {isRTL ? "إعلانات الشركة" : "Company Announcements"}
+        </h1>
+        <p className="text-sm font-bold text-[#9ca3af]">
+          {isRTL 
+            ? "ابق على اطلاع بآخر أخبار وقرارات الشركة المهمة" 
+            : "Stay updated with the latest news, policies, and important updates."}
+        </p>
       </div>
 
       {/* Announcements Grid / List */}
