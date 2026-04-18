@@ -1,5 +1,18 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { createHmac } from 'crypto';
+
+function verifySadminToken(token: string, secret: string): boolean {
+  try {
+    const [payloadB64, sig] = token.split('.');
+    if (!payloadB64 || !sig) return false;
+    const payload = Buffer.from(payloadB64, 'base64').toString();
+    const expectedSig = createHmac('sha256', secret).update(payload).digest('hex');
+    return sig === expectedSig;
+  } catch {
+    return false;
+  }
+}
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -39,7 +52,9 @@ export async function middleware(request: NextRequest) {
   // 2. Protect Sadmin Routes
   if (url.pathname.startsWith("/sadmin") && !url.pathname.startsWith("/sadmin/login")) {
     const sadminSession = request.cookies.get("sadmin_session");
-    if (!sadminSession) {
+    const sadminSecret = process.env.SADMIN_PASSWORD || "";
+    const isValid = sadminSession && sadminSecret && verifySadminToken(sadminSession.value, sadminSecret);
+    if (!isValid) {
       url.pathname = "/sadmin/login";
       return NextResponse.redirect(url);
     }

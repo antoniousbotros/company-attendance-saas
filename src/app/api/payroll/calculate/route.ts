@@ -31,10 +31,33 @@ function getExpectedWorkingDays(monthStr: string, allowedDays: string[], holiday
 
 export async function POST(req: NextRequest) {
   try {
+    // Auth Check: verify the caller is an authenticated company owner
+    const authHeader = req.headers.get('authorization') || '';
+    const token = authHeader.replace('Bearer ', '');
+    if (!token) {
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const { data: userResp } = await supabaseAdmin.auth.getUser(token);
+    if (!userResp.user?.id) {
+      return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { company_id, month } = await req.json(); // month e.g. "2026-04"
 
     if (!company_id || !month) {
       return NextResponse.json({ ok: false, error: "Missing company_id or month" }, { status: 400 });
+    }
+
+    // Ownership check: ensure caller owns this company
+    const { data: ownerCheck } = await supabaseAdmin
+      .from("companies")
+      .select("id")
+      .eq("id", company_id)
+      .eq("owner_id", userResp.user.id)
+      .single();
+
+    if (!ownerCheck) {
+      return NextResponse.json({ ok: false, error: 'Forbidden' }, { status: 403 });
     }
 
     // 1. Fetch Company Policies
