@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
     const { data: records } = await supabaseAdmin
       .from("attendance")
-      .select("id, date, check_in, check_out, status, late_minutes, working_hours")
+      .select("id, date, check_in, check_out, status, late_minutes, working_hours, day_type")
       .eq("employee_id", session.employee_id)
       .eq("company_id", session.company_id)
       .order("date", { ascending: false })

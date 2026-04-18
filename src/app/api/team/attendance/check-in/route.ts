@@ -23,7 +23,24 @@ export async function POST(req: NextRequest) {
     const company = employee.companies as any;
     if (!company) return NextResponse.json({ ok: false, error: "Company not found" }, { status: 404 });
 
-    const isWfh = dayType === "wfh" && company.enable_wfh;
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+
+    // Check if already checked in or if Admin preemptively granted WFH
+    const { data: existing } = await supabaseAdmin
+      .from("attendance")
+      .select("id, check_in, check_out, day_type")
+      .eq("employee_id", session.employee_id)
+      .eq("company_id", session.company_id)
+      .eq("date", today)
+      .single();
+
+    if (existing?.check_in) {
+      return NextResponse.json({ ok: false, error: "Already checked in today" }, { status: 400 });
+    }
+
+    const isAdminGrantedWfh = existing?.day_type === "wfh";
+    const isWfh = isAdminGrantedWfh || (dayType === "wfh" && company.enable_wfh);
 
     // Geofencing check
     if (!isWfh && company.enable_geofencing) {
@@ -38,22 +55,6 @@ export async function POST(req: NextRequest) {
           error: `You are ${Math.round(dist)}m away from the office. Must be within ${radius}m.`,
         }, { status: 403 });
       }
-    }
-
-    const now = new Date();
-    const today = now.toISOString().split("T")[0];
-
-    // Check if already checked in today
-    const { data: existing } = await supabaseAdmin
-      .from("attendance")
-      .select("id, check_in, check_out")
-      .eq("employee_id", session.employee_id)
-      .eq("company_id", session.company_id)
-      .eq("date", today)
-      .single();
-
-    if (existing?.check_in) {
-      return NextResponse.json({ ok: false, error: "Already checked in today" }, { status: 400 });
     }
 
     // Late calculation

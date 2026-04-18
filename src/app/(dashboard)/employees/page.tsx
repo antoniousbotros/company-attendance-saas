@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, X, Send, Copy, Check, Pencil, KeyRound, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, X, Send, Copy, Check, Pencil, KeyRound, Eye, EyeOff, Home } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,7 @@ type Employee = {
   overtime_rate?: number;
   birth_date?: string | null;
   created_at?: string;
+  company_id: string;
 };
 
 export default function EmployeesPage() {
@@ -42,6 +43,11 @@ export default function EmployeesPage() {
   const [empPassword, setEmpPassword] = useState("");
   const [showEmpPassword, setShowEmpPassword] = useState(false);
   
+  // WFH Grant States
+  const [wfhGrantEmployee, setWfhGrantEmployee] = useState<Employee | null>(null);
+  const [wfhGrantDate, setWfhGrantDate] = useState("");
+  const [wfhGrantLoading, setWfhGrantLoading] = useState(false);
+
   // Department State
   const [activeTab, setActiveTab] = useState<'employees' | 'departments'>('employees');
   const [departmentsList, setDepartmentsList] = useState<string[]>([]);
@@ -275,6 +281,26 @@ export default function EmployeesPage() {
     setSaving(false);
   };
 
+  const handleGrantWfh = async () => {
+    if (!wfhGrantEmployee || !wfhGrantDate) return;
+    setWfhGrantLoading(true);
+
+    const { error } = await supabase.from("attendance").upsert({
+      employee_id: wfhGrantEmployee.id,
+      company_id: wfhGrantEmployee.company_id,
+      date: wfhGrantDate,
+      day_type: "wfh",
+      source: "admin_override",
+      status: "present"
+    });
+
+    setWfhGrantLoading(false);
+    if (!error) {
+       setWfhGrantEmployee(null);
+    } else {
+       alert("Error granting WFH: " + error.message);
+    }
+  };
 
   const copyInviteLink = (empId: string) => {
     const link = `https://t.me/${botName || 'YawmyBot'}`;
@@ -467,6 +493,13 @@ export default function EmployeesPage() {
                             {copiedId === emp.id ? (isRTL ? "تم النسخ" : "Copied") : (isRTL ? "نسخ الرابط" : "Invite")}
                           </button>
                         )}
+                        <button
+                          onClick={() => { setWfhGrantEmployee(emp); setWfhGrantDate(new Date().toISOString().split("T")[0]); }}
+                          className="p-2 rounded-lg text-[#6b7280] hover:text-[#1e8e3e] hover:bg-[#e6f6ec] transition-all opacity-0 group-hover:opacity-100"
+                          title={isRTL ? "منح العمل من المنزل" : "Permit WFH"}
+                        >
+                          <Home className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => { setEditingEmployee(emp); setEmpPassword(""); setShowEmpPassword(false); setShowEditModal(true); }}
                           className="p-2 rounded-lg text-[#6b7280] hover:text-[#0284c7] hover:bg-[#f0f9ff] transition-all opacity-0 group-hover:opacity-100"
@@ -897,6 +930,51 @@ export default function EmployeesPage() {
               <PrimaryButton onClick={handleSaveEdit} disabled={saving} className="px-8 h-11 bg-[#ff5a00] hover:bg-[#e65100]">
                 {saving ? "..." : (isRTL ? "حفظ التعديلات" : "Save Changes")}
               </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {wfhGrantEmployee && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden shadow-[0_0_0_1px_rgba(0,0,0,0.05),0_20px_25px_-5px_rgba(0,0,0,0.1),0_10px_10px_-5px_rgba(0,0,0,0.04)]">
+            <div className="p-6">
+              <h2 className="text-xl font-black text-[#111] mb-2">{isRTL ? "منح العمل من المنزل" : "Permit Work From Home"}</h2>
+              <p className="text-sm font-semibold text-[#6b7280] mb-6 leading-relaxed">
+                  {isRTL 
+                     ? `تحديد يوم محدد للموظف (${wfhGrantEmployee.name}) للعمل من المنزل. سيتم تجاوز التحقق من الموقع (GPS) خلال هذا اليوم.` 
+                     : `Permit ${wfhGrantEmployee.name} to work remotely on a specific date. GPS geofencing will be completely bypassed.`}
+              </p>
+              
+              <div className="space-y-4">
+                 <div>
+                    <label className="block text-xs font-bold text-[#b0b0b0] uppercase tracking-wider mb-2">
+                       {isRTL ? "التاريخ" : "Select Date"}
+                    </label>
+                    <input
+                       type="date"
+                       value={wfhGrantDate}
+                       onChange={(e) => setWfhGrantDate(e.target.value)}
+                       className="w-full bg-[#f9fafb] border border-[#eeeeee] rounded-xl py-3.5 px-4 text-sm font-bold text-[#111] focus:ring-2 focus:ring-[#ff5a00]/20 focus:border-[#ff5a00] outline-none transition-all shadow-sm"
+                    />
+                 </div>
+              </div>
+            </div>
+            
+            <div className="p-6 bg-[#f9fafb] border-t border-[#eeeeee] flex items-center gap-3">
+               <button
+                  onClick={() => setWfhGrantEmployee(null)}
+                  className="flex-1 py-3.5 px-4 rounded-xl text-sm font-bold text-[#6b7280] hover:text-[#111] hover:bg-white border border-transparent hover:border-[#eeeeee] transition-all shadow-sm"
+               >
+                  {isRTL ? "إلغاء" : "Cancel"}
+               </button>
+               <PrimaryButton 
+                  onClick={handleGrantWfh}
+                  disabled={wfhGrantLoading || !wfhGrantDate}
+                  className="flex-1 h-12 bg-[#ff5a00]"
+               >
+                  {wfhGrantLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : (isRTL ? "تأكيد" : "Grant")}
+               </PrimaryButton>
             </div>
           </div>
         </div>

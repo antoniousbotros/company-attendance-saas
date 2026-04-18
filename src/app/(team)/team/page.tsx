@@ -74,6 +74,7 @@ export default function TeamHomePage() {
   const todayRecord = records.find((r) => r.date === today);
   const hasCheckedIn = !!todayRecord?.check_in;
   const hasCheckedOut = !!todayRecord?.check_out;
+  const isPreGrantedWfh = todayRecord && !todayRecord.check_in && todayRecord.day_type === "wfh";
   const shiftDone = hasCheckedIn && hasCheckedOut;
 
   const getLocationFromIP = async (): Promise<{ lat: number; lng: number }> => {
@@ -111,8 +112,8 @@ export default function TeamHomePage() {
     setWfhModal(false);
 
     try {
-      let body: any = { dayType };
-      const isWfh = dayType === "wfh" && company?.enable_wfh;
+      let body: any = { dayType: isPreGrantedWfh ? "wfh" : dayType };
+      const isWfh = isPreGrantedWfh || (dayType === "wfh" && company?.enable_wfh);
       
       if (!isWfh && geofencing) {
         try { 
@@ -358,7 +359,8 @@ export default function TeamHomePage() {
                 {!hasCheckedIn && !wfhModal && (
                   <button
                     onClick={() => {
-                        if (company?.enable_wfh) setWfhModal(true);
+                        if (isPreGrantedWfh) handleAttendance("check-in", "wfh");
+                        else if (company?.enable_wfh) setWfhModal(true);
                         else handleAttendance("check-in");
                     }}
                     disabled={actionLoading}

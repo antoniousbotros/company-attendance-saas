@@ -318,9 +318,14 @@ export async function POST(req: NextRequest) {
 
       const now = new Date();
       const today = now.toISOString().split("T")[0];
-      const { data: attendance } = await supabaseAdmin.from("attendance").select("check_in").eq("employee_id", employee.id).eq("date", today).single();
+      const { data: attendance } = await supabaseAdmin.from("attendance").select("check_in, day_type").eq("employee_id", employee.id).eq("date", today).single();
 
-      // Only ask for WFH vs Office on initial check-ins without an active record
+      // IF Admin granted WFH explicitly for today, bypass GPS entirely!
+      if (attendance?.day_type === "wfh" && !attendance?.check_in) {
+         return await processAttendance(ctx, employee, false, "wfh");
+      }
+
+      // Only ask for WFH vs Office on initial check-ins without an active record if Global WFH is enabled
       if (!attendance?.check_in && company.enable_wfh) {
         return ctx.reply(
           lang === 'ar' ? "أين تعمل اليوم؟" : "Where are you working today?",
