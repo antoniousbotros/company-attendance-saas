@@ -47,7 +47,19 @@ export async function POST(req: NextRequest) {
     if (compErr || !company) return NextResponse.json({ ok: false, error: "Company not found" }, { status: 404 });
 
     const workingDaysCfg = company.working_days || ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
-    const holidaysCfg = company.holidays || [];
+    const { data: dbHolidays } = await supabaseAdmin
+      .from("special_days")
+      .select("date")
+      .eq("company_id", company_id)
+      .eq("type", "holiday");
+
+    const holidaysCfg = dbHolidays ? dbHolidays.map((h: any) => h.date) : [];
+    
+    // Fallback merge just in case old structures exist
+    if (company.holidays && Array.isArray(company.holidays)) {
+       company.holidays.forEach((d: string) => { if (!holidaysCfg.includes(d)) holidaysCfg.push(d); });
+    }
+
     const latePenaltyConf = company.late_penalty_per_minute || 1.0;
     const absencePenaltyConf = company.absence_penalty_per_day || 1.0;
     const overtimeEnabled = company.overtime_enabled || false;

@@ -119,6 +119,13 @@ export default function SettingsPage() {
   }>({ type: "", text: "" });
   const [currentEmail, setCurrentEmail] = useState("");
 
+  // Holiday States
+  type Holiday = { id: string; date: string; note: string; company_id: string; type: string };
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [holidayDate, setHolidayDate] = useState("");
+  const [holidayNote, setHolidayNote] = useState("");
+  const [holidayLoading, setHolidayLoading] = useState(false);
+
   // Security modals
   type SecModalStep = "idle" | "send" | "otp" | "fields" | "done";
   const [passModal, setPassModal] = useState<SecModalStep>("idle");
@@ -176,6 +183,18 @@ export default function SettingsPage() {
         });
         setSavedAuthMode((data.auth_mode || "telegram") as "telegram" | "password");
       }
+      
+      const sessionData = await supabase.auth.getSession();
+      if (sessionData.data.session) {
+         try {
+            const hRes = await fetch("/api/companies/holidays", {
+               headers: { Authorization: `Bearer ${sessionData.data.session.access_token}` }
+            });
+            const hData = await hRes.json();
+            if (hData.ok) setHolidays(hData.holidays);
+         } catch(e) {}
+      }
+
       setLoading(false);
     };
     load();
@@ -207,6 +226,42 @@ export default function SettingsPage() {
     if (!user) return;
     await supabase.from("companies").update({ logo_url: null }).eq("owner_id", user.id);
     setLogoUrl(null);
+  };
+
+  const handleAddHoliday = async () => {
+     if (!holidayDate) return;
+     setHolidayLoading(true);
+     const sessionData = await supabase.auth.getSession();
+     if (sessionData.data.session) {
+        await fetch("/api/companies/holidays", {
+           method: "POST",
+           headers: { 
+             "Content-Type": "application/json",
+             Authorization: `Bearer ${sessionData.data.session.access_token}` 
+           },
+           body: JSON.stringify({ date: holidayDate, note: holidayNote })
+        });
+        
+        const hRes = await fetch("/api/companies/holidays", {
+           headers: { Authorization: `Bearer ${sessionData.data.session.access_token}` }
+        });
+        const hData = await hRes.json();
+        if (hData.ok) setHolidays(hData.holidays);
+     }
+     setHolidayDate("");
+     setHolidayNote("");
+     setHolidayLoading(false);
+  };
+
+  const handleDeleteHoliday = async (id: string) => {
+     const sessionData = await supabase.auth.getSession();
+     if (sessionData.data.session) {
+        await fetch(`/api/companies/holidays?id=${id}`, {
+           method: "DELETE",
+           headers: { Authorization: `Bearer ${sessionData.data.session.access_token}` }
+        });
+        setHolidays(holidays.filter(h => h.id !== id));
+     }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -555,6 +610,67 @@ export default function SettingsPage() {
                 </Field>
              </div>
           )}
+        </SectionCard>
+
+        {/* Special Holidays */}
+        <SectionCard>
+          <div className="flex items-start justify-between mb-6">
+            <SectionHeader
+              icon={CalendarDays}
+              title={isRTL ? "أيام الإجازات الخاصة" : "Special Holidays (Public & National)"}
+              subtitle={isRTL ? "استثناء بعض التواريخ من سياسة الغياب لتكون إجازة رسمية مدفوعة." : "Exclude specific calendar dates from absence penalties."}
+            />
+          </div>
+          <div className="bg-[#f9fafb] p-6 rounded-2xl border border-[#eeeeee] flex flex-col gap-5">
+             <div className="flex flex-col md:flex-row gap-3">
+               <div className="flex-1">
+                 <input
+                   type="date"
+                   value={holidayDate}
+                   onChange={(e) => setHolidayDate(e.target.value)}
+                   className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                 />
+               </div>
+               <div className="flex-1">
+                 <input
+                   type="text"
+                   placeholder={isRTL ? "المناسبة (مثال: عيد الفطر)" : "Occasion (e.g. National Day)"}
+                   value={holidayNote}
+                   onChange={(e) => setHolidayNote(e.target.value)}
+                   className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                 />
+               </div>
+               <button
+                 type="button"
+                 onClick={handleAddHoliday}
+                 disabled={!holidayDate || holidayLoading}
+                 className="bg-[#111] text-white px-6 py-3 rounded-lg text-sm font-bold disabled:opacity-50 hover:bg-black transition-colors min-w-[120px] flex items-center justify-center"
+               >
+                 {holidayLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : (isRTL ? "إضافة إجازة" : "Add Holiday")}
+               </button>
+             </div>
+
+             {holidays.length > 0 && (
+                <div className="mt-4 flex flex-col gap-2">
+                   {holidays.map(h => (
+                      <div key={h.id} className="flex items-center justify-between bg-white px-4 py-3 border border-[#eeeeee] rounded-xl">
+                         <div className="flex items-center gap-3">
+                            <CalendarDays className="w-4 h-4 text-[#ff5a00]" />
+                            <span className="text-sm font-bold text-[#111]">{h.date}</span>
+                            <span className="text-xs font-semibold text-[#6b7280 bg-[#f9fafb] px-2 py-0.5 rounded uppercase">{h.note || "Holiday"}</span>
+                         </div>
+                         <button
+                           type="button"
+                           onClick={() => handleDeleteHoliday(h.id)}
+                           className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                      </div>
+                   ))}
+                </div>
+             )}
+          </div>
         </SectionCard>
 
         {/* Location Verification (Geofencing) */}
