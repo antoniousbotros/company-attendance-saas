@@ -664,9 +664,11 @@ function ResizableColHeader({
         startXRef.current = e.clientX;
         startWRef.current = width;
         setActive(true);
+        // In RTL layouts the handle is on the left edge — invert the drag direction
+        const isRTL = getComputedStyle(document.documentElement).direction === 'rtl';
         const onMove = (ev: MouseEvent) => {
-            const newW = startWRef.current + (ev.clientX - startXRef.current);
-            onWidthChange(colKey, newW);
+            const delta = ev.clientX - startXRef.current;
+            onWidthChange(colKey, startWRef.current + (isRTL ? -delta : delta));
         };
         const onUp = () => {
             setActive(false);
