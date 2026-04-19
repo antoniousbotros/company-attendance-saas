@@ -519,22 +519,48 @@ function SwipeableRow({ children, onEdit, onDelete }: { children: React.ReactNod
     const ACTION_W = 80;
     const THRESHOLD = 40;
 
+    // ── shared snap logic
+    const endDrag = (currentOffset: number) => {
+        isDraggingRef.current = false;
+        setIsDragging(false);
+        setOffsetX(Math.abs(currentOffset) >= THRESHOLD
+            ? (currentOffset > 0 ? ACTION_W : -ACTION_W)
+            : 0
+        );
+    };
+
+    // ── touch handlers (mobile)
     const onTouchStart = (e: React.TouchEvent) => {
         startXRef.current = e.touches[0].clientX;
         isDraggingRef.current = true;
         setIsDragging(true);
     };
-
     const onTouchMove = (e: React.TouchEvent) => {
         if (!isDraggingRef.current) return;
         const delta = e.touches[0].clientX - startXRef.current;
         setOffsetX(Math.max(-ACTION_W, Math.min(ACTION_W, delta)));
     };
+    const onTouchEnd = (e: React.TouchEvent) => {
+        endDrag(e.changedTouches[0].clientX - startXRef.current);
+    };
 
-    const onTouchEnd = () => {
-        isDraggingRef.current = false;
-        setIsDragging(false);
-        setOffsetX(prev => Math.abs(prev) >= THRESHOLD ? (prev > 0 ? ACTION_W : -ACTION_W) : 0);
+    // ── mouse handlers (desktop)
+    const onMouseDown = (e: React.MouseEvent) => {
+        startXRef.current = e.clientX;
+        isDraggingRef.current = true;
+        setIsDragging(true);
+        const onMouseMove = (ev: MouseEvent) => {
+            if (!isDraggingRef.current) return;
+            const delta = ev.clientX - startXRef.current;
+            setOffsetX(Math.max(-ACTION_W, Math.min(ACTION_W, delta)));
+        };
+        const onMouseUp = (ev: MouseEvent) => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            endDrag(ev.clientX - startXRef.current);
+        };
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
     };
 
     const close = () => setOffsetX(0);
@@ -561,10 +587,13 @@ function SwipeableRow({ children, onEdit, onDelete }: { children: React.ReactNod
                 style={{
                     transform: `translateX(${offsetX}px)`,
                     transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.2,0,0.2,1)',
+                    cursor: isDragging ? 'grabbing' : 'grab',
+                    userSelect: 'none',
                 }}
                 onTouchStart={onTouchStart}
                 onTouchMove={onTouchMove}
                 onTouchEnd={onTouchEnd}
+                onMouseDown={onMouseDown}
             >
                 {children}
             </div>
