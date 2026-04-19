@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight, Image as ImageIcon, X, ZoomIn, Download } from "lucide-react";
+import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight, Image as ImageIcon, X, ZoomIn, Download, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -188,6 +188,108 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
         return true;
     });
 
+    const exportToExcel = async () => {
+        const ExcelJS = (await import("exceljs")).default;
+        const wb = new ExcelJS.Workbook();
+        wb.creator = "Yawmy";
+        wb.created = new Date();
+        const ws = wb.addWorksheet("تقارير ميدانية", { views: [{ rightToLeft: true }] });
+
+        // Resolve dynamic field labels
+        const dynamicCols = dynamicFieldIds.map(fid => ({
+            fid,
+            label: fields.find(f => f.id === fid)?.label || fid,
+            isImage: fields.find(f => f.id === fid)?.field_type === "image",
+        }));
+
+        // Build header row
+        const headers = [
+            "تاريخ التقرير",
+            "وقت الإرسال",
+            "اسم الموظف",
+            "الفريق",
+            ...dynamicCols.map(c => c.label),
+            "الملاحظات",
+            "رابط الموقع",
+        ];
+
+        ws.addRow(headers);
+
+        // Style header row
+        const headerRow = ws.getRow(1);
+        headerRow.eachCell(cell => {
+            cell.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFF5A00" } };
+            cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+            cell.border = {
+                top: { style: "thin", color: { argb: "FFDDDDDD" } },
+                bottom: { style: "thin", color: { argb: "FFDDDDDD" } },
+            };
+        });
+        headerRow.height = 24;
+
+        // Data rows
+        filteredReports.forEach((r, idx) => {
+            const mapsLink = r.location_lat
+                ? `https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`
+                : "—";
+
+            const rowData = [
+                new Date(r.date).toLocaleDateString("en-GB"),
+                new Date(r.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }),
+                r.employee_name,
+                r.team_name,
+                ...dynamicCols.map(c =>
+                    c.isImage ? (r.values[c.fid] ? "✅ تم الرفع" : "—") : (r.values[c.fid] || "—")
+                ),
+                r.notes || "—",
+                mapsLink,
+            ];
+
+            const row = ws.addRow(rowData);
+            row.height = 20;
+
+            // Zebra striping
+            const bg = idx % 2 === 0 ? "FFFFFFFF" : "FFFFF8F5";
+            row.eachCell(cell => {
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
+                cell.alignment = { vertical: "middle", wrapText: false };
+                cell.border = { bottom: { style: "hair", color: { argb: "FFEEEEEE" } } };
+            });
+
+            // Make the maps link a hyperlink
+            if (r.location_lat) {
+                const lastCell = row.getCell(row.cellCount);
+                lastCell.value = { text: "عرض على الخريطة", hyperlink: mapsLink };
+                lastCell.font = { color: { argb: "FF0070C0" }, underline: true };
+            }
+        });
+
+        // Auto-fit columns (approximate)
+        ws.columns.forEach(col => {
+            let maxLen = 10;
+            col.eachCell?.({ includeEmpty: true }, cell => {
+                const v = cell.value ? String(cell.value) : "";
+                if (v.length > maxLen) maxLen = v.length;
+            });
+            col.width = Math.min(maxLen + 4, 50);
+        });
+
+        // Freeze header row
+        ws.views = [{ state: "frozen", ySplit: 1, rightToLeft: true }];
+
+        // Download
+        const buf = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        const dateStr = new Date().toISOString().slice(0, 10);
+        a.download = `تقارير-ميدانية-${dateStr}.xlsx`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="space-y-4">
             {/* Filters */}
@@ -233,9 +335,19 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
                     <h3 className="font-bold text-gray-800">أحدث التقارير الميدانية</h3>
-                    <span className="bg-orange-50 text-[#ff5a00] text-xs font-bold px-3 py-1 rounded-full w-fit">
-                        {filteredReports.length} تقارير
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <span className="bg-orange-50 text-[#ff5a00] text-xs font-bold px-3 py-1 rounded-full">
+                            {filteredReports.length} تقارير
+                        </span>
+                        <button
+                            onClick={exportToExcel}
+                            disabled={filteredReports.length === 0}
+                            className="flex items-center gap-2 bg-[#ff5a00] hover:bg-[#e04f00] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95"
+                        >
+                            <FileDown className="w-4 h-4" />
+                            تصدير Excel
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="overflow-x-auto w-full">
