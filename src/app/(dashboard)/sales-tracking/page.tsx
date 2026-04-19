@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight, Image as ImageIcon, X, ZoomIn, Download, FileDown } from "lucide-react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight, Image as ImageIcon, X, ZoomIn, Download, FileDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 
@@ -142,7 +142,7 @@ export default function SalesTrackingPage() {
             )}
 
             {activeTab === "reports" && (
-                <ReportsView reports={reports} fields={fields} teams={teams} employees={employees} />
+            <ReportsView reports={reports} fields={fields} teams={teams} employees={employees} onReportsChange={setReports} />
             )}
 
             {activeTab === "settings" && isAdmin && (
@@ -162,12 +162,14 @@ export default function SalesTrackingPage() {
 // SUB COMPONENTS
 // ----------------------------------------------------
 
-function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj[], fields: Field[], teams: Team[], employees: Employee[] }) {
+function ReportsView({ reports, fields, teams, employees, onReportsChange }: { reports: ReportObj[], fields: Field[], teams: Team[], employees: Employee[], onReportsChange: (r: ReportObj[]) => void }) {
     const [filterTeam, setFilterTeam] = useState("");
     const [filterEmployee, setFilterEmployee] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
     const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+    const [editingReport, setEditingReport] = useState<ReportObj | null>(null);
+    const [deletingReport, setDeletingReport] = useState<ReportObj | null>(null);
 
     const closeLightbox = useCallback(() => setLightboxUrl(null), []);
 
@@ -305,6 +307,17 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
         URL.revokeObjectURL(url);
     };
 
+    const handleDeleteReport = async (id: string) => {
+        await supabase.from("reports").delete().eq("id", id);
+        onReportsChange(reports.filter(r => r.id !== id));
+        setDeletingReport(null);
+    };
+
+    const handleSaveEdit = (updated: ReportObj) => {
+        onReportsChange(reports.map(r => r.id === updated.id ? updated : r));
+        setEditingReport(null);
+    };
+
     return (
         <div className="space-y-4">
             {/* Filters */}
@@ -366,52 +379,53 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                 </div>
                 
                 <div className="overflow-x-auto w-full">
-                    <table className="w-full text-right">
-                        <thead>
-                            <tr className="bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100">
-                                <th className="px-5 py-4 w-32">التاريخ والوقت</th>
-                                <th className="px-5 py-4 w-48">الموظف</th>
-                                <th className="px-5 py-4 w-32">الفريق</th>
-                                {dedupedCols.map(col => (
-                                    <th key={col.label} className="px-5 py-4">{col.label}</th>
-                                ))}
-                                <th className="px-5 py-4">الملاحظات</th>
-                                <th className="px-5 py-4 w-32 text-center">الموقع الجغرافي</th>
-                            </tr>
-                        </thead>
-                        <tbody className="text-sm font-medium text-gray-700 divide-y divide-gray-50">
-                            {filteredReports.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6 + dedupedCols.length} className="text-center py-12 text-gray-400">
-                                        لا توجد تقارير مطابقة.
-                                    </td>
-                                </tr>
-                            ) : filteredReports.map(r => (
-                                <tr key={r.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="px-5 py-3 text-gray-500">
+                    <div className="min-w-[700px]">
+                        {/* Header row */}
+                        <div className="flex items-center bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100">
+                            <div className="px-5 py-4 w-[130px] shrink-0 text-right">التاريخ والوقت</div>
+                            <div className="px-5 py-4 w-[160px] shrink-0 text-right">الموظف</div>
+                            <div className="px-5 py-4 w-[100px] shrink-0 text-right">الفريق</div>
+                            {dedupedCols.map(col => (
+                                <div key={col.label} className="px-5 py-4 flex-1 text-right">{col.label}</div>
+                            ))}
+                            <div className="px-5 py-4 w-[160px] shrink-0 text-right">الملاحظات</div>
+                            <div className="px-5 py-4 w-[80px] shrink-0 text-center">الموقع</div>
+                        </div>
+
+                        {/* Body rows */}
+                        {filteredReports.length === 0 ? (
+                            <div className="text-center py-12 text-gray-400">لا توجد تقارير مطابقة.</div>
+                        ) : filteredReports.map(r => (
+                            <SwipeableRow
+                                key={r.id}
+                                onEdit={() => setEditingReport(r)}
+                                onDelete={() => setDeletingReport(r)}
+                            >
+                                <div className="flex items-center text-sm font-medium text-gray-700 hover:bg-gray-50/50 transition-colors">
+                                    <div className="px-5 py-3 w-[130px] shrink-0 text-gray-500">
                                         <div>{new Date(r.date).toLocaleDateString("en-GB")}</div>
                                         <div className="text-xs text-gray-400 font-mono mt-0.5">{new Date(r.created_at).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", hour12: true })}</div>
-                                    </td>
-                                    <td className="px-5 py-3">
+                                    </div>
+                                    <div className="px-5 py-3 w-[160px] shrink-0">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs">
+                                            <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
                                                 {r.employee_name.charAt(0)}
                                             </div>
-                                            {r.employee_name}
+                                            <span className="truncate">{r.employee_name}</span>
                                         </div>
-                                    </td>
-                                    <td className="px-5 py-3">
+                                    </div>
+                                    <div className="px-5 py-3 w-[100px] shrink-0">
                                         <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
-                                    </td>
+                                    </div>
                                     {dedupedCols.map(col => {
                                         const value = getColValue(r, col);
                                         const isImage = col.isImage || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
                                         return (
-                                            <td key={col.label} className="px-5 py-3 bg-blue-50/20 text-center">
+                                            <div key={col.label} className="px-5 py-3 flex-1 text-center bg-blue-50/20">
                                                 {isImage && value ? (
                                                     <button
                                                         onClick={() => setLightboxUrl(value)}
-                                                        className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#fff1e8] hover:bg-[#ffd4b8] border border-[#ffd4b8] text-[#ff5a00] transition-all hover:scale-105 active:scale-95 group"
+                                                        className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#fff1e8] hover:bg-[#ffd4b8] border border-[#ffd4b8] text-[#ff5a00] transition-all hover:scale-105 active:scale-95"
                                                         title="عرض الصورة"
                                                     >
                                                         <ImageIcon className="w-4 h-4" />
@@ -419,26 +433,26 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                                                 ) : (
                                                     <span className="text-sm text-gray-700">{value || "-"}</span>
                                                 )}
-                                            </td>
+                                            </div>
                                         );
                                     })}
-                                    <td className="px-5 py-3 text-gray-500 max-w-[200px] truncate" title={r.notes}>{r.notes || "-"}</td>
-                                    <td className="px-5 py-3 text-center">
+                                    <div className="px-5 py-3 w-[160px] shrink-0 text-gray-500 truncate" title={r.notes}>{r.notes || "-"}</div>
+                                    <div className="px-5 py-3 w-[80px] shrink-0 text-center">
                                         {r.location_lat ? (
-                                            <a 
-                                                href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
+                                            <a
+                                                href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`}
                                                 target="_blank" rel="noopener noreferrer"
                                                 className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                                                title="عرض الموقع على الخريطة"
+                                                title="عرض على الخريطة"
                                             >
                                                 <MapPin className="w-4 h-4" />
                                             </a>
                                         ) : <span className="text-gray-300">-</span>}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                    </div>
+                                </div>
+                            </SwipeableRow>
+                        ))}
+                    </div>
                 </div>
             </div>
 
@@ -473,6 +487,198 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                     </div>
                 </div>
             )}
+            {/* Edit Modal */}
+            {editingReport && (
+                <EditReportModal
+                    report={editingReport}
+                    fields={fields}
+                    onClose={() => setEditingReport(null)}
+                    onSaved={handleSaveEdit}
+                />
+            )}
+
+            {/* Delete Confirm */}
+            {deletingReport && (
+                <DeleteConfirmModal
+                    reportDate={deletingReport.date}
+                    employeeName={deletingReport.employee_name}
+                    onCancel={() => setDeletingReport(null)}
+                    onConfirm={() => handleDeleteReport(deletingReport.id)}
+                />
+            )}
+        </div>
+    );
+}
+
+// ── SwipeableRow ───────────────────────────────────────────────
+function SwipeableRow({ children, onEdit, onDelete }: { children: React.ReactNode; onEdit: () => void; onDelete: () => void }) {
+    const [offsetX, setOffsetX] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const startXRef = useRef(0);
+    const isDraggingRef = useRef(false);
+    const ACTION_W = 80;
+    const THRESHOLD = 40;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        startXRef.current = e.touches[0].clientX;
+        isDraggingRef.current = true;
+        setIsDragging(true);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        if (!isDraggingRef.current) return;
+        const delta = e.touches[0].clientX - startXRef.current;
+        setOffsetX(Math.max(-ACTION_W, Math.min(ACTION_W, delta)));
+    };
+
+    const onTouchEnd = () => {
+        isDraggingRef.current = false;
+        setIsDragging(false);
+        setOffsetX(prev => Math.abs(prev) >= THRESHOLD ? (prev > 0 ? ACTION_W : -ACTION_W) : 0);
+    };
+
+    const close = () => setOffsetX(0);
+
+    return (
+        <div className="relative overflow-hidden border-b border-gray-50 last:border-0">
+            {/* Edit — swipe right reveals (left side, green) */}
+            <div className="absolute left-0 inset-y-0 flex flex-col items-center justify-center gap-0.5 bg-emerald-500 text-white text-[10px] font-bold select-none" style={{ width: ACTION_W }}>
+                <Pencil className="w-4 h-4" />
+                <span>تعديل</span>
+            </div>
+            <button className="absolute left-0 inset-y-0 z-10" style={{ width: ACTION_W }} onClick={() => { close(); onEdit(); }} aria-label="edit" />
+
+            {/* Delete — swipe left reveals (right side, red) */}
+            <div className="absolute right-0 inset-y-0 flex flex-col items-center justify-center gap-0.5 bg-red-500 text-white text-[10px] font-bold select-none" style={{ width: ACTION_W }}>
+                <Trash2 className="w-4 h-4" />
+                <span>حذف</span>
+            </div>
+            <button className="absolute right-0 inset-y-0 z-10" style={{ width: ACTION_W }} onClick={() => { close(); onDelete(); }} aria-label="delete" />
+
+            {/* Sliding content */}
+            <div
+                className="relative bg-white"
+                style={{
+                    transform: `translateX(${offsetX}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.2,0,0.2,1)',
+                }}
+                onTouchStart={onTouchStart}
+                onTouchMove={onTouchMove}
+                onTouchEnd={onTouchEnd}
+            >
+                {children}
+            </div>
+        </div>
+    );
+}
+
+// ── EditReportModal ────────────────────────────────────────────
+function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportObj; fields: Field[]; onClose: () => void; onSaved: (updated: ReportObj) => void }) {
+    const [editedValues, setEditedValues] = useState<Record<string, string>>({ ...report.values });
+    const [editedNotes, setEditedNotes] = useState(report.notes);
+    const [saving, setSaving] = useState(false);
+
+    const editableFields = Object.keys(report.values)
+        .map(fid => ({ fid, field: fields.find(f => f.id === fid) }))
+        .filter(({ field }) => field && field.field_type !== 'image');
+
+    const handleSave = async () => {
+        setSaving(true);
+        await Promise.all(
+            Object.entries(editedValues).map(([fieldId, value]) =>
+                supabase.from('report_values').upsert(
+                    { report_id: report.id, field_id: fieldId, value },
+                    { onConflict: 'report_id,field_id' }
+                )
+            )
+        );
+        await supabase.from('reports').update({ notes: editedNotes }).eq('id', report.id);
+        setSaving(false);
+        onSaved({ ...report, values: editedValues, notes: editedNotes });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()} dir="rtl">
+                <div className="flex items-center justify-between p-5 border-b border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><Pencil className="w-5 h-5 text-[#ff5a00]" /> تعديل التقرير</h3>
+                    <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+                </div>
+                <div className="px-5 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-3 text-sm text-gray-500">
+                    <span className="font-semibold text-gray-800">{report.employee_name}</span>
+                    <span className="text-gray-300">•</span>
+                    <span>{report.team_name}</span>
+                    <span className="text-gray-300">•</span>
+                    <span>{new Date(report.date).toLocaleDateString('ar-EG')}</span>
+                </div>
+                <div className="p-5 space-y-4 max-h-[55vh] overflow-y-auto">
+                    {editableFields.map(({ fid, field }) => (
+                        <div key={fid}>
+                            <label className="block text-xs font-bold text-gray-500 mb-1.5">{field!.label}</label>
+                            {field!.field_type === 'select' && field!.options?.length ? (
+                                <select
+                                    value={editedValues[fid] || ''}
+                                    onChange={e => setEditedValues(prev => ({ ...prev, [fid]: e.target.value }))}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#ff5a00] transition-all"
+                                >
+                                    <option value="">اختر...</option>
+                                    {field!.options!.map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                            ) : (
+                                <input
+                                    type={field!.field_type === 'number' ? 'number' : 'text'}
+                                    value={editedValues[fid] || ''}
+                                    onChange={e => setEditedValues(prev => ({ ...prev, [fid]: e.target.value }))}
+                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/10 transition-all"
+                                />
+                            )}
+                        </div>
+                    ))}
+                    <div>
+                        <label className="block text-xs font-bold text-gray-500 mb-1.5">الملاحظات</label>
+                        <textarea
+                            value={editedNotes}
+                            onChange={e => setEditedNotes(e.target.value)}
+                            rows={3}
+                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#ff5a00] focus:ring-2 focus:ring-[#ff5a00]/10 transition-all resize-none"
+                        />
+                    </div>
+                </div>
+                <div className="p-5 border-t border-gray-100 flex gap-3">
+                    <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">إلغاء</button>
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-[#ff5a00] hover:bg-[#e04f00] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+                    >
+                        {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                        حفظ التعديلات
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ── DeleteConfirmModal ─────────────────────────────────────────
+function DeleteConfirmModal({ reportDate, employeeName, onCancel, onConfirm }: { reportDate: string; employeeName: string; onCancel: () => void; onConfirm: () => void }) {
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-4" onClick={onCancel}>
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()} dir="rtl">
+                <div className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+                        <Trash2 className="w-7 h-7 text-red-500" />
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-900 mb-1">حذف التقرير</h3>
+                    <p className="text-sm text-gray-500">سيتم حذف تقرير <span className="font-semibold text-gray-800">{employeeName}</span> بتاريخ <span className="font-semibold text-gray-800">{new Date(reportDate).toLocaleDateString('ar-EG')}</span> بشكل نهائي.</p>
+                </div>
+                <div className="px-5 pb-5 flex gap-3">
+                    <button onClick={onCancel} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">إلغاء</button>
+                    <button onClick={onConfirm} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+                        <Trash2 className="w-4 h-4" /> حذف نهائياً
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
