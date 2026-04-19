@@ -209,15 +209,16 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
     const getColValue = (r: ReportObj, col: { ids: string[] }) =>
         col.ids.map(id => r.values[id]).find(v => v && v.trim() !== "") || "";
 
-    // Initialize widths for newly-seen dynamic columns
-    const ensureDynColWidths = (cols: typeof dedupedCols) => {
+    // Initialize widths for newly-seen dynamic columns (safe — runs AFTER render)
+    useEffect(() => {
         setColWidths(prev => {
             const next = { ...prev };
             let changed = false;
-            cols.forEach(c => { if (!(c.label in next)) { next[c.label] = 150; changed = true; } });
+            dedupedCols.forEach(c => { if (!(c.label in next)) { next[c.label] = 150; changed = true; } });
             return changed ? next : prev;
         });
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dedupedCols.map(c => c.label).join('|')]);
 
     // Auto-fit: measure max content length → derive pixel width
     const autoFitCol = (key: string, currentDedupedCols: typeof dedupedCols, currentReports: ReportObj[]) => {
@@ -426,9 +427,9 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                             <ResizableColHeader colKey="date"     width={colWidths.date     ?? 130} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>التاريخ والوقت</ResizableColHeader>
                             <ResizableColHeader colKey="employee" width={colWidths.employee ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الموظف</ResizableColHeader>
                             <ResizableColHeader colKey="team"     width={colWidths.team     ?? 100} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الفريق</ResizableColHeader>
-                            {(ensureDynColWidths(dedupedCols), dedupedCols.map(col => (
+                            {dedupedCols.map(col => (
                                 <ResizableColHeader key={col.label} colKey={col.label} width={colWidths[col.label] ?? 150} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{col.label}</ResizableColHeader>
-                            )))}
+                            ))}
                             <ResizableColHeader colKey="notes"    width={colWidths.notes    ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الملاحظات</ResizableColHeader>
                             <ResizableColHeader colKey="location" width={colWidths.location ?? 80}  onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)} center>الموقع</ResizableColHeader>
                         </div>
