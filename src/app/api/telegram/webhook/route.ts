@@ -27,13 +27,17 @@ const getMainMenu = (company: any) => {
   const bottomRow = salesEnabled 
     ? (lang === 'ar' ? ["📈 تقرير مبيعات", "📂 تقاريري", "📊 تقارير فريقي"] : ["📈 Submit Report", "📂 My Reports", "📊 Team Reports"])
     : (lang === 'ar' ? ["ℹ️ مساعدة"] : ["ℹ️ Help"]);
+  const editRow = salesEnabled
+    ? (lang === 'ar' ? ["✏️ تعديل تقريري"] : ["✏️ Edit Last Report"])
+    : null;
 
   if (geofencing) {
     return Markup.keyboard([
       [Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location (Check In / Out)")],
       row2,
       row3,
-      bottomRow
+      bottomRow,
+      ...(editRow ? [editRow] : []),
     ]).resize();
   }
 
@@ -41,8 +45,18 @@ const getMainMenu = (company: any) => {
     lang === 'ar' ? ["✅ تسجيل حضور", "🚪 تسجيل انصراف"] : ["✅ Check In", "🚪 Check Out"],
     row2,
     row3,
-    bottomRow
+    bottomRow,
+    ...(editRow ? [editRow] : []),
   ]).resize();
+};
+
+// ── Holiday helper ─────────────────────────────────────────────────────────
+const isHolidayToday = async (companyId: string, date: string, lang: string): Promise<string | null> => {
+  const { data } = await supabaseAdmin.from("special_days").select("note").eq("company_id", companyId).eq("date", date).eq("type", "holiday").maybeSingle();
+  if (!data) return null;
+  return lang === 'ar'
+    ? `🎉 اليوم إجازة رسمية${data.note ? ` — ${data.note}` : ""}. استمتع بيومك!`
+    : `🎉 Today is an official holiday${data.note ? ` — ${data.note}` : ""}. Enjoy your day off!`;
 };
 
 export async function POST(req: NextRequest) {
@@ -118,6 +132,10 @@ export async function POST(req: NextRequest) {
       const today = now.toISOString().split("T")[0];
       const company = (employee.companies as any);
       const lang = company.bot_language || 'en';
+
+      // ── Holiday guard ────────────────────────────────────────────────────
+      const holidayMsg = await isHolidayToday(employee.company_id, today, lang);
+      if (holidayMsg) return ctx.reply(holidayMsg);
 
       const { data: attendance } = await supabaseAdmin.from("attendance").select("*").eq("employee_id", employee.id).eq("date", today).single();
 
@@ -253,6 +271,13 @@ export async function POST(req: NextRequest) {
              location_lat: ctx.message.location.latitude,
              location_lng: ctx.message.location.longitude
           }));
+      }
+
+      // ── WFH admin override: if admin pre-set today as WFH for this employee, skip GPS
+      const locToday = new Date().toISOString().split("T")[0];
+      const { data: presetRecord } = await supabaseAdmin.from("attendance").select("day_type, check_in").eq("employee_id", employee.id).eq("date", locToday).maybeSingle();
+      if (presetRecord?.day_type === "wfh" && !presetRecord?.check_in) {
+        return processAttendance(ctx, employee, false, "wfh");
       }
 
       // Fallback: Attendance flow
@@ -686,6 +711,56 @@ export async function POST(req: NextRequest) {
       return ctx.replyWithDocument({ source: Buffer.from(buffer), filename: `My_Reports_${new Date().toISOString().split("T")[0]}.xlsx` });
     });
 
+    // EDIT LAST REPORT HOOK
+    bot.hears(["✏️ Edit Last Report", "✏️ تعديل تقريري"], async (ctx) => {
+      const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
+      if (!employee) return;
+      const lang = (employee.companies as any).bot_language || 'en';
+      if (!(employee.companies as any).sales_tracking_enabled) return;
+
+      // Last completed report
+      const { data: lastReport } = await supabaseAdmin.from("reports")
+        .select("id, date, notes, team_id")
+        .eq("employee_id", employee.id)
+        .eq("status", "completed")
+        .order("created_at", { ascending: false })
+        .limit(1).single();
+
+      if (!lastReport) {
+        return ctx.reply(lang === 'ar' ? "❌ لا توجد تقارير سابقة للتعديل." : "❌ No previous reports to edit.");
+      }
+
+      const { data: rValues } = await supabaseAdmin.from("report_values").select("field_id, value").eq("report_id", lastReport.id);
+      const fieldIds = (rValues || []).map((rv: any) => rv.field_id);
+      const { data: fieldDefs } = fieldIds.length > 0
+        ? await supabaseAdmin.from("custom_fields").select("id, label, field_type").in("id", fieldIds)
+        : { data: [] };
+      const fieldMap: Record<string, { label: string; field_type: string }> = {};
+      (fieldDefs || []).forEach((f: any) => { fieldMap[f.id] = f; });
+
+      const dateStr = new Date(lastReport.date).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-GB');
+      let summary = lang === 'ar' ? `📋 <b>آخر تقرير لك (${dateStr})</b>\n\n` : `📋 <b>Your Last Report (${dateStr})</b>\n\n`;
+      const buttons: any[] = [];
+
+      for (const rv of (rValues || [])) {
+        const fd = fieldMap[(rv as any).field_id];
+        if (!fd || fd.field_type === 'image') continue;
+        summary += `• <b>${fd.label}:</b> ${(rv as any).value || '-'}\n`;
+        buttons.push([Markup.button.callback(
+          `✏️ ${fd.label}`,
+          `editfield_${lastReport.id.substring(0,8)}_${(rv as any).field_id.substring(0,8)}`
+        )]);
+      }
+
+      summary += `\n📝 ${lang === 'ar' ? 'الملاحظات' : 'Notes'}: ${lastReport.notes || '-'}`;
+      buttons.push([Markup.button.callback(
+        lang === 'ar' ? "✏️ تعديل الملاحظات" : "✏️ Edit Notes",
+        `editfield_${lastReport.id.substring(0,8)}_notes`
+      )]);
+
+      await ctx.replyWithHTML(summary, Markup.inlineKeyboard(buttons));
+    });
+
     // SALES TRACKING HOOK
     bot.hears(["📈 Submit Report", "📈 تقرير مبيعات"], async (ctx) => {
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
@@ -874,6 +949,37 @@ export async function POST(req: NextRequest) {
          return;
       }
       
+      // EDIT SPECIFIC FIELD IN COMPLETED REPORT
+      if (data && data.startsWith("editfield_")) {
+        await ctx.answerCbQuery().catch(() => {});
+        const eParts = data.split("_");
+        const eReportShort = eParts[1];
+        const eFieldShort  = eParts[2]; // UUID short or "notes"
+
+        const { data: empE } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
+        if (!empE) return;
+        const langE = (empE.companies as any).bot_language || 'en';
+
+        let fieldLabelE = eFieldShort === 'notes' ? (langE === 'ar' ? 'الملاحظات' : 'Notes') : '';
+        if (eFieldShort !== 'notes') {
+          // Find the report to get team_id, then look up the field
+          const { data: repsE } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", empE.id).eq("status", "completed");
+          const repE = repsE?.find((r: any) => r.id.startsWith(eReportShort));
+          if (repE) {
+            const { data: flds } = await supabaseAdmin.from("custom_fields").select("id, label").eq("team_id", repE.team_id);
+            const mf = flds?.find((f: any) => f.id.startsWith(eFieldShort));
+            fieldLabelE = mf?.label || eFieldShort;
+          }
+        }
+
+        return ctx.reply(
+          langE === 'ar'
+            ? `أدخل القيمة الجديدة لـ: ${fieldLabelE}⁣E:${eReportShort}_${eFieldShort}⁣`
+            : `Enter new value for: ${fieldLabelE}⁣E:${eReportShort}_${eFieldShort}⁣`,
+          { reply_markup: { force_reply: true, input_field_placeholder: langE === 'ar' ? "القيمة الجديدة..." : "New value..." } }
+        );
+      }
+
       // OPTION SELECT FOR FIELD REPORT
       if (data && data.startsWith("ropt_")) {
           const parts = data.split("_");
@@ -991,6 +1097,45 @@ export async function POST(req: NextRequest) {
                Markup.inlineKeyboard(calButtons)
              );
            }
+      }
+
+      // EDIT FIELD REPLY HOOK
+      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("⁣E:")) {
+        const eMatch = replyToMsg.text.match(/⁣E:([a-f0-9]{8})_([a-f0-9]{8}|notes)⁣/);
+        if (eMatch) {
+          const eRepShort   = eMatch[1];
+          const eFieldShort = eMatch[2];
+          const newVal = ctx.message.text.trim();
+
+          const { data: empEd } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
+          if (!empEd) return;
+          const langEd = (empEd.companies as any).bot_language || "en";
+
+          const { data: repsEd } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", empEd.id).eq("status", "completed");
+          const repEd = repsEd?.find((r: any) => r.id.startsWith(eRepShort));
+          if (!repEd) return ctx.reply(langEd === "ar" ? "❌ لم يتم العثور على التقرير." : "❌ Report not found.");
+
+          if (eFieldShort === "notes") {
+            await supabaseAdmin.from("reports").update({ notes: newVal }).eq("id", repEd.id);
+          } else {
+            const { data: fldsEd } = await supabaseAdmin.from("custom_fields").select("id, field_type").eq("team_id", repEd.team_id);
+            const mfEd = fldsEd?.find((f: any) => f.id.startsWith(eFieldShort));
+            if (!mfEd) return ctx.reply(langEd === "ar" ? "❌ لم يتم العثور على الحقل." : "❌ Field not found.");
+            if (mfEd.field_type === "number" && isNaN(Number(newVal))) {
+              return ctx.reply(
+                langEd === "ar"
+                  ? `❌ أدخل رقماً صحيحاً.⁣E:${eRepShort}_${eFieldShort}⁣`
+                  : `❌ Please enter a valid number.⁣E:${eRepShort}_${eFieldShort}⁣`,
+                { reply_markup: { force_reply: true } }
+              );
+            }
+            await supabaseAdmin.from("report_values").update({ value: newVal }).eq("report_id", repEd.id).eq("field_id", mfEd.id);
+          }
+          return ctx.reply(
+            langEd === "ar" ? "✅ تم تحديث التقرير بنجاح." : "✅ Report updated successfully.",
+            getMainMenu((empEd as any).companies)
+          );
+        }
       }
 
       // SALES REPORT FORM HOOK
