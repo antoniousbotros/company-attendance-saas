@@ -89,14 +89,24 @@ export default function TeamReportsPage() {
 
   const handleSubmit = async () => {
     if (!team) return;
+    // ── Location guard ───────────────────────────────────────────
+    if (!location) {
+      setLocationError(isRTL ? "⚠️ يجب تحديد الموقع قبل إرسال التقرير." : "⚠️ Location is required before submitting.");
+      return;
+    }
     setSubmitting(true);
     const fv = Object.entries(fieldValues).map(([field_id, value]) => ({ field_id, value }));
-    await fetch("/api/team/reports/submit", {
+    const res = await fetch("/api/team/reports/submit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ team_id: team.id, location_lat: location?.lat, location_lng: location?.lng, field_values: fv, notes: notes || null }),
+      body: JSON.stringify({ team_id: team.id, location_lat: location.lat, location_lng: location.lng, field_values: fv, notes: notes || null }),
     });
     setSubmitting(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      setLocationError(isRTL ? `❌ ${err.error || 'خطأ في الإرسال. حاول مرة أخرى.'}` : `❌ ${err.error || 'Submission failed. Please try again.'}`);
+      return;
+    }
     setSubmitted(true);
     setFieldValues({});
     setNotes("");
@@ -315,8 +325,12 @@ export default function TeamReportsPage() {
                   <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] placeholder:text-[#9ca3af] outline-none focus:border-[#ff5a00] resize-none" placeholder={isRTL ? "أضف ملاحظات..." : "Add notes..."} />
                 </div>
               )}
-              <button onClick={handleSubmit} disabled={submitting} className="w-full bg-[#ff5a00] text-white font-black py-3 rounded-xl hover:bg-[#e04f00] transition-all disabled:opacity-50">
-                {submitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : (isRTL ? "إرسال التقرير" : "Submit Report")}
+              <button
+                onClick={handleSubmit}
+                disabled={submitting || !location}
+                className="w-full bg-[#ff5a00] text-white font-black py-3 rounded-xl hover:bg-[#e04f00] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {submitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : !location ? (isRTL ? "حدد الموقع أولاً 📍" : "Capture location first 📍") : (isRTL ? "إرسال التقرير" : "Submit Report")}
               </button>
             </>
           )}

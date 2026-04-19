@@ -241,6 +241,16 @@ export async function POST(req: NextRequest) {
         }
 
         // All fields filled, ask for notes if enabled
+        // ── Location guard: must have coordinates before completing ──────────
+        if (!draftReport.location_lat || !draftReport.location_lng) {
+            await supabaseAdmin.from("reports").update({ status: 'draft' }).eq("id", draftReport.id); // keep as draft
+            return ctx.reply(lang === 'ar'
+                ? "📍 لم يتم تحديد موقعك بعد. يرجى إرسال موقعك الجغرافي أولاً لإكمال التقرير."
+                : "📍 Your location is missing. Please send your location to complete the report.",
+                Markup.keyboard([[Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location")]]).resize()
+            );
+        }
+
         if (team && team.show_notes === false) {
              await supabaseAdmin.from("reports").update({ status: 'completed' }).eq("id", draftReport.id);
              return ctx.reply(lang === 'ar' ? "✅ تم تسجيل تقريرك الميداني بنجاح! شكراً لك." : "✅ Field report submitted successfully! Thank you.", getMainMenu((employee as any).companies));

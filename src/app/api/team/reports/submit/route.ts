@@ -15,6 +15,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Team required" }, { status: 400 });
     }
 
+    // ── Location is mandatory for every field report ──────────────────────
+    const lat = typeof location_lat === 'number' ? location_lat : parseFloat(location_lat);
+    const lng = typeof location_lng === 'number' ? location_lng : parseFloat(location_lng);
+    if (!location_lat || !location_lng || isNaN(lat) || isNaN(lng)) {
+      return NextResponse.json({ ok: false, error: "Location is required to submit a report" }, { status: 400 });
+    }
+
     // Validate team belongs to employee's company
     const { data: team } = await supabaseAdmin
       .from("teams")
