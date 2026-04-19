@@ -178,7 +178,25 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
         return () => window.removeEventListener("keydown", handler);
     }, [closeLightbox]);
 
-    const dynamicFieldIds = Array.from(new Set(reports.flatMap(r => Object.keys(r.values))));
+    // Group fields by label — fields from different teams with the same label share one column
+    const dedupedCols: { label: string; ids: string[]; isImage: boolean }[] = [];
+    const allFieldIds = Array.from(new Set(reports.flatMap(r => Object.keys(r.values))));
+    allFieldIds.forEach(fid => {
+        const field = fields.find(f => f.id === fid);
+        const label = field?.label || fid;
+        const isImage = field?.field_type === "image";
+        const existing = dedupedCols.find(c => c.label === label);
+        if (existing) {
+            if (!existing.ids.includes(fid)) existing.ids.push(fid);
+            if (isImage) existing.isImage = true;
+        } else {
+            dedupedCols.push({ label, ids: [fid], isImage });
+        }
+    });
+
+    // Helper: get the first non-empty value from a report for a column group
+    const getColValue = (r: ReportObj, col: { ids: string[] }) =>
+        col.ids.map(id => r.values[id]).find(v => v && v.trim() !== "") || "";
 
     const filteredReports = reports.filter(r => {
         if (filterTeam && r.team_id !== filterTeam) return false;
@@ -195,12 +213,8 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
         wb.created = new Date();
         const ws = wb.addWorksheet("تقارير ميدانية", { views: [{ rightToLeft: true }] });
 
-        // Resolve dynamic field labels
-        const dynamicCols = dynamicFieldIds.map(fid => ({
-            fid,
-            label: fields.find(f => f.id === fid)?.label || fid,
-            isImage: fields.find(f => f.id === fid)?.field_type === "image",
-        }));
+        // Resolve dynamic field labels (already deduped by label)
+        const dynamicCols = dedupedCols;
 
         // Build header row
         const headers = [
@@ -239,9 +253,10 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                 new Date(r.created_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: true }),
                 r.employee_name,
                 r.team_name,
-                ...dynamicCols.map(c =>
-                    c.isImage ? (r.values[c.fid] ? "✅ تم الرفع" : "—") : (r.values[c.fid] || "—")
-                ),
+                ...dynamicCols.map(c => {
+                    const val = getColValue(r, c);
+                    return c.isImage ? (val ? "✅ تم الرفع" : "—") : (val || "—");
+                }),
                 r.notes || "—",
                 mapsLink,
             ];
@@ -357,10 +372,9 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                                 <th className="px-5 py-4 w-32">التاريخ والوقت</th>
                                 <th className="px-5 py-4 w-48">الموظف</th>
                                 <th className="px-5 py-4 w-32">الفريق</th>
-                                {dynamicFieldIds.map(fid => {
-                                    const fl = fields.find(f => f.id === fid)?.label || "قيمة ديناميكية";
-                                    return <th key={fid} className="px-5 py-4">{fl}</th>
-                                })}
+                                {dedupedCols.map(col => (
+                                    <th key={col.label} className="px-5 py-4">{col.label}</th>
+                                ))}
                                 <th className="px-5 py-4">الملاحظات</th>
                                 <th className="px-5 py-4 w-32 text-center">الموقع الجغرافي</th>
                             </tr>
@@ -368,7 +382,7 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                         <tbody className="text-sm font-medium text-gray-700 divide-y divide-gray-50">
                             {filteredReports.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6 + dynamicFieldIds.length} className="text-center py-12 text-gray-400">
+                                    <td colSpan={6 + dedupedCols.length} className="text-center py-12 text-gray-400">
                                         لا توجد تقارير مطابقة.
                                     </td>
                                 </tr>
@@ -389,12 +403,11 @@ function ReportsView({ reports, fields, teams, employees }: { reports: ReportObj
                                     <td className="px-5 py-3">
                                         <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
                                     </td>
-                                    {dynamicFieldIds.map(fid => {
-                                        const field = fields.find(f => f.id === fid);
-                                        const value = r.values[fid] || "";
-                                        const isImage = field?.field_type === "image" || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
+                                    {dedupedCols.map(col => {
+                                        const value = getColValue(r, col);
+                                        const isImage = col.isImage || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
                                         return (
-                                            <td key={fid} className="px-5 py-3 bg-blue-50/20 text-center">
+                                            <td key={col.label} className="px-5 py-3 bg-blue-50/20 text-center">
                                                 {isImage && value ? (
                                                     <button
                                                         onClick={() => setLightboxUrl(value)}
