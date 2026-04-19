@@ -401,7 +401,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                                 onEdit={() => setEditingReport(r)}
                                 onDelete={() => setDeletingReport(r)}
                             >
-                                <div className="flex items-center text-sm font-medium text-gray-700 hover:bg-gray-50/50 transition-colors">
+                                <div className="flex items-center text-sm font-medium text-gray-700 hover:bg-gray-50/50 transition-colors w-full">
                                     <div className="px-5 py-3 w-[130px] shrink-0 text-gray-500">
                                         <div>{new Date(r.date).toLocaleDateString("en-GB")}</div>
                                         <div className="text-xs text-gray-400 font-mono mt-0.5">{new Date(r.created_at).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", hour12: true })}</div>
@@ -583,7 +583,7 @@ function SwipeableRow({ children, onEdit, onDelete }: { children: React.ReactNod
 
             {/* Sliding content */}
             <div
-                className="relative bg-white"
+                className="relative bg-white w-full"
                 style={{
                     transform: `translateX(${offsetX}px)`,
                     transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.2,0,0.2,1)',
