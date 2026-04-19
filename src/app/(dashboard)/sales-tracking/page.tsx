@@ -718,64 +718,174 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
     const [members, setMembers] = useState<TeamMember[]>(initialMembers);
     const [newTeamName, setNewTeamName] = useState("");
 
-    const handleCreateTeam = async () => {
-        if (!newTeamName.trim()) return;
-        const { data, error } = await supabase.from("teams").insert({ company_id: companyId, name: newTeamName }).select("*").single();
+    // ── Global Field Creator state
+    const [gLabel, setGLabel] = useState("");
+    const [gType, setGType] = useState("text");
+    const [gOptions, setGOptions] = useState("");
+    const [gTeams, setGTeams] = useState<string[]>([]);
+    const [gBusy, setGBusy] = useState(false);
+    const [gMsg, setGMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
+    const toggleGTeam = (id: string) =>
+        setGTeams(prev => prev.includes(id) ? prev.filter(t => t !== id) : [...prev, id]);
+
+    const handleGlobalCreate = async () => {
+        setGMsg(null);
+        if (!gLabel.trim()) { setGMsg({ ok: false, text: "⚠️ اكتب اسم الحقل أولاً." }); return; }
+        if (gTeams.length === 0) { setGMsg({ ok: false, text: "⚠️ اختر فريقاً واحداً على الأقل." }); return; }
+        if (gType === "select" && !gOptions.trim()) { setGMsg({ ok: false, text: "⚠️ اكتب خيارات القائمة." }); return; }
+        setGBusy(true);
+        const opts = gType === "select" ? gOptions.split(",").map(s => s.trim()).filter(Boolean) : [];
+        const inserts = gTeams.map(tid => ({
+            team_id: tid,
+            label: gLabel.trim(),
+            field_type: gType,
+            options: opts,
+            order_index: fields.filter(f => f.team_id === tid).length,
+        }));
+        const { data, error } = await supabase.from("custom_fields").insert(inserts).select();
+        setGBusy(false);
+        if (error) { setGMsg({ ok: false, text: "حدث خطأ: " + error.message }); return; }
         if (data) {
-            setTeams([...teams, data]);
-            setNewTeamName("");
+            setFields(prev => [...prev, ...data]);
+            setGMsg({ ok: true, text: `✅ تم إضافة "${gLabel.trim()}" إلى ${data.length} فريق.` });
+            setGLabel(""); setGOptions(""); setGTeams([]);
+            setTimeout(() => setGMsg(null), 4000);
         }
     };
 
+    const handleCreateTeam = async () => {
+        if (!newTeamName.trim()) return;
+        const { data } = await supabase.from("teams").insert({ company_id: companyId, name: newTeamName }).select("*").single();
+        if (data) { setTeams([...teams, data]); setNewTeamName(""); }
+    };
+
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Create Team Block */}
-            <div className="lg:col-span-1 space-y-6">
-                <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                    <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-gray-400"/> فرق العمل</h3>
-                    <div className="flex flex-col gap-3">
-                        <input 
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#ff5a00] transition-colors" 
-                            placeholder="اسم الفريق (مثال: المبيعات الخارجية)" 
-                            value={newTeamName} onChange={e => setNewTeamName(e.target.value)}
+        <div className="space-y-6">
+            {/* ── Global Field Creator ── */}
+            <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                <h3 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-[#ff5a00]" /> إضافة حقل لعدة فرق دفعة واحدة
+                </h3>
+                <p className="text-xs text-gray-400 mb-4">أنشئ حقلاً مرة واحدة وطبّقه على أي عدد من الفرق بضغطة زر.</p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                    <input
+                        placeholder="اسم الحقل (مثال: اسم الدكتور)"
+                        value={gLabel}
+                        onChange={e => { setGLabel(e.target.value); setGMsg(null); }}
+                        className="sm:col-span-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#ff5a00] transition-colors"
+                    />
+                    <select
+                        value={gType}
+                        onChange={e => setGType(e.target.value)}
+                        className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#ff5a00] transition-colors"
+                    >
+                        <option value="text">نص حر</option>
+                        <option value="number">رقم</option>
+                        <option value="select">خيارات متعددة</option>
+                        <option value="image">صورة</option>
+                    </select>
+                    {gType === "select" ? (
+                        <input
+                            placeholder="الخيارات مفصولة بفواصل"
+                            value={gOptions}
+                            onChange={e => setGOptions(e.target.value)}
+                            className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#ff5a00] transition-colors"
                         />
-                        <button 
-                            onClick={handleCreateTeam}
-                            className="w-full bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Plus className="w-4 h-4"/> إضافة فريق
-                        </button>
-                    </div>
+                    ) : <div />}
                 </div>
 
-                <div className="bg-orange-50 p-4 rounded-xl border border-orange-100 hidden">
-                    <p className="text-xs text-orange-800 leading-relaxed font-medium">
-                        ملاحظة: لتعيين موظفين داخل الفريق، يرجى التوجه إلى شاشة "فريق العمل" واختيار الموظفين وتعديل بياناتهم للانضمام للفرق (قيد التطوير).
-                    </p>
-                </div>
+                {teams.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                        <button
+                            type="button"
+                            onClick={() => setGTeams(gTeams.length === teams.length ? [] : teams.map(t => t.id))}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
+                            {gTeams.length === teams.length ? "إلغاء الكل" : "تحديد الكل"}
+                        </button>
+                        {teams.map(team => (
+                            <button
+                                key={team.id}
+                                type="button"
+                                onClick={() => toggleGTeam(team.id)}
+                                className={cn(
+                                    "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
+                                    gTeams.includes(team.id)
+                                        ? "bg-[#ff5a00] text-white border-[#ff5a00] shadow-sm"
+                                        : "bg-white text-gray-600 border-gray-200 hover:border-[#ff5a00] hover:text-[#ff5a00]"
+                                )}
+                            >
+                                {gTeams.includes(team.id) ? "✓ " : ""}{team.name}
+                            </button>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-xs text-gray-400 mb-4">أنشئ فريقاً أولاً لتتمكن من تطبيق الحقول.</p>
+                )}
+
+                {gMsg && (
+                    <p className={cn(
+                        "text-xs font-bold mb-3 px-3 py-2 rounded-lg",
+                        gMsg.ok ? "text-emerald-700 bg-emerald-50" : "text-red-600 bg-red-50"
+                    )}>{gMsg.text}</p>
+                )}
+
+                <button
+                    onClick={handleGlobalCreate}
+                    disabled={gBusy || teams.length === 0}
+                    className="px-6 py-2.5 bg-[#ff5a00] hover:bg-[#e04f00] disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-2"
+                >
+                    {gBusy
+                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جارٍ الإنشاء...</>
+                        : <><Plus className="w-4 h-4" /> إنشاء الحقل{gTeams.length > 0 ? ` في ${gTeams.length} فريق` : ""}</>
+                    }
+                </button>
             </div>
 
-            {/* Teams List & Form Builder */}
-            <div className="lg:col-span-2 flex flex-col gap-4">
-                {teams.map(team => (
-                    <TeamCard 
-                        key={team.id} 
-                        team={team} 
-                        fields={fields.filter(f => f.team_id === team.id)}
-                        employees={employees}
-                        members={members.filter(m => m.team_id === team.id)} 
-                        onFieldsChange={(updated) => setFields(prev => [...prev.filter(f => f.team_id !== team.id), ...updated])}
-                        onMembersChange={(updated) => setMembers(prev => [...prev.filter(m => m.team_id !== team.id), ...updated])}
-                    />
-                ))}
-                
-                {teams.length === 0 && (
-                    <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 flex flex-col items-center">
-                        <Users className="w-12 h-12 text-gray-200 mb-3" />
-                        <p>لا توجد فرق عمل حتى الان.</p>
-                        <p className="text-sm">أنشئ فريقك الأول للبدء في تجميع التقارير الميدانية.</p>
+            {/* ── Teams Grid ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-1">
+                    <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
+                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-gray-400"/> فرق العمل</h3>
+                        <div className="flex flex-col gap-3">
+                            <input
+                                className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#ff5a00] transition-colors"
+                                placeholder="اسم الفريق (مثال: المبيعات الخارجية)"
+                                value={newTeamName} onChange={e => setNewTeamName(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleCreateTeam()}
+                            />
+                            <button
+                                onClick={handleCreateTeam}
+                                className="w-full bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-4 h-4"/> إضافة فريق
+                            </button>
+                        </div>
                     </div>
-                )}
+                </div>
+
+                <div className="lg:col-span-2 flex flex-col gap-4">
+                    {teams.map(team => (
+                        <TeamCard
+                            key={team.id}
+                            team={team}
+                            fields={fields.filter(f => f.team_id === team.id)}
+                            employees={employees}
+                            members={members.filter(m => m.team_id === team.id)}
+                            onFieldsChange={(updated) => setFields(prev => [...prev.filter(f => f.team_id !== team.id), ...updated])}
+                            onMembersChange={(updated) => setMembers(prev => [...prev.filter(m => m.team_id !== team.id), ...updated])}
+                        />
+                    ))}
+                    {teams.length === 0 && (
+                        <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 flex flex-col items-center">
+                            <Users className="w-12 h-12 text-gray-200 mb-3" />
+                            <p>لا توجد فرق عمل حتى الان.</p>
+                            <p className="text-sm">أنشئ فريقك الأول للبدء في تجميع التقارير الميدانية.</p>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
