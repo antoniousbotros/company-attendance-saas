@@ -171,6 +171,15 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
     const [editingReport, setEditingReport] = useState<ReportObj | null>(null);
     const [deletingReport, setDeletingReport] = useState<ReportObj | null>(null);
 
+    // ── Resizable column widths ─────────────────────────────────────────────
+    const [colWidths, setColWidths] = useState<Record<string, number>>({
+        date: 130, employee: 160, team: 100, notes: 160, location: 80
+    });
+    // Initialize widths for dynamic cols when dedupedCols change
+    // (called after dedupedCols is derived below — we use a callback here)
+    const setColWidth = (key: string, w: number) =>
+        setColWidths(prev => ({ ...prev, [key]: Math.max(60, Math.min(500, w)) }));
+
     const closeLightbox = useCallback(() => setLightboxUrl(null), []);
 
     // Close on ESC
@@ -199,6 +208,38 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
     // Helper: get the first non-empty value from a report for a column group
     const getColValue = (r: ReportObj, col: { ids: string[] }) =>
         col.ids.map(id => r.values[id]).find(v => v && v.trim() !== "") || "";
+
+    // Initialize widths for newly-seen dynamic columns
+    const ensureDynColWidths = (cols: typeof dedupedCols) => {
+        setColWidths(prev => {
+            const next = { ...prev };
+            let changed = false;
+            cols.forEach(c => { if (!(c.label in next)) { next[c.label] = 150; changed = true; } });
+            return changed ? next : prev;
+        });
+    };
+
+    // Auto-fit: measure max content length → derive pixel width
+    const autoFitCol = (key: string, currentDedupedCols: typeof dedupedCols, currentReports: ReportObj[]) => {
+        const HEADER_NAMES: Record<string, string> = {
+            date: 'التاريخ والوقت', employee: 'الموظف', team: 'الفريق', notes: 'الملاحظات', location: 'الموقع'
+        };
+        let maxLen = (HEADER_NAMES[key] || key).length;
+        currentReports.forEach(r => {
+            let val = '';
+            if (key === 'date')     val = new Date(r.date).toLocaleDateString('en-GB') + ' 12:00 AM';
+            else if (key === 'employee') val = r.employee_name || '';
+            else if (key === 'team')     val = r.team_name || '';
+            else if (key === 'notes')    val = r.notes || '';
+            else if (key === 'location') val = r.location_lat ? 'View Map' : '';
+            else {
+                const dc = currentDedupedCols.find(c => c.label === key);
+                if (dc) val = getColValue(r, dc);
+            }
+            if (val.length > maxLen) maxLen = val.length;
+        });
+        setColWidth(key, Math.max(80, maxLen * 9 + 40));
+    };
 
     const filteredReports = reports.filter(r => {
         if (filterTeam && r.team_id !== filterTeam) return false;
@@ -380,16 +421,16 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                 
                 <div className="overflow-x-auto w-full">
                     <div className="min-w-[700px]">
-                        {/* Header row */}
-                        <div className="flex items-center bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100">
-                            <div className="px-5 py-4 w-[130px] shrink-0 text-right">التاريخ والوقت</div>
-                            <div className="px-5 py-4 w-[160px] shrink-0 text-right">الموظف</div>
-                            <div className="px-5 py-4 w-[100px] shrink-0 text-right">الفريق</div>
-                            {dedupedCols.map(col => (
-                                <div key={col.label} className="px-5 py-4 flex-1 text-right">{col.label}</div>
-                            ))}
-                            <div className="px-5 py-4 w-[160px] shrink-0 text-right">الملاحظات</div>
-                            <div className="px-5 py-4 w-[80px] shrink-0 text-center">الموقع</div>
+                        {/* Header row — resizable columns */}
+                        <div className="flex items-center bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100 select-none">
+                            <ResizableColHeader colKey="date"     width={colWidths.date     ?? 130} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>التاريخ والوقت</ResizableColHeader>
+                            <ResizableColHeader colKey="employee" width={colWidths.employee ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الموظف</ResizableColHeader>
+                            <ResizableColHeader colKey="team"     width={colWidths.team     ?? 100} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الفريق</ResizableColHeader>
+                            {(ensureDynColWidths(dedupedCols), dedupedCols.map(col => (
+                                <ResizableColHeader key={col.label} colKey={col.label} width={colWidths[col.label] ?? 150} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{col.label}</ResizableColHeader>
+                            )))}
+                            <ResizableColHeader colKey="notes"    width={colWidths.notes    ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الملاحظات</ResizableColHeader>
+                            <ResizableColHeader colKey="location" width={colWidths.location ?? 80}  onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)} center>الموقع</ResizableColHeader>
                         </div>
 
                         {/* Body rows */}
@@ -402,11 +443,11 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                                 onDelete={() => setDeletingReport(r)}
                             >
                                 <div className="flex items-center text-sm font-medium text-gray-700 hover:bg-gray-50/50 transition-colors w-full">
-                                    <div className="px-5 py-3 w-[130px] shrink-0 text-gray-500">
+                                    <div className="px-5 py-3 shrink-0 text-gray-500 overflow-hidden" style={{ width: colWidths.date ?? 130 }}>
                                         <div>{new Date(r.date).toLocaleDateString("en-GB")}</div>
                                         <div className="text-xs text-gray-400 font-mono mt-0.5">{new Date(r.created_at).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", hour12: true })}</div>
                                     </div>
-                                    <div className="px-5 py-3 w-[160px] shrink-0">
+                                    <div className="px-5 py-3 shrink-0 overflow-hidden" style={{ width: colWidths.employee ?? 160 }}>
                                         <div className="flex items-center gap-2">
                                             <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
                                                 {r.employee_name.charAt(0)}
@@ -414,14 +455,14 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                                             <span className="truncate">{r.employee_name}</span>
                                         </div>
                                     </div>
-                                    <div className="px-5 py-3 w-[100px] shrink-0">
+                                    <div className="px-5 py-3 shrink-0 overflow-hidden" style={{ width: colWidths.team ?? 100 }}>
                                         <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
                                     </div>
                                     {dedupedCols.map(col => {
                                         const value = getColValue(r, col);
                                         const isImage = col.isImage || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
                                         return (
-                                            <div key={col.label} className="px-5 py-3 flex-1 text-center bg-blue-50/20">
+                                            <div key={col.label} className="px-5 py-3 shrink-0 text-center bg-blue-50/20 overflow-hidden" style={{ width: colWidths[col.label] ?? 150 }}>
                                                 {isImage && value ? (
                                                     <button
                                                         onClick={() => setLightboxUrl(value)}
@@ -436,8 +477,8 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                                             </div>
                                         );
                                     })}
-                                    <div className="px-5 py-3 w-[160px] shrink-0 text-gray-500 truncate" title={r.notes}>{r.notes || "-"}</div>
-                                    <div className="px-5 py-3 w-[80px] shrink-0 text-center">
+                                    <div className="px-5 py-3 shrink-0 text-gray-500 truncate overflow-hidden" style={{ width: colWidths.notes ?? 160 }} title={r.notes}>{r.notes || "-"}</div>
+                                    <div className="px-5 py-3 shrink-0 text-center" style={{ width: colWidths.location ?? 80 }}>
                                         {r.location_lat ? (
                                             <a
                                                 href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`}
@@ -596,6 +637,69 @@ function SwipeableRow({ children, onEdit, onDelete }: { children: React.ReactNod
                 onMouseDown={onMouseDown}
             >
                 {children}
+            </div>
+        </div>
+    );
+}
+
+// ── ResizableColHeader ──────────────────────────────────────────────────────
+function ResizableColHeader({
+    colKey, width, onWidthChange, onAutoFit, center, children
+}: {
+    colKey: string;
+    width: number;
+    onWidthChange: (key: string, w: number) => void;
+    onAutoFit: (key: string) => void;
+    center?: boolean;
+    children: React.ReactNode;
+}) {
+    const startXRef = useRef(0);
+    const startWRef = useRef(0);
+    const [active, setActive] = useState(false);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startXRef.current = e.clientX;
+        startWRef.current = width;
+        setActive(true);
+        const onMove = (ev: MouseEvent) => {
+            const newW = startWRef.current + (ev.clientX - startXRef.current);
+            onWidthChange(colKey, newW);
+        };
+        const onUp = () => {
+            setActive(false);
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        };
+        document.addEventListener('mousemove', onMove);
+        document.addEventListener('mouseup', onUp);
+    };
+
+    return (
+        <div
+            className="relative shrink-0 overflow-hidden"
+            style={{ width }}
+        >
+            <div className={cn("px-5 py-4 overflow-hidden text-ellipsis whitespace-nowrap", center ? "text-center" : "text-right")}>
+                {children}
+            </div>
+            {/* Resize handle — drag to resize, double-click to auto-fit */}
+            <div
+                className={cn(
+                    "absolute top-0 end-0 bottom-0 w-[5px] z-20 cursor-col-resize group",
+                    "hover:bg-[#ff5a00]/30 transition-colors",
+                    active && "bg-[#ff5a00]/60"
+                )}
+                onMouseDown={handleMouseDown}
+                onDoubleClick={e => { e.stopPropagation(); onAutoFit(colKey); }}
+                title="Drag to resize • Double-click to auto-fit"
+            >
+                {/* Visual divider line */}
+                <div className={cn(
+                    "absolute top-2 bottom-2 end-[2px] w-[1px] bg-gray-200 group-hover:bg-[#ff5a00]/60 transition-colors",
+                    active && "bg-[#ff5a00]"
+                )} />
             </div>
         </div>
     );
