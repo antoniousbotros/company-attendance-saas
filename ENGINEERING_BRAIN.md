@@ -103,3 +103,21 @@
 - **v2.0.0**: Employee Portal (`team.yawmy.app`), simplified pricing (4 plans, all features), sadmin pricing control, security hardening.
 - **v1.1.0**: Major UI overhaul (Notion Style), Cookie-based Auth, and multi-tenant bot support.
 - **v1.0.0**: Initial release of SyncTime SaaS.
+- **v2.2.0**: Sales Tracking enhancements — resizable columns, RTL drag fix, sticky employee column, mobile card view, location validation (3 layers), payroll bug fixes, Telegram bot parity (holiday guard, WFH bypass, edit-last-report), middleware Edge Runtime fix.
+
+## DECISIONS LOG (v2.2.0)
+- **2026-04-19**: Fixed React error #301 in sales-tracking — moved `setColWidths` call from render into `useEffect` to comply with React rendering rules.
+- **2026-04-19**: Inverted drag delta in `ResizableColHeader` for RTL — `position: sticky; end-0` places handle on LEFT in RTL, so rightward drag must shrink the column.
+- **2026-04-19**: Added 3-layer location enforcement for field reports: (1) API route returns 400 if lat/lng missing, (2) team web app disables submit button + shows error, (3) Telegram bot re-prompts for location before completing any draft report.
+- **2026-04-20**: Fixed 3 payroll calculation bugs: (a) overtime pay now correctly uses `hourlyRate × otRate × hours`; (b) late minutes no longer double-counted against missing-hours deduction; (c) date strings built from loop vars instead of `toISOString()` to avoid UTC offset errors on Cairo (UTC+2) servers.
+- **2026-04-21**: Sales tracking table restructured into two panels: sticky (date + employee, outside transform) + SwipeableRow (data columns only). Root cause: CSS `position: sticky` doesn't work inside CSS `transform` parents. Extracting sticky cells from SwipeableRow's `translateX` scope solves it permanently.
+- **2026-04-21**: Added mobile responsive card view for sales tracking (`< lg`). Cards show employee name prominently with explicit edit/delete buttons — swipe gesture removed on mobile to prevent conflict with horizontal scroll.
+- **2026-04-21**: **CRITICAL FIX** — Replaced `import { createHmac } from 'crypto'` in `src/middleware.ts` with Web Crypto API (`crypto.subtle.sign`). Node.js `crypto` module is not available in Vercel Edge Runtime; this was a silent runtime bug that could crash sadmin route protection on every request. Token generation in `api/sadmin/auth/route.ts` remains on Node.js (API route, not middleware) and is unaffected.
+
+## KNOWN ISSUES (updated v2.2.0)
+- **RESOLVED**: `crypto` module in middleware Edge Runtime — fixed in v2.2.0 (replaced with Web Crypto API).
+- **Pre-existing**: Sadmin auth uses HMAC tokens derived from the `SADMIN_PASSWORD` env var. If the password is weak or leaked, sadmin is compromised. Upgrade to dedicated sadmin user table with bcrypt in a future sprint.
+- **Pre-existing**: `employee_otp`, `employee_sessions`, `pricing_config` tables have no RLS. Access is only via `supabaseAdmin` (service role) in API routes. Safe for now but should add RLS as defence-in-depth.
+- **Pre-existing**: Sadmin pricing editor saves to `pricing_config` DB table, but customer-facing billing reads from hardcoded `billing.ts`. Price changes in sadmin UI do NOT propagate to customers until `billing.ts` is refactored to read from DB.
+- **Pre-existing**: Next.js 16 deprecation warning: `middleware.ts` file convention will become `proxy.ts`. Not breaking; rename in next major version bump.
+- **Pre-existing**: `middleware.ts` reads `companies.onboarding_step` on every authenticated request when `onb_done` cookie is absent. Can be expensive under load. Mitigation: cookie is set once onboarding is complete, so DB is only hit once per fresh session.
