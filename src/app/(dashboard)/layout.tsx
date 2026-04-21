@@ -155,9 +155,9 @@ function Sidebar({
         <div className="px-3 pb-3 space-y-2 border-t border-[#f5f5f5] pt-4">
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-[14px] text-red-600 hover:bg-red-50 transition-colors"
+            className="w-full flex justify-start items-center gap-3 px-3 py-2 rounded-md text-[14px] text-red-600 hover:bg-red-50 transition-colors"
           >
-            <LogOut className="w-[18px] h-[18px] shrink-0" />
+            <LogOut className={cn("w-[18px] h-[18px] shrink-0", isRTL && "rotate-180")} />
             <span className="truncate">{isRTL ? "تسجيل الخروج" : "Sign Out"}</span>
           </button>
         </div>
