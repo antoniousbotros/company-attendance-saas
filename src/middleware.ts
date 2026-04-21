@@ -1,13 +1,21 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { createHmac } from 'crypto';
 
-function verifySadminToken(token: string, secret: string): boolean {
+// ── Edge-compatible HMAC verification (Web Crypto API — no Node.js deps) ──────
+async function verifySadminToken(token: string, secret: string): Promise<boolean> {
   try {
     const [payloadB64, sig] = token.split('.');
     if (!payloadB64 || !sig) return false;
-    const payload = Buffer.from(payloadB64, 'base64').toString();
-    const expectedSig = createHmac('sha256', secret).update(payload).digest('hex');
+    const payload = atob(payloadB64); // atob is available in Edge Runtime
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw', enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false, ['sign']
+    );
+    const mac = await crypto.subtle.sign('HMAC', key, enc.encode(payload));
+    const expectedSig = Array.from(new Uint8Array(mac))
+      .map(b => b.toString(16).padStart(2, '0')).join('');
     return sig === expectedSig;
   } catch {
     return false;
@@ -53,7 +61,7 @@ export async function middleware(request: NextRequest) {
   if (url.pathname.startsWith("/sadmin") && !url.pathname.startsWith("/sadmin/login")) {
     const sadminSession = request.cookies.get("sadmin_session");
     const sadminSecret = process.env.SADMIN_PASSWORD || "";
-    const isValid = sadminSession && sadminSecret && verifySadminToken(sadminSession.value, sadminSecret);
+    const isValid = sadminSession && sadminSecret && await verifySadminToken(sadminSession.value, sadminSecret);
     if (!isValid) {
       url.pathname = "/sadmin/login";
       return NextResponse.redirect(url);
