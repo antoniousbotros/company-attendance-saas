@@ -308,7 +308,7 @@ export async function POST(req: NextRequest) {
       const lang = employee.companies.bot_language || 'en';
 
       // Check for active draft report
-      const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft").single();
+      const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft").single();
       if (!draftReport) return ctx.reply(lang === 'ar' ? "لا يوجد تقرير نشط لإرفاق الصورة." : "No active report to attach photo to.");
 
       // Find the next unfilled image field
@@ -1004,7 +1004,7 @@ export async function POST(req: NextRequest) {
           if(!employee) return;
           const lang = (employee.companies as any).bot_language || 'en';
 
-          const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft");
+          const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft");
           const draftReport = reports?.find(r => r.id.startsWith(shortReportId));
           if (!draftReport) {
               return ctx.editMessageText(lang === 'ar' ? "❌ لم يتم العثور على المسودة." : "❌ Draft not found.").catch(()=>{});
@@ -1161,7 +1161,7 @@ export async function POST(req: NextRequest) {
              const lang = (employee.companies as any).bot_language || 'en';
 
              // Find the draft report
-             const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft");
+             const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft");
              const draftReport = reports?.find(r => r.id.startsWith(shortReportId));
              
              if (!draftReport) return ctx.reply(lang === 'ar' ? "❌ لم يتم العثور على المسودة، قد تكون أُكملت مسبقاً." : "❌ Report draft not found or already completed.");
