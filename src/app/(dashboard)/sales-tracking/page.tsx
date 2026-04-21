@@ -420,30 +420,95 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                     </div>
                 </div>
                 
-                <div className="overflow-x-auto w-full">
-                    <div className="min-w-[700px]">
-                        {/* Header row — resizable columns */}
-                        <div className="flex items-center bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100 select-none">
-                            <ResizableColHeader colKey="date"     width={colWidths.date     ?? 130} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>التاريخ والوقت</ResizableColHeader>
-                            <ResizableColHeader colKey="employee" width={colWidths.employee ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الموظف</ResizableColHeader>
-                            <ResizableColHeader colKey="team"     width={colWidths.team     ?? 100} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الفريق</ResizableColHeader>
-                            {dedupedCols.map(col => (
-                                <ResizableColHeader key={col.label} colKey={col.label} width={colWidths[col.label] ?? 150} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{col.label}</ResizableColHeader>
-                            ))}
-                            <ResizableColHeader colKey="notes"    width={colWidths.notes    ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الملاحظات</ResizableColHeader>
-                            <ResizableColHeader colKey="location" width={colWidths.location ?? 80}  onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)} center>الموقع</ResizableColHeader>
+                {/* ── Mobile: card list (lg and below) ──────────────────────────────── */}
+                <div className="lg:hidden space-y-2 p-3">
+                    {filteredReports.length === 0 ? (
+                        <div className="text-center py-12 text-gray-400">لا توجد تقارير مطابقة.</div>
+                    ) : filteredReports.map(r => (
+                        <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
+                            {/* Employee + date header */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0">
+                                        {r.employee_name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-gray-900 text-sm leading-tight">{r.employee_name}</div>
+                                        <div className="text-[11px] text-gray-400 font-medium">{r.team_name}</div>
+                                    </div>
+                                </div>
+                                <div className="text-left">
+                                    <div className="text-xs font-semibold text-gray-600">{new Date(r.date).toLocaleDateString("en-GB")}</div>
+                                    <div className="text-[11px] text-gray-400 font-mono">{new Date(r.created_at).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", hour12: true })}</div>
+                                </div>
+                            </div>
+                            {/* Field values */}
+                            {dedupedCols.length > 0 && (
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2 border-t border-gray-50">
+                                    {dedupedCols.map(col => {
+                                        const value = getColValue(r, col);
+                                        const isImg = col.isImage || (value.startsWith("https://") && /(\.jpg|\.jpeg|\.png|\.webp|\.gif|supabase\.co\/storage)/i.test(value));
+                                        return (
+                                            <div key={col.label} className="min-w-0">
+                                                <div className="text-[10px] text-gray-400 uppercase tracking-wide truncate">{col.label}</div>
+                                                {isImg && value ? (
+                                                    <button onClick={() => setLightboxUrl(value)} className="mt-0.5">
+                                                        <img src={value} alt={col.label} className="w-12 h-12 rounded-lg object-cover border border-gray-100" />
+                                                    </button>
+                                                ) : (
+                                                    <div className="text-xs font-semibold text-gray-800 truncate">{value || "-"}</div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                            {r.notes && <p className="text-[11px] text-gray-500 italic border-t border-gray-50 pt-1">{r.notes}</p>}
+                            {/* Actions row */}
+                            <div className="flex items-center justify-between pt-1 border-t border-gray-50">
+                                {r.location_lat ? (
+                                    <a href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center gap-1 text-xs text-green-600 font-semibold hover:underline">
+                                        <MapPin className="w-3.5 h-3.5" /> خريطة
+                                    </a>
+                                ) : <span />}
+                                <div className="flex gap-2">
+                                    <button onClick={() => setEditingReport(r)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition-colors">تعديل</button>
+                                    <button onClick={() => setDeletingReport(r)} className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 transition-colors">حذف</button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Desktop: sticky-column table (lg and above) ─────────────────────── */}
+                <div className="hidden lg:block overflow-x-auto w-full">
+                    <div style={{ minWidth: (colWidths.date ?? 130) + (colWidths.employee ?? 160) + (colWidths.team ?? 100) + dedupedCols.reduce((s, c) => s + (colWidths[c.label] ?? 150), 0) + (colWidths.notes ?? 160) + (colWidths.location ?? 80) }}>
+                        {/* Header row */}
+                        <div className="flex bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100 select-none">
+                            {/* Sticky section: date + employee (always visible) */}
+                            <div className="sticky right-0 z-20 flex bg-[#fafafa] shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+                                <ResizableColHeader colKey="date"     width={colWidths.date     ?? 130} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>التاريخ والوقت</ResizableColHeader>
+                                <ResizableColHeader colKey="employee" width={colWidths.employee ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الموظف</ResizableColHeader>
+                            </div>
+                            {/* Scrollable section */}
+                            <div className="flex">
+                                <ResizableColHeader colKey="team"     width={colWidths.team     ?? 100} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الفريق</ResizableColHeader>
+                                {dedupedCols.map(col => (
+                                    <ResizableColHeader key={col.label} colKey={col.label} width={colWidths[col.label] ?? 150} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{col.label}</ResizableColHeader>
+                                ))}
+                                <ResizableColHeader colKey="notes"    width={colWidths.notes    ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الملاحظات</ResizableColHeader>
+                                <ResizableColHeader colKey="location" width={colWidths.location ?? 80}  onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)} center>الموقع</ResizableColHeader>
+                            </div>
                         </div>
 
                         {/* Body rows */}
                         {filteredReports.length === 0 ? (
                             <div className="text-center py-12 text-gray-400">لا توجد تقارير مطابقة.</div>
                         ) : filteredReports.map(r => (
-                            <SwipeableRow
-                                key={r.id}
-                                onEdit={() => setEditingReport(r)}
-                                onDelete={() => setDeletingReport(r)}
-                            >
-                                <div className="flex items-center text-sm font-medium text-gray-700 hover:bg-gray-50/50 transition-colors w-full">
+                            <div key={r.id} className="flex border-b border-gray-50 last:border-0 group">
+                                {/* Sticky: date + employee — outside SwipeableRow so sticky works */}
+                                <div className="sticky right-0 z-10 bg-white flex items-center text-sm font-medium text-gray-700 shadow-[0_0_6px_rgba(0,0,0,0.04)] group-hover:bg-gray-50/60 transition-colors">
                                     <div className="px-5 py-3 shrink-0 text-gray-500 overflow-hidden" style={{ width: colWidths.date ?? 130 }}>
                                         <div>{new Date(r.date).toLocaleDateString("en-GB")}</div>
                                         <div className="text-xs text-gray-400 font-mono mt-0.5">{new Date(r.created_at).toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit", hour12: true })}</div>
@@ -453,46 +518,51 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                                             <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
                                                 {r.employee_name.charAt(0)}
                                             </div>
-                                            <span className="truncate">{r.employee_name}</span>
+                                            <span className="truncate font-semibold">{r.employee_name}</span>
                                         </div>
                                     </div>
-                                    <div className="px-5 py-3 shrink-0 overflow-hidden" style={{ width: colWidths.team ?? 100 }}>
-                                        <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
-                                    </div>
-                                    {dedupedCols.map(col => {
-                                        const value = getColValue(r, col);
-                                        const isImage = col.isImage || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
-                                        return (
-                                            <div key={col.label} className="px-5 py-3 shrink-0 text-center bg-blue-50/20 overflow-hidden" style={{ width: colWidths[col.label] ?? 150 }}>
-                                                {isImage && value ? (
-                                                    <button
-                                                        onClick={() => setLightboxUrl(value)}
-                                                        className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#fff1e8] hover:bg-[#ffd4b8] border border-[#ffd4b8] text-[#ff5a00] transition-all hover:scale-105 active:scale-95"
-                                                        title="عرض الصورة"
-                                                    >
-                                                        <ImageIcon className="w-4 h-4" />
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-sm text-gray-700">{value || "-"}</span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                    <div className="px-5 py-3 shrink-0 text-gray-500 truncate overflow-hidden" style={{ width: colWidths.notes ?? 160 }} title={r.notes}>{r.notes || "-"}</div>
-                                    <div className="px-5 py-3 shrink-0 text-center" style={{ width: colWidths.location ?? 80 }}>
-                                        {r.location_lat ? (
-                                            <a
-                                                href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`}
-                                                target="_blank" rel="noopener noreferrer"
-                                                className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                                                title="عرض على الخريطة"
-                                            >
-                                                <MapPin className="w-4 h-4" />
-                                            </a>
-                                        ) : <span className="text-gray-300">-</span>}
-                                    </div>
                                 </div>
-                            </SwipeableRow>
+                                {/* Swipeable data section — only the non-sticky columns */}
+                                <SwipeableRow onEdit={() => setEditingReport(r)} onDelete={() => setDeletingReport(r)}>
+                                    <div className="flex items-center text-sm font-medium text-gray-700 group-hover:bg-gray-50/40 transition-colors">
+                                        <div className="px-5 py-3 shrink-0 overflow-hidden" style={{ width: colWidths.team ?? 100 }}>
+                                            <span className="px-2 py-1 bg-gray-100 rounded-md text-gray-600 text-[11px]">{r.team_name}</span>
+                                        </div>
+                                        {dedupedCols.map(col => {
+                                            const value = getColValue(r, col);
+                                            const isImage = col.isImage || (value.startsWith("https://") && (value.includes(".jpg") || value.includes(".jpeg") || value.includes(".png") || value.includes(".webp") || value.includes(".gif") || value.includes("supabase.co/storage")));
+                                            return (
+                                                <div key={col.label} className="px-5 py-3 shrink-0 text-center bg-blue-50/20 overflow-hidden" style={{ width: colWidths[col.label] ?? 150 }}>
+                                                    {isImage && value ? (
+                                                        <button
+                                                            onClick={() => setLightboxUrl(value)}
+                                                            className="inline-flex items-center justify-center w-9 h-9 rounded-xl bg-[#fff1e8] hover:bg-[#ffd4b8] border border-[#ffd4b8] text-[#ff5a00] transition-all hover:scale-105 active:scale-95"
+                                                            title="عرض الصورة"
+                                                        >
+                                                            <ImageIcon className="w-4 h-4" />
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-sm text-gray-700">{value || "-"}</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        <div className="px-5 py-3 shrink-0 text-gray-500 truncate overflow-hidden" style={{ width: colWidths.notes ?? 160 }} title={r.notes}>{r.notes || "-"}</div>
+                                        <div className="px-5 py-3 shrink-0 text-center" style={{ width: colWidths.location ?? 80 }}>
+                                            {r.location_lat ? (
+                                                <a
+                                                    href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`}
+                                                    target="_blank" rel="noopener noreferrer"
+                                                    className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                                                    title="عرض على الخريطة"
+                                                >
+                                                    <MapPin className="w-4 h-4" />
+                                                </a>
+                                            ) : <span className="text-gray-300">-</span>}
+                                        </div>
+                                    </div>
+                                </SwipeableRow>
+                            </div>
                         ))}
                     </div>
                 </div>
@@ -608,7 +678,7 @@ function SwipeableRow({ children, onEdit, onDelete }: { children: React.ReactNod
     const close = () => setOffsetX(0);
 
     return (
-        <div className="relative overflow-hidden border-b border-gray-50 last:border-0">
+        <div className="relative overflow-hidden flex-1 min-w-0">
             {/* Edit — swipe right reveals (left side, green) */}
             <div className="absolute left-0 inset-y-0 flex flex-col items-center justify-center gap-0.5 bg-emerald-500 text-white text-[10px] font-bold select-none" style={{ width: ACTION_W }}>
                 <Pencil className="w-4 h-4" />
