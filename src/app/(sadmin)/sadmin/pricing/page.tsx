@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Save, Plus, Trash2, RefreshCw, DollarSign, Users, Sparkles } from "lucide-react";
+import { Save, Plus, Trash2, RefreshCw, DollarSign, Users, Sparkles, CreditCard, Zap, CheckCircle, XCircle, AlertCircle } from "lucide-react";
 
 interface PlanConfig {
   name: string;
@@ -16,6 +16,7 @@ interface PricingConfig {
   features: string[];
   features_ar: string[];
   extra_employee_cost: number;
+  payment_gateway: "stripe" | "paymob";
 }
 
 export default function SadminPricing() {
@@ -37,6 +38,7 @@ export default function SadminPricing() {
           features: data.config.features,
           features_ar: data.config.features_ar,
           extra_employee_cost: data.config.extra_employee_cost,
+          payment_gateway: data.config.payment_gateway ?? "stripe",
         });
       }
     } catch (e) {
@@ -135,7 +137,7 @@ export default function SadminPricing() {
             Pricing Control
           </h1>
           <p className="text-zinc-400">
-            Manage plans, prices, employee limits, features, and extra costs.
+            Manage plans, prices, employee limits, features, and payment gateway.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -151,12 +153,113 @@ export default function SadminPricing() {
             className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm px-5 py-2.5 rounded-xl transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/20"
           >
             <Save className="w-4 h-4" />
-            {saving ? "Saving..." : saved ? "Saved!" : "Save Changes"}
+            {saving ? "Saving..." : saved ? "✓ Saved!" : "Save Changes"}
           </button>
         </div>
       </div>
 
-      {/* Plan Cards Grid */}
+      {/* ── Payment Gateway Control ─────────────────────────────────────── */}
+      <div>
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-violet-400" />
+          Payment Gateway
+        </h2>
+        <div className="bg-zinc-900/50 border border-zinc-800/50 rounded-2xl p-6 space-y-5">
+
+          {/* Toggle */}
+          <div className="flex gap-3">
+            {(["stripe", "paymob"] as const).map((gw) => {
+              const isActive = config.payment_gateway === gw;
+              const label = gw === "stripe" ? "Stripe" : "PayMob";
+              const desc = gw === "stripe"
+                ? "Global cards, recurring subscriptions, hosted checkout"
+                : "EGP payments, local Egyptian cards & wallets";
+              const accent = gw === "stripe" ? "indigo" : "amber";
+              return (
+                <button
+                  key={gw}
+                  onClick={() => setConfig({ ...config, payment_gateway: gw })}
+                  className={`flex-1 text-left p-4 rounded-xl border-2 transition-all ${
+                    isActive
+                      ? gw === "stripe"
+                        ? "border-indigo-500 bg-indigo-500/10"
+                        : "border-amber-500 bg-amber-500/10"
+                      : "border-zinc-800 bg-zinc-950 hover:border-zinc-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`font-bold text-sm ${
+                      isActive
+                        ? gw === "stripe" ? "text-indigo-300" : "text-amber-300"
+                        : "text-zinc-400"
+                    }`}>
+                      {label}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? gw === "stripe"
+                          ? "bg-indigo-500/20 text-indigo-300"
+                          : "bg-amber-500/20 text-amber-300"
+                        : "bg-zinc-800 text-zinc-500"
+                    }`}>
+                      {isActive ? "● ACTIVE" : "INACTIVE"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500">{desc}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Stripe status */}
+          {config.payment_gateway === "stripe" && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Required Vercel Env Vars</p>
+              {[
+                ["STRIPE_SECRET_KEY", "sk_live_..."],
+                ["STRIPE_WEBHOOK_SECRET", "whsec_..."],
+                ["STRIPE_PRICE_STARTER", "price_..."],
+                ["STRIPE_PRICE_PRO", "price_..."],
+                ["STRIPE_PRICE_ENTERPRISE", "price_..."],
+              ].map(([key, placeholder]) => (
+                <div key={key} className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5">
+                  <Zap className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                  <code className="text-xs text-indigo-300 font-mono flex-1">{key}</code>
+                  <span className="text-[10px] text-zinc-600">{placeholder}</span>
+                </div>
+              ))}
+              <p className="text-[10px] text-zinc-600 pt-1">
+                Set these in Vercel → Project → Settings → Environment Variables. Webhook URL: <code className="text-indigo-400">https://www.yawmy.app/api/billing/webhook</code>
+              </p>
+            </div>
+          )}
+
+          {/* PayMob status */}
+          {config.payment_gateway === "paymob" && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Required Env Vars</p>
+              {[
+                ["PAYMOB_API_KEY", "Your PayMob API key"],
+                ["PAYMOB_INTEGRATION_ID", "Card integration ID"],
+                ["PAYMOB_IFRAME_ID", "Payment iframe ID"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center gap-3 bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5">
+                  <Zap className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+                  <code className="text-xs text-amber-300 font-mono flex-1">{key}</code>
+                  <span className="text-[10px] text-zinc-600">{desc}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-start gap-2 bg-zinc-950 border border-zinc-800/50 rounded-xl p-3">
+            <AlertCircle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-zinc-400">
+              Changing the active gateway takes effect immediately after saving. Existing subscriptions on the other gateway remain active until they expire.
+            </p>
+          </div>
+        </div>
+      </div>
       <div>
         <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
           <DollarSign className="w-5 h-5 text-emerald-400" />

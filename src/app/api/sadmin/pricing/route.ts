@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, config: data });
+  // Note: data includes payment_gateway field from DB
 }
 
 export async function POST(req: NextRequest) {
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
     if (features !== undefined) payload.features = features;
     if (features_ar !== undefined) payload.features_ar = features_ar;
     if (extra_employee_cost !== undefined) payload.extra_employee_cost = extra_employee_cost;
+    if (body.payment_gateway !== undefined) payload.payment_gateway = body.payment_gateway;
 
     const { error } = await supabaseAdmin
       .from("pricing_config")

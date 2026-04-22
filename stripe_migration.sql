@@ -15,3 +15,8 @@ ALTER TABLE subscriptions
 -- Optional: index for fast webhook lookups
 CREATE INDEX IF NOT EXISTS idx_companies_stripe_customer_id
   ON companies(stripe_customer_id);
+
+-- Add payment_gateway control to pricing_config
+ALTER TABLE pricing_config ADD COLUMN IF NOT EXISTS payment_gateway text DEFAULT 'stripe';
+-- Set default for existing row
+UPDATE pricing_config SET payment_gateway = 'stripe' WHERE id = '00000000-0000-0000-0000-000000000001' AND payment_gateway IS NULL;
