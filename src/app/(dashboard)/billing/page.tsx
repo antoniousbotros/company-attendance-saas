@@ -100,6 +100,19 @@ function BillingPageInner() {
   const paidPlanEntries = Object.entries(PLANS).filter(([id]) => id !== "free");
   const discountPct = Math.round(YEARLY_DISCOUNT * 100);
 
+  // Plan rank for upgrade vs downgrade detection
+  const planOrder = ["free", "basic", "pro", "business", "enterprise"];
+  const currentPlanRank = planOrder.indexOf(company.plan_id);
+
+  // Subscription status label + tone
+  const statusConfig: Record<string, { label: string; tone: "success" | "danger" | "neutral" }> = {
+    active:    { label: t.active,                                         tone: "success" },
+    trialing:  { label: t.activeTrial,                                    tone: "neutral" },
+    past_due:  { label: isRTL ? "تأخر في الدفع" : "Past Due",          tone: "danger"  },
+    cancelled: { label: isRTL ? "ملغي" : "Cancelled",                   tone: "danger"  },
+  };
+  const statusInfo = statusConfig[company.subscription_status] ?? { label: company.subscription_status, tone: "neutral" as const };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <PageHeader title={t.billingTitle} subtitle={t.billingSubtitle} isRTL={isRTL} />
@@ -118,13 +131,35 @@ function BillingPageInner() {
         </div>
       )}
 
+      {/* Past-due payment warning */}
+      {company.subscription_status === "past_due" && (
+        <div className="flex items-center justify-between gap-4 bg-[#fef2f2] border border-[#fecaca] rounded-xl px-5 py-4">
+          <div className="flex items-center gap-3">
+            <XCircle className="w-4 h-4 text-[#b91c1c] shrink-0" />
+            <p className="text-sm font-bold text-[#b91c1c]">
+              {isRTL
+                ? "⚠️ فشلت عملية تجديد الدفع. يرجى تحديث بيانات الدفع لتجنّب تعطّل حسابك."
+                : "⚠️ Your last payment failed. Please update your payment method to avoid service interruption."}
+            </p>
+          </div>
+          <a
+            href="https://billing.stripe.com"
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 text-xs font-black text-white bg-[#b91c1c] px-4 py-2 rounded-lg hover:bg-[#991b1b] transition-all"
+          >
+            {isRTL ? "تحديث بيانات الدفع" : "Update Payment"}
+          </a>
+        </div>
+      )}
+
       {/* Usage Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <SectionCard className="bg-[#f9fafb]">
           <div className="text-start">
             <p className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-1">{t.currentPlan}</p>
             <p className="text-xl font-black text-[#111]">{isRTL ? currentPlan.nameAr : currentPlan.name}</p>
-            <StatusPill label={company.subscription_status === "active" ? t.active : t.activeTrial} tone="success" />
+            <StatusPill label={statusInfo.label} tone={statusInfo.tone} />
           </div>
         </SectionCard>
         <SectionCard>
@@ -234,6 +269,8 @@ function BillingPageInner() {
           {paidPlanEntries.map(([id, plan]) => {
             const isCurrent = company.plan_id === id;
             const isPopular = plan.popular;
+            const cardRank = planOrder.indexOf(id);
+            const isDowngrade = !isCurrent && cardRank < currentPlanRank;
             const displayPrice = billingPeriod === "yearly"
               ? monthlyEquivalent(plan)
               : plan.price;
@@ -290,13 +327,18 @@ function BillingPageInner() {
                   <PrimaryButton
                     disabled={isCurrent || isUpgrading !== null}
                     onClick={() => handleUpgrade(id)}
-                    className="w-full text-xs"
+                    className={cn(
+                      "w-full text-xs",
+                      isDowngrade && !isCurrent && "bg-[#6b7280] hover:bg-[#4b5563]"
+                    )}
                   >
                     {isUpgrading === id
                       ? (isRTL ? "جاري التحويل..." : "Redirecting...")
                       : isCurrent
                         ? (isRTL ? "باقتك الحالية" : "Current Plan")
-                        : (isRTL ? "ترقية الآن" : "Upgrade Now")}
+                        : isDowngrade
+                          ? (isRTL ? "تخفيض الباقة" : "Downgrade")
+                          : (isRTL ? "ترقية الآن" : "Upgrade Now")}
                   </PrimaryButton>
                 </div>
               </SectionCard>
