@@ -1,14 +1,15 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { Check, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/LanguageContext";
-import { PLANS, ALL_FEATURES, ALL_FEATURES_AR, EXTRA_EMPLOYEE_COST } from "@/lib/billing";
+import { PLANS, ALL_FEATURES, ALL_FEATURES_AR, monthlyEquivalent, YEARLY_DISCOUNT } from "@/lib/billing";
 
 export default function PricingSection() {
   const { isRTL } = useLanguage();
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("yearly");
 
   const planEntries = Object.entries(PLANS);
   const features = isRTL ? ALL_FEATURES_AR : ALL_FEATURES;
@@ -25,6 +26,27 @@ export default function PricingSection() {
               ? "الفرق الوحيد هو عدد الموظفين. كل الميزات متاحة في كل الباقات."
               : "The only difference is the number of employees. Every feature is included in every plan."}
           </p>
+        </div>
+
+        {/* Billing Toggle */}
+        <div className="flex justify-center mb-8">
+          <div className="bg-[#eeeeee] p-1 rounded-xl inline-flex relative items-center gap-2">
+            <button
+              onClick={() => setBillingPeriod("monthly")}
+              className={cn("px-6 py-2 rounded-lg text-sm font-bold transition-all z-10", billingPeriod === "monthly" ? "bg-white text-[#111] shadow-sm" : "text-[#6b7280] hover:text-[#111]")}
+            >
+              {isRTL ? "شهري" : "Monthly"}
+            </button>
+            <button
+              onClick={() => setBillingPeriod("yearly")}
+              className={cn("px-6 py-2 rounded-lg text-sm font-bold transition-all z-10 flex items-center gap-2", billingPeriod === "yearly" ? "bg-white text-[#111] shadow-sm" : "text-[#6b7280] hover:text-[#111]")}
+            >
+              {isRTL ? "سنوي" : "Yearly"}
+              <span className="bg-[#ecfdf5] text-[#10b981] text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                {isRTL ? "خصم 30%" : "Save 30%"}
+              </span>
+            </button>
+          </div>
         </div>
 
         {/* Shared Features */}
@@ -69,7 +91,7 @@ export default function PricingSection() {
                   ) : (
                     <>
                       <span className={cn("text-3xl font-black", plan.popular ? "text-white" : "text-[#111]")}>
-                        {plan.price}
+                        {billingPeriod === "yearly" ? monthlyEquivalent(plan) : plan.price}
                       </span>
                       <span className={cn("text-sm font-bold", plan.popular ? "text-white/70" : "text-[#9ca3af]")}>
                         EGP/mo
@@ -77,6 +99,11 @@ export default function PricingSection() {
                     </>
                   )}
                 </div>
+                {billingPeriod === "yearly" && plan.price > 0 && (
+                  <p className={cn("text-xs font-bold mt-1 tracking-tight", plan.popular ? "text-white/80" : "text-[#10b981]")}>
+                    {isRTL ? `تدفع سنويًا (${plan.yearlyPrice} ج.م)` : `Billed annually (${plan.yearlyPrice} EGP)`}
+                  </p>
+                )}
               </div>
 
               <div className={cn("flex items-center gap-2 mb-6 pb-6 border-b", plan.popular ? "border-white/20" : "border-[#eeeeee]")}>
@@ -101,12 +128,6 @@ export default function PricingSection() {
             </div>
           ))}
         </div>
-
-        <p className="text-center text-sm text-[#6b7280] font-medium mt-8">
-          {isRTL
-            ? `تحتاج موظفين أكثر؟ أضف موظفين إضافيين بـ ${EXTRA_EMPLOYEE_COST} جنيه/شهر لكل موظف.`
-            : `Need more employees? Add extra at ${EXTRA_EMPLOYEE_COST} EGP/month each.`}
-        </p>
       </div>
     </section>
   );
