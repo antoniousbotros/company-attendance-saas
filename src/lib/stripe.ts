@@ -1,22 +1,35 @@
 import Stripe from "stripe";
 
 if (!process.env.STRIPE_SECRET_KEY) {
-  // Warn clearly during dev — don't crash the build
   console.warn("[stripe.ts] STRIPE_SECRET_KEY is not set.");
 }
 
-// Singleton — reused across hot-reloads in dev, instantiated once in prod
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_missing", {
   apiVersion: "2026-03-25.dahlia",
 });
 
 export default stripe;
 
-// ── Plan → Stripe Price ID map ────────────────────────────────────────────────
-// Populated from env vars you set per plan in Stripe Dashboard.
-// Each value is a recurring monthly Price ID (price_xxx).
-export const STRIPE_PRICE_IDS: Record<string, string | undefined> = {
-  starter:    process.env.STRIPE_PRICE_STARTER,
-  pro:        process.env.STRIPE_PRICE_PRO,
-  enterprise: process.env.STRIPE_PRICE_ENTERPRISE,
+// ── Price ID map: plan → { monthly, yearly } ──────────────────────────────────
+export const STRIPE_PRICE_IDS: Record<string, { monthly?: string; yearly?: string }> = {
+  basic: {
+    monthly: process.env.STRIPE_PRICE_BASIC_MONTHLY,
+    yearly:  process.env.STRIPE_PRICE_BASIC_YEARLY,
+  },
+  pro: {
+    monthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+    yearly:  process.env.STRIPE_PRICE_PRO_YEARLY,
+  },
+  business: {
+    monthly: process.env.STRIPE_PRICE_BUSINESS_MONTHLY,
+    yearly:  process.env.STRIPE_PRICE_BUSINESS_YEARLY,
+  },
+  enterprise: {
+    monthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
+    yearly:  process.env.STRIPE_PRICE_ENTERPRISE_YEARLY,
+  },
 };
+
+export function getStripePrice(planId: string, period: "monthly" | "yearly"): string | undefined {
+  return STRIPE_PRICE_IDS[planId]?.[period];
+}

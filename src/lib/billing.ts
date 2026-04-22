@@ -1,38 +1,58 @@
 export interface Plan {
   name: string;
   nameAr: string;
-  price: number;
+  price: number;        // monthly price EGP
+  yearlyPrice: number;  // total yearly price EGP (30% off)
   employeeLimit: number;
   popular?: boolean;
 }
+
+// 30% yearly discount constant
+export const YEARLY_DISCOUNT = 0.30;
 
 export const PLANS: Record<string, Plan> = {
   free: {
     name: "Free",
     nameAr: "مجاني",
     price: 0,
-    employeeLimit: 5,
+    yearlyPrice: 0,
+    employeeLimit: 3,
   },
-  starter: {
-    name: "Starter",
+  basic: {
+    name: "Basic",
     nameAr: "أساسي",
-    price: 149,
+    price: 79,
+    yearlyPrice: Math.round(79 * 12 * (1 - YEARLY_DISCOUNT)), // 664
     employeeLimit: 10,
   },
   pro: {
     name: "Pro",
     nameAr: "احترافي",
-    price: 499,
-    employeeLimit: 25,
+    price: 249,
+    yearlyPrice: Math.round(249 * 12 * (1 - YEARLY_DISCOUNT)), // 2092
+    employeeLimit: 30,
     popular: true,
+  },
+  business: {
+    name: "Business",
+    nameAr: "أعمال",
+    price: 699,
+    yearlyPrice: Math.round(699 * 12 * (1 - YEARLY_DISCOUNT)), // 5872
+    employeeLimit: 75,
   },
   enterprise: {
     name: "Enterprise",
     nameAr: "شركات",
-    price: 999,
-    employeeLimit: 50,
+    price: 1199,
+    yearlyPrice: Math.round(1199 * 12 * (1 - YEARLY_DISCOUNT)), // 10072
+    employeeLimit: 200,
   },
 };
+
+// Helper: effective monthly price when billed yearly
+export function monthlyEquivalent(plan: Plan): number {
+  return Math.round(plan.yearlyPrice / 12);
+}
 
 // All features are included in every plan
 export const ALL_FEATURES = [
@@ -57,12 +77,11 @@ export const ALL_FEATURES_AR = [
   "تحليلات",
 ];
 
-export const EXTRA_EMPLOYEE_COST = 50;
+export const EXTRA_EMPLOYEE_COST = 30; // EGP per extra employee
 
 export function calculateExtraCosts(employeeCount: number, planId: string) {
   const plan = PLANS[planId];
   if (!plan) return 0;
-
   if (employeeCount > plan.employeeLimit) {
     return (employeeCount - plan.employeeLimit) * EXTRA_EMPLOYEE_COST;
   }

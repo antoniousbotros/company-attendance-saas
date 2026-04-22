@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import stripe, { STRIPE_PRICE_IDS } from "@/lib/stripe";
+import stripe, { getStripePrice } from "@/lib/stripe";
 import { PLANS } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,8 @@ async function getActiveGateway(): Promise<"stripe" | "paymob"> {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { owner_id, plan_id } = body;
+    const { owner_id, plan_id, billing_period = "monthly" } = body;
+    const period: "monthly" | "yearly" = billing_period === "yearly" ? "yearly" : "monthly";
 
     if (!owner_id || !plan_id) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid plan" }, { status: 400 });
     }
 
-    // ── Fetch company — only safe columns that always exist ───────────────────
+    // Fetch company — only safe columns that always exist
     const { data: company, error: companyError } = await supabaseAdmin
       .from("companies")
       .select("id, name")
@@ -45,11 +46,10 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (companyError || !company) {
-      console.error("[billing/checkout] Company lookup failed:", companyError?.message);
       return NextResponse.json({ ok: false, error: "Company not found" }, { status: 404 });
     }
 
-    // Try to get stripe_customer_id if the column exists (safe — separate query)
+    // Try to get existing Stripe customer ID (safe — column may not exist yet)
     let existingCustomerId: string | null = null;
     try {
       const { data: extRow } = await supabaseAdmin
@@ -58,18 +58,16 @@ export async function POST(req: NextRequest) {
         .eq("id", company.id)
         .single();
       existingCustomerId = extRow?.stripe_customer_id ?? null;
-    } catch {
-      // Column doesn't exist yet — that's ok, we'll create a fresh customer
-    }
+    } catch { /* migration not yet applied */ }
 
     const gateway = await getActiveGateway();
 
     // ── STRIPE ────────────────────────────────────────────────────────────────
     if (gateway === "stripe") {
-      const priceId = STRIPE_PRICE_IDS[plan_id];
+      const priceId = getStripePrice(plan_id, period);
       if (!priceId) {
         return NextResponse.json(
-          { ok: false, error: `Stripe Price ID not configured for plan "${plan_id}". Add STRIPE_PRICE_${plan_id.toUpperCase()} to Vercel env vars.` },
+          { ok: false, error: `Stripe Price ID not configured for ${plan_id}/${period}. Check Vercel env vars.` },
           { status: 500 }
         );
       }
@@ -77,7 +75,6 @@ export async function POST(req: NextRequest) {
       const { data: ownerAuth } = await supabaseAdmin.auth.admin.getUserById(owner_id);
       const email = ownerAuth?.user?.email ?? undefined;
 
-      // Reuse Stripe customer if we have one, otherwise create
       let customerId = existingCustomerId ?? "";
       if (!customerId) {
         const customer = await stripe.customers.create({
@@ -86,13 +83,12 @@ export async function POST(req: NextRequest) {
           metadata: { company_id: company.id, owner_id },
         });
         customerId = customer.id;
-        // Persist — silently ignore if column doesn't exist yet
         try {
           await supabaseAdmin
             .from("companies")
             .update({ stripe_customer_id: customerId })
             .eq("id", company.id);
-        } catch { /* column not migrated yet */ }
+        } catch { /* migration not yet applied */ }
       }
 
       const origin = req.headers.get("origin") ?? "https://www.yawmy.app";
@@ -102,8 +98,10 @@ export async function POST(req: NextRequest) {
         line_items: [{ price: priceId, quantity: 1 }],
         success_url: `${origin}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url:  `${origin}/billing?cancelled=true`,
-        metadata: { company_id: company.id, plan_id, owner_id },
-        subscription_data: { metadata: { company_id: company.id, plan_id } },
+        metadata: { company_id: company.id, plan_id, owner_id, billing_period: period },
+        subscription_data: {
+          metadata: { company_id: company.id, plan_id, billing_period: period },
+        },
         allow_promotion_codes: true,
       });
 
@@ -117,7 +115,7 @@ export async function POST(req: NextRequest) {
         const { data: ownerAuth } = await supabaseAdmin.auth.admin.getUserById(owner_id);
         const email = ownerAuth?.user?.email ?? "owner@yawmy.app";
 
-        const amountEGP = Number(plan.price) + Number(body.extra_cost ?? 0);
+        const amountEGP = period === "yearly" ? plan.yearlyPrice : plan.price;
         const amountCents = amountEGP * 100;
         const paymob = getPayMobClient();
         const merchantOrderId = `SUB_${company.id}_${Date.now()}`;
@@ -146,7 +144,6 @@ export async function POST(req: NextRequest) {
         });
         return NextResponse.json({ ok: true, url: iframeUrl, iframeUrl, gateway: "paymob" });
       } catch (err: any) {
-        console.error("[billing/checkout] PayMob error:", err);
         return NextResponse.json({ ok: false, error: `PayMob error: ${err.message}` }, { status: 500 });
       }
     }
