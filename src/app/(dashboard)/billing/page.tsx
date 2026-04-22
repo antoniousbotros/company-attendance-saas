@@ -5,8 +5,8 @@ import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle2, ReceiptText, CalendarClock, Users, XCircle, Zap } from "lucide-react";
 import {
-  PLANS, ALL_FEATURES, ALL_FEATURES_AR, EXTRA_EMPLOYEE_COST,
-  calculateExtraCosts, monthlyEquivalent, YEARLY_DISCOUNT,
+  PLANS, ALL_FEATURES, ALL_FEATURES_AR,
+  monthlyEquivalent, YEARLY_DISCOUNT,
 } from "@/lib/billing";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -92,8 +92,6 @@ function BillingPageInner() {
   }, []);
 
   const currentPlan = PLANS[company.plan_id] || PLANS.free;
-  const extraCost = calculateExtraCosts(employeeCount, company.plan_id);
-  const extraCount = Math.max(0, employeeCount - currentPlan.employeeLimit);
   const features = isRTL ? ALL_FEATURES_AR : ALL_FEATURES;
 
   // Only show paid plans in the pricing grid
@@ -154,7 +152,7 @@ function BillingPageInner() {
       )}
 
       {/* Usage Summary */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <SectionCard className="bg-[#f9fafb]">
           <div className="text-start">
             <p className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-1">{t.currentPlan}</p>
@@ -170,26 +168,10 @@ function BillingPageInner() {
             </p>
             <div className="w-full h-1 bg-[#f1f1f1] rounded-full mt-2 overflow-hidden">
               <div
-                className={cn("h-full transition-all rounded-full", extraCount > 0 ? "bg-[#ef4444]" : "bg-[#1e8e3e]")}
+                className={cn("h-full transition-all rounded-full", employeeCount >= currentPlan.employeeLimit ? "bg-[#ef4444]" : "bg-[#1e8e3e]")}
                 style={{ width: `${Math.min(100, (employeeCount / currentPlan.employeeLimit) * 100)}%` }}
               />
             </div>
-          </div>
-        </SectionCard>
-        <SectionCard>
-          <div className="text-start">
-            <p className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-1">{t.extraEmployees}</p>
-            <p className="text-xl font-black text-[#b45309]">+{extraCount}</p>
-            <p className="text-[10px] text-[#9ca3af] mt-1 font-medium">
-              {isRTL ? `${EXTRA_EMPLOYEE_COST} جنيه/موظف إضافي` : `${EXTRA_EMPLOYEE_COST} EGP/extra employee`}
-            </p>
-          </div>
-        </SectionCard>
-        <SectionCard className="bg-[#fff1e8] border-[#ffd4b8]">
-          <div className="text-start">
-            <p className="text-[10px] font-black text-[#ff5a00] uppercase tracking-wider mb-1">{t.estimatedAddon}</p>
-            <p className="text-xl font-black text-[#ff5a00]">+{extraCost} {currency}</p>
-            <p className="text-[10px] text-[#9ca3af] mt-1 font-medium">{t.nextBill}</p>
           </div>
         </SectionCard>
       </div>
@@ -345,11 +327,6 @@ function BillingPageInner() {
             );
           })}
         </div>
-        <p className="text-xs text-[#6b7280] font-medium mt-3 text-start">
-          {isRTL
-            ? `تحتاج موظفين أكثر؟ أضف موظفين إضافيين بـ ${EXTRA_EMPLOYEE_COST} جنيه/شهر لكل موظف.`
-            : `Need more employees? Add extra for ${EXTRA_EMPLOYEE_COST} EGP/month each.`}
-        </p>
       </div>
 
       {/* Transactions Record */}
