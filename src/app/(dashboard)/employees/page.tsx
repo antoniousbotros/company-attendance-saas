@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { Plus, Trash2, X, Send, Copy, Check, Pencil, KeyRound, Eye, EyeOff, Home } from "lucide-react";
+import { Plus, Trash2, X, Send, Copy, Check, Pencil, KeyRound, Eye, EyeOff, Home, Lock, ArrowRight, Zap } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
+import { PLANS, monthlyEquivalent } from "@/lib/billing";
 import {
   PageHeader,
   SectionCard,
@@ -54,8 +55,10 @@ export default function EmployeesPage() {
   const [newDepartment, setNewDepartment] = useState("");
   const [editingDept, setEditingDept] = useState<string | null>(null);
   const [editDeptValue, setEditDeptValue] = useState("");
-  
-  // Bulk Assign State
+
+  // Plan limit state
+  const [planId, setPlanId] = useState("free");
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [bulkDepartment, setBulkDepartment] = useState("");
 
@@ -96,11 +99,16 @@ export default function EmployeesPage() {
   const fetchCompany = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data: company } = await supabase.from("companies").select("id, bot_name, departments, auth_mode").eq("owner_id", user.id).single();
+    const { data: company } = await supabase
+      .from("companies")
+      .select("id, bot_name, departments, auth_mode, plan_id")
+      .eq("owner_id", user.id)
+      .single();
     if (company) {
       setBotName(company.bot_name?.replace("@", "") || "");
       setDepartmentsList(company.departments || []);
       setAuthMode((company.auth_mode || "telegram") as "telegram" | "password");
+      setPlanId(company.plan_id || "free");
     }
   };
 
@@ -330,6 +338,28 @@ export default function EmployeesPage() {
      return groups;
   }, [filtered, isRTL]);
 
+  // Plan limit derived values
+  const plan = PLANS[planId] ?? PLANS.free;
+  const planLimit = plan.employeeLimit;
+  const employeeCount = employees.length;
+  const slotsRemaining = Math.max(0, planLimit - employeeCount);
+  const isAtLimit = employeeCount >= planLimit;
+  const isOverLimit = employeeCount > planLimit;
+
+  // Next paid plan for upgrade prompt
+  const planOrder = ["free", "basic", "pro", "business", "enterprise"];
+  const currentPlanIdx = planOrder.indexOf(planId);
+  const nextPlanId = planOrder[currentPlanIdx + 1] ?? "basic";
+  const nextPlan = PLANS[nextPlanId] ?? PLANS.basic;
+
+  const handleAddEmployeeClick = () => {
+    if (isAtLimit) {
+      setShowUpgradePrompt(true);
+    } else {
+      setShowAddModal(true);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
@@ -337,14 +367,52 @@ export default function EmployeesPage() {
         subtitle={isRTL ? "إدارة فريق العمل وحالة الربط مع تليجرام" : "Manage your team and Telegram linking status"}
         isRTL={isRTL}
         action={
-          <PrimaryButton
-            icon={Plus}
-            onClick={() => setShowAddModal(true)}
-          >
-            {isRTL ? "إضافة موظف" : "Add Employee"}
-          </PrimaryButton>
+          <div className="flex items-center gap-3">
+            {/* Slot counter */}
+            <div className={cn(
+              "hidden sm:flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg border",
+              isOverLimit
+                ? "bg-[#fef2f2] border-[#fecaca] text-[#b91c1c]"
+                : isAtLimit
+                  ? "bg-[#fff8f0] border-[#ffd4b8] text-[#ff5a00]"
+                  : "bg-[#f9fafb] border-[#e0e0e0] text-[#6b7280]"
+            )}>
+              {isOverLimit ? <Zap className="w-3.5 h-3.5" /> : isAtLimit ? <Lock className="w-3.5 h-3.5" /> : null}
+              {isRTL
+                ? `${employeeCount} / ${planLimit} موظف`
+                : `${employeeCount} / ${planLimit} employees`}
+            </div>
+            <PrimaryButton
+              icon={isAtLimit ? Lock : Plus}
+              onClick={handleAddEmployeeClick}
+              className={isAtLimit ? "bg-[#6b7280] hover:bg-[#4b5563]" : ""}
+            >
+              {isRTL ? "إضافة موظف" : "Add Employee"}
+            </PrimaryButton>
+          </div>
         }
       />
+
+      {/* Over-quota banner */}
+      {isOverLimit && (
+        <div className="flex items-center justify-between gap-4 bg-[#fef2f2] border border-[#fecaca] rounded-xl px-5 py-4">
+          <div className="flex items-center gap-3">
+            <Lock className="w-4 h-4 text-[#b91c1c] shrink-0" />
+            <p className="text-sm font-bold text-[#b91c1c]">
+              {isRTL
+                ? `تجاوزت حد الخطة (${planLimit} موظف). ترقّ لإضافة المزيد.`
+                : `You've exceeded your plan limit (${planLimit} employees). Upgrade to add more.`}
+            </p>
+          </div>
+          <a
+            href="/billing"
+            className="shrink-0 flex items-center gap-1.5 text-xs font-black text-white bg-[#ff5a00] px-4 py-2 rounded-lg hover:bg-[#e04f00] transition-all"
+          >
+            {isRTL ? "ترقية الآن" : "Upgrade"}
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      )}
 
       <div className={cn("flex items-center gap-6 border-b border-[#eeeeee] mb-6", isRTL && "flex-row-reverse")}>
          <button onClick={() => setActiveTab('employees')} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", activeTab === 'employees' ? "border-[#ff5a00] text-[#ff5a00]" : "border-transparent text-[#6b7280] hover:text-[#111]")}>
@@ -975,6 +1043,87 @@ export default function EmployeesPage() {
                >
                   {wfhGrantLoading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mx-auto" /> : (isRTL ? "تأكيد" : "Grant")}
                </PrimaryButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Upgrade Prompt Modal ──────────────────────────────────────────── */}
+      {showUpgradePrompt && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#ff5a00] px-6 pt-8 pb-10 relative">
+              <button
+                onClick={() => setShowUpgradePrompt(false)}
+                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center mb-4">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+              <h2 className="text-xl font-black text-white">
+                {isRTL ? "وصلت لحد الباقة" : "Employee Limit Reached"}
+              </h2>
+              <p className="text-white/80 text-sm font-medium mt-1">
+                {isRTL
+                  ? `باقتك الحالية تسمح بـ ${planLimit} موظف فقط.`
+                  : `Your current plan allows up to ${planLimit} employees.`}
+              </p>
+            </div>
+
+            {/* Plan comparison */}
+            <div className="px-6 -mt-4">
+              <div className="bg-white border border-[#e0e0e0] rounded-xl shadow-sm p-4 space-y-3">
+                {/* Current */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">
+                      {isRTL ? "الباقة الحالية" : "Current Plan"}
+                    </p>
+                    <p className="text-sm font-bold text-[#111] mt-0.5">
+                      {isRTL ? plan.nameAr : plan.name}
+                    </p>
+                  </div>
+                  <span className="text-sm font-black text-[#6b7280]">{planLimit} {isRTL ? "موظف" : "emp"}</span>
+                </div>
+
+                <div className="border-t border-dashed border-[#eeeeee]" />
+
+                {/* Next plan */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold text-[#ff5a00] uppercase tracking-wider">
+                      {isRTL ? "المقترح" : "Recommended"}
+                    </p>
+                    <p className="text-sm font-black text-[#111] mt-0.5">
+                      {isRTL ? nextPlan.nameAr : nextPlan.name}
+                    </p>
+                    <p className="text-xs text-[#9ca3af] font-medium">
+                      {nextPlan.price} {isRTL ? "جنيه/شهر" : "EGP/mo"}
+                    </p>
+                  </div>
+                  <span className="text-sm font-black text-[#ff5a00]">{nextPlan.employeeLimit} {isRTL ? "موظف" : "emp"}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-6 py-5 flex flex-col gap-3">
+              <a
+                href="/billing"
+                className="flex items-center justify-center gap-2 w-full bg-[#ff5a00] text-white font-black py-3.5 rounded-xl hover:bg-[#e04f00] transition-all text-sm"
+              >
+                {isRTL ? "ترقية الباقة" : "Upgrade Plan"}
+                <ArrowRight className="w-4 h-4" />
+              </a>
+              <button
+                onClick={() => setShowUpgradePrompt(false)}
+                className="text-sm font-bold text-[#6b7280] hover:text-[#111] transition-colors py-1"
+              >
+                {isRTL ? "إلغاء" : "Cancel"}
+              </button>
             </div>
           </div>
         </div>
