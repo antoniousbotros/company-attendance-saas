@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { getPayMobClient } from "@/lib/paymob";
+import stripe, { STRIPE_PRICE_IDS } from "@/lib/stripe";
 import { PLANS } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
@@ -8,10 +8,15 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { owner_id, plan_id, extra_cost = 0 } = body;
+    const { owner_id, plan_id } = body;
 
     if (!owner_id || !plan_id) {
-      return NextResponse.json({ ok: false, error: "Missing required properties" }, { status: 400 });
+      return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
+    }
+
+    // Free plan needs no payment
+    if (plan_id === "free") {
+      return NextResponse.json({ ok: false, error: "Free plan requires no payment" }, { status: 400 });
     }
 
     const plan = PLANS[plan_id as keyof typeof PLANS];
@@ -19,72 +24,71 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "Invalid plan" }, { status: 400 });
     }
 
-    // Amount is standard price + extra employees cost. PayMob uses cents (piasters).
-    const amountEGP = Number(plan.price) + Number(extra_cost);
-    const amountCents = amountEGP * 100;
+    const priceId = STRIPE_PRICE_IDS[plan_id];
+    if (!priceId) {
+      return NextResponse.json(
+        { ok: false, error: `Stripe Price ID not configured for plan: ${plan_id}. Set STRIPE_PRICE_${plan_id.toUpperCase()} in env vars.` },
+        { status: 500 }
+      );
+    }
 
-    const { data: company } = await supabaseAdmin.from("companies").select("*").eq("owner_id", owner_id).single();
-    
+    // 1. Get company & owner email
+    const { data: company } = await supabaseAdmin
+      .from("companies")
+      .select("id, name, stripe_customer_id")
+      .eq("owner_id", owner_id)
+      .single();
+
     if (!company) {
       return NextResponse.json({ ok: false, error: "Company not found" }, { status: 404 });
     }
 
-    const { data: owner } = await supabaseAdmin.auth.admin.getUserById(owner_id);
-    const email = owner?.user?.email || "owner@yawmy.app";
+    const { data: ownerAuth } = await supabaseAdmin.auth.admin.getUserById(owner_id);
+    const email = ownerAuth?.user?.email ?? undefined;
 
-    const paymob = getPayMobClient();
-    const merchantOrderId = `SUB_${company.id}_${Date.now()}`;
+    // 2. Reuse or create a Stripe Customer so payment methods are saved
+    let customerId: string = company.stripe_customer_id ?? "";
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email,
+        name: company.name,
+        metadata: { company_id: company.id, owner_id },
+      });
+      customerId = customer.id;
+      // Persist customer ID immediately
+      await supabaseAdmin
+        .from("companies")
+        .update({ stripe_customer_id: customerId })
+        .eq("id", company.id);
+    }
 
-    // Step 1: Authenticate
-    const authData = await paymob.authenticate();
-
-    // Step 2: Create Order
-    const orderData = await paymob.createOrder({
-      authToken: authData.token,
-      amountCents,
-      currency: "EGP",
-      merchantOrderId
+    // 3. Create a Stripe Checkout Session (hosted by Stripe — no PCI risk)
+    const origin = req.headers.get("origin") ?? "https://www.yawmy.app";
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${origin}/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:  `${origin}/billing?cancelled=true`,
+      // Embed plan & company so the webhook can act on this without DB lookups
+      metadata: {
+        company_id: company.id,
+        plan_id,
+        owner_id,
+      },
+      subscription_data: {
+        metadata: {
+          company_id: company.id,
+          plan_id,
+        },
+      },
+      allow_promotion_codes: true,
     });
 
-    // Generate strict checkout sequence
-    const billingData = {
-      first_name: company.name.split(" ")[0] || "Yawmy",
-      last_name: company.name.split(" ").slice(1).join(" ") || "Owner",
-      email: email,
-      phone_number: "+201000000000",
-      apartment: "NA", floor: "NA", street: "NA", building: "NA", shipping_method: "NA",
-      postal_code: "NA", city: "Cairo", country: "EGY", state: "Cairo"
-    };
-
-    // Step 3: Payment Key Generation
-    const paymentKeyData = await paymob.getPaymentKey({
-      authToken: authData.token,
-      amountCents,
-      orderId: orderData.id,
-      currency: "EGP",
-      billingData
-    });
-
-    const iframeUrl = paymob.getIframeUrl(paymentKeyData.token);
-
-    // Persist Payment Intent
-    await supabaseAdmin.from("subscriptions").insert({
-      company_id: company.id,
-      merchant_order_id: merchantOrderId,
-      paymob_order_id: String(orderData.id),
-      amount: amountEGP,
-      currency: "EGP",
-      status: "pending"
-    });
-
-    return NextResponse.json({
-      ok: true,
-      iframeUrl,
-      merchantOrderId
-    });
+    return NextResponse.json({ ok: true, url: session.url });
 
   } catch (err: any) {
-    console.error("PayMob Checkout Exception:", err);
+    console.error("[billing/checkout] Error:", err);
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 });
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { CheckCircle2, ReceiptText, CalendarClock, Users } from "lucide-react";
+import { CheckCircle2, ReceiptText, CalendarClock, Users, XCircle } from "lucide-react";
 import { PLANS, ALL_FEATURES, ALL_FEATURES_AR, EXTRA_EMPLOYEE_COST, calculateExtraCosts } from "@/lib/billing";
 import { useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -14,11 +15,14 @@ import {
   HelpCard,
 } from "@/app/components/talabat-ui";
 
-export default function BillingPage() {
+function BillingPageInner() {
   const { t, isRTL } = useLanguage();
+  const searchParams = useSearchParams();
+  const paymentSuccess   = searchParams.get("success") === "true";
+  const paymentCancelled = searchParams.get("cancelled") === "true";
 
   const [loading, setLoading] = useState(true);
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState<string | null>(null); // stores the planId being upgraded
   const [currency] = useState("EGP");
   const [employeeCount, setEmployeeCount] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -32,26 +36,24 @@ export default function BillingPage() {
 
   const handleUpgrade = async (planId: string) => {
     try {
-      setIsUpgrading(true);
+      setIsUpgrading(planId);
+      const { data: { user } } = await supabase.auth.getUser();
       const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          owner_id: (await supabase.auth.getUser()).data.user?.id,
-          plan_id: planId,
-          extra_cost: extraCost,
-        })
+        body: JSON.stringify({ owner_id: user?.id, plan_id: planId }),
       });
       const data = await res.json();
-      if (data.ok && data.iframeUrl) {
-        window.location.href = data.iframeUrl;
+      if (data.ok && data.url) {
+        // Redirect to Stripe-hosted checkout page
+        window.location.href = data.url;
       } else {
-        alert(data.error || "Failed to initialize payment");
-        setIsUpgrading(false);
+        alert(data.error || "Failed to initialize payment. Please try again.");
+        setIsUpgrading(null);
       }
-    } catch(err) {
-      console.error(err);
-      setIsUpgrading(false);
+    } catch (err) {
+      console.error("[billing] handleUpgrade error:", err);
+      setIsUpgrading(null);
     }
   };
 
@@ -103,6 +105,22 @@ export default function BillingPage() {
         subtitle={t.billingSubtitle}
         isRTL={isRTL}
       />
+
+      {/* Payment success banner */}
+      {paymentSuccess && (
+        <div className="flex items-center gap-3 bg-[#e6f6ec] border border-[#bbf7d0] text-[#1e8e3e] px-5 py-4 rounded-xl font-semibold text-sm">
+          <CheckCircle2 className="w-5 h-5 shrink-0" />
+          {isRTL ? "✅ تمت عملية الدفع بنجاح! تم تفعيل باقتك الجديدة." : "✅ Payment successful! Your new plan has been activated."}
+        </div>
+      )}
+
+      {/* Payment cancelled banner */}
+      {paymentCancelled && (
+        <div className="flex items-center gap-3 bg-[#fef1f1] border border-[#fecaca] text-[#b91c1c] px-5 py-4 rounded-xl font-semibold text-sm">
+          <XCircle className="w-5 h-5 shrink-0" />
+          {isRTL ? "تم إلغاء عملية الدفع. لم يُخصم أي مبلغ." : "Payment cancelled. You have not been charged."}
+        </div>
+      )}
 
       {/* Usage Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -206,14 +224,18 @@ export default function BillingPage() {
                 </div>
 
                 <div className="mt-4">
-                  <PrimaryButton 
-                    disabled={isCurrent || isUpgrading} 
+                  <PrimaryButton
+                    disabled={isCurrent || plan.price === 0 || isUpgrading !== null}
                     onClick={() => handleUpgrade(id)}
                     className="w-full text-xs"
                   >
-                    {isUpgrading && !isCurrent ? (isRTL ? "جاري..." : "Processing...") : isCurrent
-                      ? (isRTL ? "باقتك الحالية" : "Current")
-                      : (isRTL ? "ترقية" : "Upgrade")}
+                    {isUpgrading === id
+                      ? (isRTL ? "جاري التحويل..." : "Redirecting...")
+                      : isCurrent
+                        ? (isRTL ? "باقتك الحالية" : "Current Plan")
+                        : plan.price === 0
+                          ? (isRTL ? "مجاني دائماً" : "Always Free")
+                          : (isRTL ? "ترقية الآن" : "Upgrade Now")}
                   </PrimaryButton>
                 </div>
               </SectionCard>
@@ -296,5 +318,14 @@ export default function BillingPage() {
          />
       </div>
     </div>
+  );
+}
+
+// Wrap in Suspense because useSearchParams() requires it in Next.js App Router
+export default function BillingPage() {
+  return (
+    <Suspense>
+      <BillingPageInner />
+    </Suspense>
   );
 }
