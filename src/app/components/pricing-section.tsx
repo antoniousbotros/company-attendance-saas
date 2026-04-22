@@ -60,7 +60,7 @@ export default function PricingSection() {
         </div>
 
         {/* Plan Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 max-w-[1400px] mx-auto">
           {planEntries.map(([id, plan]) => (
             <div
               key={id}
