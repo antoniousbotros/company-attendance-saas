@@ -5,51 +5,6 @@ import { PLANS } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
-// ── Temporary diagnostic — remove after debugging ─────────────────────────────
-export async function GET() {
-  const checks: Record<string, string> = {};
-  try {
-    checks.stripe_key = process.env.STRIPE_SECRET_KEY
-      ? `set (${process.env.STRIPE_SECRET_KEY.slice(0, 10)}...)`
-      : "MISSING";
-    checks.price_starter  = process.env.STRIPE_PRICE_STARTER  ?? "MISSING";
-    checks.price_pro      = process.env.STRIPE_PRICE_PRO      ?? "MISSING";
-    checks.price_ent      = process.env.STRIPE_PRICE_ENTERPRISE ?? "MISSING";
-    checks.webhook_secret = process.env.STRIPE_WEBHOOK_SECRET
-      ? `set (${process.env.STRIPE_WEBHOOK_SECRET.slice(0, 8)}...)`
-      : "MISSING";
-
-    // Test Stripe connectivity
-    try {
-      const bal = await stripe.balance.retrieve();
-      checks.stripe_connect = `ok (currency: ${bal.available?.[0]?.currency ?? "n/a"})`;
-    } catch (e: any) {
-      checks.stripe_connect = `FAIL: ${e.message}`;
-    }
-
-    // Test Supabase
-    try {
-      const { error } = await supabaseAdmin.from("companies").select("id").limit(1);
-      checks.supabase = error ? `FAIL: ${error.message}` : "ok";
-    } catch (e: any) {
-      checks.supabase = `FAIL: ${e.message}`;
-    }
-
-    // Test pricing_config
-    try {
-      const { data, error } = await supabaseAdmin.from("pricing_config").select("payment_gateway").limit(1);
-      checks.pricing_config_gw = error ? `FAIL: ${error.message}` : (data?.[0]?.payment_gateway ?? "no row / column missing");
-    } catch (e: any) {
-      checks.pricing_config_gw = `FAIL: ${e.message}`;
-    }
-
-  } catch (e: any) {
-    checks.fatal = e.message;
-  }
-  return NextResponse.json({ ok: true, checks });
-}
-// ── End diagnostic ────────────────────────────────────────────────────────────
-
 const CONFIG_ID = "00000000-0000-0000-0000-000000000001";
 
 async function getActiveGateway(): Promise<"stripe" | "paymob"> {
