@@ -7,7 +7,7 @@ if (!process.env.STRIPE_SECRET_KEY) {
 
 // Singleton — reused across hot-reloads in dev, instantiated once in prod
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_missing", {
-  apiVersion: "2025-11-20.acacia",
+  apiVersion: "2026-03-25.dahlia",
 });
 
 export default stripe;
