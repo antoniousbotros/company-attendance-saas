@@ -41,27 +41,42 @@ export async function POST(req: NextRequest) {
         const subscriptionId: string | null = session.subscription ?? null;
         const customerId: string | null = session.customer ?? null;
 
-        // Activate plan
+        // Activate plan — only use safe columns that always exist
         await supabaseAdmin
           .from("companies")
-          .update({
-            plan_id,
-            subscription_status: "active",
-            ...(customerId && { stripe_customer_id: customerId }),
-            ...(subscriptionId && { stripe_subscription_id: subscriptionId }),
-          })
+          .update({ plan_id, subscription_status: "active" })
           .eq("id", company_id);
 
-        // Record the transaction
-        await supabaseAdmin.from("subscriptions").insert({
-          company_id,
-          stripe_session_id: session.id,
-          stripe_subscription_id: subscriptionId,
-          amount: (session.amount_total ?? 0) / 100, // Stripe uses cents
-          currency: (session.currency ?? "egp").toUpperCase(),
-          status: "succeeded",
-          plan_id,
-        });
+        // Persist Stripe IDs — silently skip if migration columns don't exist yet
+        try {
+          const stripeUpdate: Record<string, string | null> = {};
+          if (customerId) stripeUpdate.stripe_customer_id = customerId;
+          if (subscriptionId) stripeUpdate.stripe_subscription_id = subscriptionId;
+          if (Object.keys(stripeUpdate).length > 0) {
+            await supabaseAdmin.from("companies").update(stripeUpdate).eq("id", company_id);
+          }
+        } catch { /* migration columns not added yet */ }
+
+        // Record the transaction — use only original columns, add new ones safely
+        try {
+          await supabaseAdmin.from("subscriptions").insert({
+            company_id,
+            stripe_session_id: session.id,
+            stripe_subscription_id: subscriptionId,
+            amount: (session.amount_total ?? 0) / 100,
+            currency: (session.currency ?? "egp").toUpperCase(),
+            status: "succeeded",
+            plan_id,
+          });
+        } catch {
+          // Fallback: insert with only columns that definitely exist
+          await supabaseAdmin.from("subscriptions").insert({
+            company_id,
+            amount: (session.amount_total ?? 0) / 100,
+            currency: (session.currency ?? "egp").toUpperCase(),
+            status: "succeeded",
+          });
+        }
 
         console.log(`[billing/webhook] Plan activated: company=${company_id} plan=${plan_id}`);
         break;
@@ -79,12 +94,12 @@ export async function POST(req: NextRequest) {
 
         await supabaseAdmin
           .from("companies")
-          .update({
-            plan_id: "free",
-            subscription_status: "cancelled",
-            stripe_subscription_id: null,
-          })
+          .update({ plan_id: "free", subscription_status: "cancelled" })
           .eq("id", company_id);
+        // Clear subscription ID if column exists
+        try {
+          await supabaseAdmin.from("companies").update({ stripe_subscription_id: null }).eq("id", company_id);
+        } catch { /* migration not done */ }
 
         console.log(`[billing/webhook] Subscription cancelled — company ${company_id} moved to free.`);
         break;
