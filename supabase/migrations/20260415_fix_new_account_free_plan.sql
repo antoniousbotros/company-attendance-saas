@@ -1,7 +1,6 @@
 -- Fix: New accounts must start on the free plan with active status.
--- The previous trigger did not explicitly set plan_id/subscription_status,
--- relying on column defaults which may have drifted. This migration hardens
--- the defaults AND rewrites the trigger to be explicit.
+-- Updated 2026-04-23: Expanded valid plan IDs to include new pricing tiers
+-- (basic, business) introduced in the Stripe billing update.
 
 -- 1. Ensure column-level defaults match intent
 ALTER TABLE public.companies
@@ -23,11 +22,13 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Ensure existing accounts without a plan default to free/active
+-- 3. Ensure existing accounts without a valid plan default to free/active
+--    Valid plan IDs: free, basic, pro, business, enterprise
+--    (old IDs: starter — now replaced by basic/business)
 UPDATE public.companies
 SET
   plan_id = 'free',
   subscription_status = 'active'
 WHERE
   plan_id IS NULL
-  OR plan_id NOT IN ('free', 'starter', 'pro', 'enterprise');
+  OR plan_id NOT IN ('free', 'basic', 'pro', 'business', 'enterprise', 'starter');
