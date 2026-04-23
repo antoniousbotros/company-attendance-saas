@@ -20,6 +20,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import PricingSection from "./components/pricing-section";
+import ShowcaseSection from "./components/showcase-section";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
 import { cn } from "@/lib/utils";
 
@@ -247,6 +248,9 @@ function LandingPageContent() {
             </div>
          </div>
       </section>
+
+      {/* 4. SHOWCASE (Analytics, Tasks, Infographic) */}
+      <ShowcaseSection isRTL={isRTL} />
 
       {/* 5. HOW IT WORKS */}
       <section className="py-32 px-6 bg-[#111] text-white">
