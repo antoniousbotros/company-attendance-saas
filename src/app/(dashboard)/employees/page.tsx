@@ -58,6 +58,7 @@ export default function EmployeesPage() {
 
   // Plan limit state
   const [planId, setPlanId] = useState("free");
+  const [isLifetime, setIsLifetime] = useState(false);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const [bulkDepartment, setBulkDepartment] = useState("");
@@ -108,7 +109,20 @@ export default function EmployeesPage() {
       setBotName(company.bot_name?.replace("@", "") || "");
       setDepartmentsList(company.departments || []);
       setAuthMode((company.auth_mode || "telegram") as "telegram" | "password");
+      
+      // Default to database plan_id while fetching access override
       setPlanId(company.plan_id || "free");
+
+      try {
+        const res = await fetch("/api/billing/access");
+        const accessData = await res.json();
+        if (accessData && accessData.tier) {
+          setPlanId(accessData.tier);
+          setIsLifetime(accessData.isLifetime || false);
+        }
+      } catch (err) {
+        console.error("Failed to fetch billing access", err);
+      }
     }
   };
 

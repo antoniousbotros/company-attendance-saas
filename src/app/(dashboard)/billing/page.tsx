@@ -38,7 +38,12 @@ function BillingPageInner() {
     plan_id: "free",
     subscription_status: "active",
     trial_ends_at: null as string | null,
+    isLifetime: false,
   });
+
+  const [showLtdModal, setShowLtdModal] = useState(false);
+  const [ltdCode, setLtdCode] = useState("");
+  const [ltdLoading, setLtdLoading] = useState(false);
 
   const handleUpgrade = async (planId: string) => {
     try {
@@ -72,13 +77,30 @@ function BillingPageInner() {
         .eq("owner_id", user.id)
         .single();
       if (comp) {
-        const effectivePlanId = comp.plan_id || "free";
+        let effectivePlanId = comp.plan_id || "free";
         let effectiveStatus = comp.subscription_status || "active";
+        let lifetime = false;
+
         if (effectivePlanId === "free" && effectiveStatus !== "active") {
           effectiveStatus = "active";
           supabase.from("companies").update({ plan_id: "free", subscription_status: "active" }).eq("id", comp.id).then(() => {});
         }
-        setCompany({ id: comp.id, plan_id: effectivePlanId, subscription_status: effectiveStatus, trial_ends_at: comp.trial_ends_at || null });
+
+        try {
+          const res = await fetch("/api/billing/access");
+          const accessData = await res.json();
+          if (accessData && accessData.tier) {
+            effectivePlanId = accessData.tier;
+            lifetime = accessData.isLifetime || false;
+            if (lifetime) {
+                effectiveStatus = "active"; // LTD is always active
+            }
+          }
+        } catch(e) {
+            console.error("LTD load error", e);
+        }
+
+        setCompany({ id: comp.id, plan_id: effectivePlanId, subscription_status: effectiveStatus, trial_ends_at: comp.trial_ends_at || null, isLifetime: lifetime });
         const [empRes, txnRes] = await Promise.all([
           supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", comp.id),
           supabase.from("subscriptions").select("*").eq("company_id", comp.id).order("created_at", { ascending: false }),
@@ -90,6 +112,30 @@ function BillingPageInner() {
     }
     loadBilling();
   }, []);
+
+  const handleRedeemLtd = async () => {
+    if(!ltdCode.trim()) return;
+    setLtdLoading(true);
+    try {
+      const res = await fetch("/api/ltd/redeem", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: ltdCode })
+      });
+      const data = await res.json();
+      if(data.success) {
+        alert(isRTL ? "✅ تم تفعيل العرض الدائم بنجاح!" : "✅ Lifetime Deal successfully activated!");
+        setShowLtdModal(false);
+        window.location.reload();
+      } else {
+        alert(data.error || "Invalid code");
+      }
+    } catch(err) {
+      alert("Error redeeming code.");
+    } finally {
+      setLtdLoading(false);
+    }
+  };
 
   const currentPlan = PLANS[company.plan_id] || PLANS.free;
   const features = isRTL ? ALL_FEATURES_AR : ALL_FEATURES;
@@ -192,6 +238,24 @@ function BillingPageInner() {
       </SectionCard>
 
       {/* ── Plan switcher + cards ── */}
+      {company.isLifetime ? (
+        <SectionCard className="bg-emerald-50 border-emerald-200">
+          <div className="flex flex-col items-center text-center py-6">
+            <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
+              <Zap className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h2 className="text-2xl font-black text-emerald-800 mb-2">
+              {isRTL ? "تم تفعيل العرض الدائم بنجاح 🎉" : "Lifetime Access Active 🎉"}
+            </h2>
+            <p className="text-emerald-700 font-medium">
+              {isRTL 
+                ? `لقد حصلت على إمكانية الوصول مدى الحياة لباقة (${currentPlan.nameAr}) بكل مميزاتها المتقدمة. لا توجد أي مدفوعات مستقبلية مطلوبة.`
+                : `You've unlocked lifetime access to the ${currentPlan.name} tier and all its premium features. No future billing is required.`
+              }
+            </p>
+          </div>
+        </SectionCard>
+      ) : (
       <div>
         {/* Period toggle */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -328,6 +392,26 @@ function BillingPageInner() {
           })}
         </div>
       </div>
+      )}
+
+      {/* ── LTD Redemption Section ── */}
+      {!company.isLifetime && (
+        <SectionCard className="bg-[#f9fafb] border-dashed border-2">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-start">
+              <h3 className="text-sm font-bold text-[#111]">
+                {isRTL ? "لديك كود تفعيل عرض دائم؟" : "Have a Lifetime Deal code?"}
+              </h3>
+              <p className="text-xs text-[#6b7280]">
+                {isRTL ? "أدخل الكود هنا لتفعيل حسابك مدى الحياة." : "Redeem your LTD code to permanently unlock your tier constraints."}
+              </p>
+            </div>
+            <PrimaryButton onClick={() => setShowLtdModal(true)} disabled={ltdLoading} className="bg-[#111] hover:bg-[#333]">
+              {isRTL ? "تفعيل الكود" : "Redeem Code"}
+            </PrimaryButton>
+          </div>
+        </SectionCard>
+      )}
 
       {/* Transactions Record */}
       <div className="pt-4">
@@ -395,6 +479,45 @@ function BillingPageInner() {
           ]}
         />
       </div>
+      {/* LTD REDEMPTION MODAL */}
+      {showLtdModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+            <div className="p-4 border-b border-[#eeeeee] flex items-center justify-between bg-[#f9fafb]">
+              <h3 className="font-black text-lg text-[#111]">
+                {isRTL ? "تفعيل كود العرض الدائم" : "Redeem LTD Code"}
+              </h3>
+              <button 
+                onClick={() => setShowLtdModal(false)}
+                className="p-1.5 hover:bg-[#e0e0e0] rounded-full transition-colors"
+              >
+                <XCircle className="w-5 h-5 text-[#6b7280]" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm font-bold text-[#6b7280]">
+                {isRTL ? "يرجى إدخال كود التفعيل المكون من 15 حرفاً:" : "Please enter your unique 15-character redemption code:"}
+              </p>
+              <input
+                type="text"
+                autoFocus
+                placeholder="LTD-XXX-YYYYYY"
+                value={ltdCode}
+                onChange={(e) => setLtdCode(e.target.value.toUpperCase())}
+                className="w-full text-center text-lg tracking-widest font-mono p-4 border-2 border-[#eeeeee] rounded-xl outline-none focus:border-[#111] transition-colors uppercase"
+              />
+              <button 
+                onClick={handleRedeemLtd}
+                disabled={!ltdCode.trim() || ltdLoading}
+                className="w-full bg-[#111] text-white font-black py-4 rounded-xl disabled:opacity-50 transition-all hover:bg-[#333]"
+              >
+                {ltdLoading ? "..." : (isRTL ? "تأكيد" : "Confirm Redemption")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
