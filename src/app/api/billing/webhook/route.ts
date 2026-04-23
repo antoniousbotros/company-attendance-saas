@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
         // Get current company state to detect downgrade
         const { data: comp } = await supabaseAdmin
           .from("companies")
-          .select("plan_id")
+          .select("plan_id, current_period_end")
           .eq("id", company_id)
           .single();
 
@@ -105,6 +105,23 @@ export async function POST(req: NextRequest) {
           }
         } catch (e: any) { console.error("Stripe metadata update failed", e.message); }
 
+        // Determine started_at and ends_at
+        let started_at = new Date().toISOString();
+        let ends_at: string | null = null;
+
+        if (subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
+            // If it's a downgrade, it starts when the current plan ends
+            if (isDowngrade && comp?.current_period_end) {
+              started_at = new Date(comp.current_period_end).toISOString();
+            } else {
+              started_at = new Date(sub.current_period_start * 1000).toISOString();
+            }
+            ends_at = new Date(sub.current_period_end * 1000).toISOString();
+          } catch (e) { console.error("Stripe sub retrieve failed", e); }
+        }
+
         // Record the transaction
         await supabaseAdmin.from("subscriptions").insert({
           company_id,
@@ -115,9 +132,8 @@ export async function POST(req: NextRequest) {
           currency: (session.currency ?? "egp").toUpperCase(),
           status: "succeeded",
           plan_id,
-          started_at: new Date().toISOString(),
-          // Use current_period_end if available
-          ends_at: subscriptionId ? new Date(((await stripe.subscriptions.retrieve(subscriptionId)) as any).current_period_end * 1000).toISOString() : null
+          started_at,
+          ends_at
         });
         console.log(`[billing/webhook] Plan activation logic finished for company=${company_id}`);
         break;
@@ -183,7 +199,7 @@ export async function POST(req: NextRequest) {
           // Log renewal
           await supabaseAdmin.from("subscriptions").insert({
             company_id,
-            stripe_session_id: invoice.id, // Legacy mapping
+            stripe_session_id: invoice.id, 
             stripe_invoice_id: invoice.id,
             stripe_subscription_id: invoice.subscription,
             stripe_payment_intent_id: paymentIntentId,
@@ -191,8 +207,8 @@ export async function POST(req: NextRequest) {
             currency: (invoice.currency ?? "egp").toUpperCase(),
             status: "succeeded",
             plan_id: plan_id ?? null,
-            started_at: new Date(invoice.created * 1000).toISOString(),
-            ends_at: periodEnd
+            started_at: new Date(invoice.period_start * 1000).toISOString(),
+            ends_at: new Date(invoice.period_end * 1000).toISOString()
           });
         }
         break;
