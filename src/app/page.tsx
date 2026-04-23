@@ -16,7 +16,8 @@ import {
   Globe,
   Wallet,
   MapPin,
-  ChevronDown
+  ChevronDown,
+  LayoutDashboard
 } from "lucide-react";
 import PricingSection from "./components/pricing-section";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
@@ -80,6 +81,11 @@ function LandingPageContent() {
         title: isRTL ? "لا يحتاج لتدريب" : "No Training Required",
         desc: isRTL ? "إذا كانوا يعرفون استخدام تليجرام، فهم يعرفون استخدام \"يومي\". بدون تثبيت تطبيقات جديدة." : "If they can send a message, they can use Yawmy. No apps to install.",
         icon: Smartphone
+      },
+      {
+        title: isRTL ? "تطبيق احترافي لكل موظف" : "Pro App for Every Employee",
+        desc: isRTL ? "يحصل كل موظف على بوابة ويب خاصة لإدارة المهام، والاطلاع على سجل الحضور، وتلقي إعلانات الشركة." : "Every employee gets a dedicated web portal to manage tasks, view attendance history, and receive company announcements.",
+        icon: LayoutDashboard
       }
     ],
     howItWorks: {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
@@ -61,6 +61,12 @@ function useNav(): NavGroup[] {
         { name: t.billing, href: "/billing", icon: CreditCard },
         { name: isRTL ? "مدونة يومي" : "Yawmy Blog", href: "/blog", icon: Globe },
         { name: t.settings, href: "/settings", icon: SettingsIcon },
+      ],
+    },
+    {
+      label: isRTL ? "بوابات خارجية" : "External Portals",
+      items: [
+        { name: isRTL ? "تطبيق الموظفين (برو)" : "Employee App (Pro)", href: "https://team.yawmy.app", icon: Smartphone },
       ],
     },
   ];
@@ -193,8 +199,12 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-4">
+          <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="hidden sm:block text-sm font-bold text-[#ff5a00] hover:underline">
+            {isRTL ? "بوابة الموظفين" : "Employee Portal"}
+          </a>
+          <div className="flex items-center gap-2">
+            <button
             onClick={toggleLang}
             className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] border border-[#eeeeee] hover:bg-[#f5f5f5] transition-colors"
             aria-label="Toggle language"
@@ -245,6 +255,17 @@ function DashboardChrome({
 }) {
   const { isRTL } = useLanguage();
   const [showRolesModal, setShowRolesModal] = useState(false);
+  const [showTeamBanner, setShowTeamBanner] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem("team_banner_dismissed");
+    if (!dismissed) setShowTeamBanner(true);
+  }, []);
+
+  const dismissBanner = () => {
+    localStorage.setItem("team_banner_dismissed", "true");
+    setShowTeamBanner(false);
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-[#111] flex font-sans">
@@ -257,6 +278,29 @@ function DashboardChrome({
         )}
       >
         <TopBar setIsSidebarOpen={setIsSidebarOpen} />
+        
+        {showTeamBanner && (
+          <div className="bg-[#1e8e3e] text-white px-4 md:px-8 py-3 relative flex items-center justify-between text-start md:text-center z-20">
+            <div className="flex flex-col md:flex-row md:items-center justify-center gap-2 md:gap-4 flex-1">
+              <span className="text-sm font-medium">
+                 {isRTL 
+                   ? "دع موظفيك يستخدمون تطبيقهم الخاص لإدارة المهام والتسجيل والتقارير." 
+                   : "Give your employees their own Pro App to manage tasks, attendance, and reports."}
+              </span>
+              <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="bg-white text-[#1e8e3e] w-fit px-4 py-1.5 rounded-full text-xs font-bold shadow-sm hover:bg-gray-100 transition-colors">
+                {isRTL ? "تطبيق فريق العمل" : "Open Team App"}
+              </a>
+            </div>
+            <button 
+              onClick={dismissBanner} 
+              className={cn("absolute w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors", isRTL ? "left-4" : "right-4")} 
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <main className="flex-1 px-4 md:px-8 py-8 max-w-[1200px] w-full mx-auto">
           {children}
         </main>
