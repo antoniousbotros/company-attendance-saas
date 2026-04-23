@@ -40,12 +40,13 @@ export async function POST(req: NextRequest) {
 
         const subscriptionId: string | null = session.subscription ?? null;
         const customerId: string | null = session.customer ?? null;
+        const paymentIntentId: string | null = session.payment_intent ?? null;
 
         // Check if transaction already exists (deduplication)
         const { data: existing } = await supabaseAdmin
           .from("subscriptions")
           .select("id")
-          .eq("stripe_session_id", session.id)
+          .or(`stripe_session_id.eq.${session.id}${paymentIntentId ? `,stripe_payment_intent_id.eq.${paymentIntentId}` : ""}`)
           .single();
 
         if (existing) {
@@ -109,6 +110,7 @@ export async function POST(req: NextRequest) {
           company_id,
           stripe_session_id: session.id,
           stripe_subscription_id: subscriptionId,
+          stripe_payment_intent_id: paymentIntentId,
           amount: (session.amount_total ?? 0) / 100,
           currency: (session.currency ?? "egp").toUpperCase(),
           status: "succeeded",
@@ -148,12 +150,13 @@ export async function POST(req: NextRequest) {
       // ── Renewal payment succeeded — keep subscription active ──────────────
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as any;
+        const paymentIntentId = invoice.payment_intent;
         
         // Deduplicate: check if this invoice was already processed (or session fulfilled it)
         const { data: existing } = await supabaseAdmin
           .from("subscriptions")
           .select("id")
-          .or(`stripe_invoice_id.eq.${invoice.id},stripe_session_id.eq.${invoice.id}`)
+          .or(`stripe_invoice_id.eq.${invoice.id},stripe_session_id.eq.${invoice.id}${paymentIntentId ? `,stripe_payment_intent_id.eq.${paymentIntentId}` : ""}`)
           .single();
 
         if (existing) {
@@ -183,6 +186,7 @@ export async function POST(req: NextRequest) {
             stripe_session_id: invoice.id, // Legacy mapping
             stripe_invoice_id: invoice.id,
             stripe_subscription_id: invoice.subscription,
+            stripe_payment_intent_id: paymentIntentId,
             amount: (invoice.amount_paid ?? 0) / 100,
             currency: (invoice.currency ?? "egp").toUpperCase(),
             status: "succeeded",

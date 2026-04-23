@@ -465,6 +465,7 @@ function BillingPageInner() {
                 <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
                   <tr>
                     <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "التاريخ" : "Purchase Date"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "الباقة" : "Plan"}</th>
                     <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "تاريخ التفعيل" : "Activation"}</th>
                     <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "تاريخ الانتهاء" : "Expiration"}</th>
                     <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "المبلغ" : "Amount"}</th>
@@ -473,9 +474,37 @@ function BillingPageInner() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f1f1]">
+                  {/* Scheduled / Pending Plan Row */}
+                  {company.pending_plan_id && (
+                    <tr className="bg-[#fff8f0] hover:bg-[#fff4e5] transition-colors border-b border-[#ffd4b8] text-start">
+                      <td className="px-5 py-4 text-sm font-semibold text-[#b45309]">—</td>
+                      <td className="px-5 py-4 text-sm font-black text-[#111]">
+                        {isRTL ? PLANS[company.pending_plan_id]?.nameAr : PLANS[company.pending_plan_id]?.name}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-black text-[#b45309]">
+                        {company.current_period_end ? new Date(company.current_period_end).toLocaleDateString() : (isRTL ? "قريباً" : "Soon")}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-[#6b7280]">
+                         {isRTL ? "—" : "—"}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-black text-[#111]">0 {currency}</td>
+                      <td className="px-5 py-4">
+                        <StatusPill
+                          label={isRTL ? "قيد الانتظار" : "Pending Activation"}
+                          tone="neutral"
+                        />
+                      </td>
+                      <td className="px-5 py-4 text-[10px] text-[#9ca3af] font-mono">
+                        SCHEDULED_CHANGE
+                      </td>
+                    </tr>
+                  )}
                   {transactions.map((tx) => (
                     <tr key={tx.id} className="hover:bg-[#f9fafb] transition-colors border-b border-[#f1f1f1] last:border-0 text-start">
                       <td className="px-5 py-4 text-sm font-semibold text-[#111]">{new Date(tx.created_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-4 text-sm font-black text-[#111]">
+                        {tx.plan_id ? (isRTL ? PLANS[tx.plan_id]?.nameAr : PLANS[tx.plan_id]?.name) : "—"}
+                      </td>
                       <td className="px-5 py-4 text-sm font-semibold text-[#111]">
                         {tx.started_at ? new Date(tx.started_at).toLocaleDateString() : (isRTL ? "نشط" : "Active")}
                       </td>
