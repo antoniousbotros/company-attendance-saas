@@ -269,11 +269,12 @@ function LandingPageContent() {
       <section className="py-24 bg-white border-b border-[#eeeeee] overflow-hidden">
          <div className="max-w-7xl mx-auto px-6 text-center space-y-12">
             <h2 className="text-2xl font-black text-[#6b7280]">{t.proof}</h2>
-            <div className="flex flex-wrap justify-center gap-12 opacity-40 grayscale">
-               <div className="text-3xl font-black">Acme Corp</div>
-               <div className="text-3xl font-black">Stark Ind</div>
-               <div className="text-3xl font-black">Wayne Ent</div>
-               <div className="text-3xl font-black">Globex</div>
+            <div className="flex flex-wrap items-center justify-center gap-10 md:gap-16 opacity-50 grayscale hover:grayscale-0 transition-all duration-700">
+               <img src="/logos/baseet.svg" alt="Baseet" className="h-10 object-contain" />
+               <img src="/logos/makhzon.svg" alt="Makhzon" className="h-10 object-contain" />
+               <img src="/logos/alwaseet-logo.svg" alt="AlWaseet" className="h-10 object-contain" />
+               <img src="/logos/menutap.svg" alt="MenuTap" className="h-10 object-contain" />
+               <img src="/logos/worldsite-logo.svg" alt="Worldsite" className="h-10 object-contain" />
             </div>
          </div>
       </section>
