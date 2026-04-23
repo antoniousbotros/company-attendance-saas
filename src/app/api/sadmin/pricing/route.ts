@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifySadminTokenAPI } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +8,8 @@ const CONFIG_ID = "00000000-0000-0000-0000-000000000001";
 
 export async function GET(req: NextRequest) {
   const sessionCookie = req.cookies.get("sadmin_session");
-  if (!sessionCookie || sessionCookie.value !== "authorized") {
+  const secret = process.env.SADMIN_JWT_SECRET || "";
+  if (!sessionCookie || !secret || !(await verifySadminTokenAPI(sessionCookie.value, secret))) {
     return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
@@ -28,7 +30,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const sessionCookie = req.cookies.get("sadmin_session");
-    if (!sessionCookie || sessionCookie.value !== "authorized") {
+    const secret = process.env.SADMIN_JWT_SECRET || "";
+    if (!sessionCookie || !secret || !(await verifySadminTokenAPI(sessionCookie.value, secret))) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 

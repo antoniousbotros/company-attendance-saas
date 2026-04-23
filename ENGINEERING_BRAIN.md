@@ -99,6 +99,7 @@
 - **2026-04-15**: Security hardening — added `company_id` scoping to all team API queries, try/catch on all routes, sanitized error messages, crypto-secure OTP generation.
 
 ## CHANGE LOG
+- **v2.3.1**: **ATO Security & Monetization Overlay.** Mathematical JWT enforcement pushed across the Sadmin API preventing zero-click Account Takeovers. Established Postgres-level employee limit bounds natively via `company_entitlements` locking off API overage leakage. Resolved LTD overlap subscription bleed loop.
 - **v2.3.0**: **Lifetime Deals (LTD) & Olisaas Fulfillment.** Introduced `company_entitlements` layer bypassing Stripe subscription limits. Added `getCompanyAccess()` middleware, LTD redemption UI, and military-grade Olisaas incoming webhook processor with Postgres `FOR UPDATE` idempotency locks.
 - **v2.1.0**: Team portal UI redesign (analytics dashboard style), Recharts charts, company logo upload, Excel export for team leaders, full RTL/Arabic support.
 - **v2.0.0**: Employee Portal (`team.yawmy.app`), simplified pricing (4 plans, all features), sadmin pricing control, security hardening.
@@ -121,9 +122,15 @@
 - **2026-04-23**: Abstracted frontend pricing and limit-checks internally behind `fetch("/api/billing/access")` hitting `getCompanyAccess()`. 
 - **2026-04-23**: Implemented Auto-Provisioning Pipeline using internal Supabase Admin API to generate headless Users without interfering with the local `pg` triggers.
 
-## KNOWN ISSUES (updated v2.3.0)
+## DECISIONS LOG (v2.3.1)
+- **2026-04-23**: Isolated symmetric cryptographic secrets enforcing `SADMIN_JWT_SECRET` out of `--password` parameters directly securing Sadmin backend interactions gracefully.
+- **2026-04-23**: Migrated frontend limit overlays on the `employees` array strictly back to `PLPGSQL BEFORE INSERT` triggers preventing unauthorized vertical scaling.
+- **2026-04-23**: Abstracted the pricing layer overlay forcing `getCompanyAccess` to return `MAX(LTD, Subscription)` natively permitting lifetime members to still natively process Stripe checkout expansions when growing larger than their LTD base.
+
+## KNOWN ISSUES (updated v2.3.1)
 - **RESOLVED**: `crypto` module in middleware Edge Runtime — fixed in v2.2.0 (replaced with Web Crypto API).
-- **Pre-existing**: Sadmin auth uses HMAC tokens derived from the `SADMIN_PASSWORD` env var. If the password is weak or leaked, sadmin is compromised. Upgrade to dedicated sadmin user table with bcrypt in a future sprint.
+- **RESOLVED (v2.3.1)**: `SADMIN_PASSWORD` no longer leaks into internal JWT verification hashing. The architecture requires `SADMIN_JWT_SECRET` completely separating human authenticators from machine cryptographic layers.
+- **RESOLVED (v2.3.1)**: Edge APIs `/api/sadmin/*` are no longer unauthenticated endpoints, previously permitting arbitrary HMAC bypass via mocked String parameters, now enforcing Edge Node implementations natively invoking `verifySadminTokenAPI`.
 - **Pre-existing**: `employee_otp`, `employee_sessions`, `pricing_config` tables have no RLS. Access is only via `supabaseAdmin` (service role) in API routes. Safe for now but should add RLS as defence-in-depth.
 - **Pre-existing**: Sadmin pricing editor saves to `pricing_config` DB table, but customer-facing billing reads from hardcoded `billing.ts`. Price changes in sadmin UI do NOT propagate to customers until `billing.ts` is refactored to read from DB.
 - **Pre-existing**: Next.js 16 deprecation warning: `middleware.ts` file convention will become `proxy.ts`. Not breaking; rename in next major version bump.

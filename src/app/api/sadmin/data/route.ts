@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
+import { verifySadminTokenAPI } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
   try {
     // 1. Verify Sadmin session
     const sessionCookie = req.cookies.get("sadmin_session");
-    if (!sessionCookie || sessionCookie.value !== "authorized") {
+    const secret = process.env.SADMIN_JWT_SECRET || "";
+    if (!sessionCookie || !secret || !(await verifySadminTokenAPI(sessionCookie.value, secret))) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }
 

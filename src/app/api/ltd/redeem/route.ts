@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { supabaseAdmin } from "@/lib/supabase";
+import stripe from "@/lib/stripe";
 
 export async function POST(req: NextRequest) {
   try {
@@ -51,6 +53,25 @@ export async function POST(req: NextRequest) {
 
     if (!result.success) {
       return NextResponse.json({ error: result.error || "Failed to redeem code" }, { status: 400 });
+    }
+
+    // Cancel existing subscriptions to close the billing leak
+    const { data: activeSubs } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id, stripe_subscription_id")
+        .eq("company_id", company.id)
+        .eq("status", "active");
+
+    if (activeSubs && activeSubs.length > 0) {
+       for (const sub of activeSubs) {
+           if (sub.stripe_subscription_id) {
+               try {
+                   await stripe.subscriptions.cancel(sub.stripe_subscription_id, { prorate: true });
+               } catch (e) { console.warn("Failed to cancel stripe sub from LTD:", e); }
+           }
+       }
+       // Mark closed locally
+       await supabaseAdmin.from("subscriptions").update({ status: "canceled" }).eq("company_id", company.id);
     }
 
     return NextResponse.json({ 

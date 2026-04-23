@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { PLANS } from "@/lib/billing";
+import stripe from "@/lib/stripe";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -137,6 +138,25 @@ export async function POST(request: Request) {
 
     if (!result.success) {
       return NextResponse.json({ error: "Failed idempotency or internal error" }, { status: 400 });
+    }
+
+    // Cancel existing subscriptions to close the billing leak
+    const { data: activeSubs } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id, stripe_subscription_id")
+        .eq("company_id", company.id)
+        .eq("status", "active");
+
+    if (activeSubs && activeSubs.length > 0) {
+       for (const sub of activeSubs) {
+           if (sub.stripe_subscription_id) {
+               try {
+                   await stripe.subscriptions.cancel(sub.stripe_subscription_id, { prorate: true });
+               } catch (e) { console.warn("Failed to cancel stripe sub from Olisaas LTD:", e); }
+           }
+       }
+       // Mark closed locally
+       await supabaseAdmin.from("subscriptions").update({ status: "canceled" }).eq("company_id", company.id);
     }
 
     // 5. Success

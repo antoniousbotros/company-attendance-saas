@@ -14,49 +14,49 @@ export type CompanyAccess = {
  * It automatically applies LTD overrides if a valid permanent entitlement exists.
  */
 export async function getCompanyAccess(companyId: string): Promise<CompanyAccess> {
-  // 1. Check LTD Entitlements First (O(1) indexed query)
-  const { data: entitlement, error: entitlementError } = await supabaseAdmin
-    .from("company_entitlements")
-    .select("tier_id")
-    .eq("company_id", companyId)
-    .eq("status", "active")
-    .single();
+  // Fetch both LTD and Subscription concurrently
+  const [ltdReq, compReq] = await Promise.all([
+    supabaseAdmin
+      .from("company_entitlements")
+      .select("tier_id")
+      .eq("company_id", companyId)
+      .eq("status", "active")
+      .single(),
+    supabaseAdmin
+      .from("companies")
+      .select("plan_id, subscription_status")
+      .eq("id", companyId)
+      .single()
+  ]);
 
-  if (entitlement && !entitlementError) {
-    // LTD Overrides subscription limits
-    const plan = PLANS[entitlement.tier_id];
-    return {
-      tier: entitlement.tier_id,
-      isLifetime: true,
-      limits: plan ? plan.employeeLimit : PLANS.free.employeeLimit,
-      planDetails: plan || PLANS.free,
-    };
+  const ltdPlanId = (ltdReq.data && !ltdReq.error) ? ltdReq.data.tier_id : null;
+  const isSubActive = compReq.data && ["active", "trialing"].includes(compReq.data.subscription_status || "");
+  const subPlanId = isSubActive ? (compReq.data?.plan_id || "free") : "free";
+
+  let finalPlanId = "free";
+  let isLifetime = false;
+
+  if (ltdPlanId) {
+    // If LTD exists, check if Subscription provides higher limits
+    const ltdLimit = PLANS[ltdPlanId]?.employeeLimit || 0;
+    const subLimit = PLANS[subPlanId]?.employeeLimit || 0;
+
+    if (subLimit > ltdLimit) {
+      finalPlanId = subPlanId;
+      isLifetime = false; // Using the paid sub because it's higher
+    } else {
+      finalPlanId = ltdPlanId;
+      isLifetime = true;
+    }
+  } else {
+    finalPlanId = subPlanId;
   }
 
-  // 2. Fallback to Subscription logic
-  const { data: company, error: companyError } = await supabaseAdmin
-    .from("companies")
-    .select("plan_id, subscription_status")
-    .eq("id", companyId)
-    .single();
-
-  if (!company || companyError) {
-    return {
-      tier: "free",
-      isLifetime: false,
-      limits: PLANS.free.employeeLimit,
-      planDetails: PLANS.free,
-    };
-  }
-
-  const isSubActive = ["active", "trialing"].includes(company.subscription_status || "");
-  const activePlanId = isSubActive ? company.plan_id || "free" : "free";
-
-  const plan = PLANS[activePlanId];
+  const plan = PLANS[finalPlanId];
 
   return {
-    tier: activePlanId,
-    isLifetime: false,
+    tier: finalPlanId,
+    isLifetime: isLifetime,
     limits: plan ? plan.employeeLimit : PLANS.free.employeeLimit,
     planDetails: plan || PLANS.free,
   };

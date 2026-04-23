@@ -237,9 +237,9 @@ function BillingPageInner() {
         </div>
       </SectionCard>
 
-      {/* ── Plan switcher + cards ── */}
-      {company.isLifetime ? (
-        <SectionCard className="bg-emerald-50 border-emerald-200">
+      {/* ── LTD Active Banner ── */}
+      {company.isLifetime && (
+        <SectionCard className="bg-emerald-50 border-emerald-200 mb-6">
           <div className="flex flex-col items-center text-center py-6">
             <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mb-4">
               <Zap className="w-8 h-8 text-emerald-600" />
@@ -249,13 +249,15 @@ function BillingPageInner() {
             </h2>
             <p className="text-emerald-700 font-medium">
               {isRTL 
-                ? `لقد حصلت على إمكانية الوصول مدى الحياة لباقة (${currentPlan.nameAr}) بكل مميزاتها المتقدمة. لا توجد أي مدفوعات مستقبلية مطلوبة.`
-                : `You've unlocked lifetime access to the ${currentPlan.name} tier and all its premium features. No future billing is required.`
+                ? `لقد حصلت على إمكانية الوصول مدى الحياة لباقة (${currentPlan.nameAr}) بكل مميزاتها المتقدمة. ستدفع فقط في حال اختيارك لباقة أعلى سعة.`
+                : `You've unlocked lifetime access to the ${currentPlan.name} tier. You will only be billed if you elect to subscribe to a higher-capacity plan.`
               }
             </p>
           </div>
         </SectionCard>
-      ) : (
+      )}
+
+      {/* ── Plan switcher + cards ── */}
       <div>
         {/* Period toggle */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -392,7 +394,6 @@ function BillingPageInner() {
           })}
         </div>
       </div>
-      )}
 
       {/* ── LTD Redemption Section ── */}
       {!company.isLifetime && (

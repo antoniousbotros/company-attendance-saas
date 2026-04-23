@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json();
 
-    if (!process.env.SADMIN_PASSWORD) {
-      console.error("CRITICAL: SADMIN_PASSWORD environment variable is not set!");
+    if (!process.env.SADMIN_PASSWORD || !process.env.SADMIN_JWT_SECRET) {
+      console.error("CRITICAL: SADMIN_PASSWORD or SADMIN_JWT_SECRET environment variable is not set!");
       return NextResponse.json({ ok: false, error: "System misconfiguration" }, { status: 500 });
     }
 
     if (password === process.env.SADMIN_PASSWORD) {
-      const secret = process.env.SADMIN_PASSWORD;
+      const secret = process.env.SADMIN_JWT_SECRET;
       const sessionToken = signToken(secret);
 
       const res = NextResponse.json({ ok: true });

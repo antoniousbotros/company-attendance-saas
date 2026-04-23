@@ -60,7 +60,7 @@ export async function middleware(request: NextRequest) {
   // 2. Protect Sadmin Routes
   if (url.pathname.startsWith("/sadmin") && !url.pathname.startsWith("/sadmin/login")) {
     const sadminSession = request.cookies.get("sadmin_session");
-    const sadminSecret = process.env.SADMIN_PASSWORD || "";
+    const sadminSecret = process.env.SADMIN_JWT_SECRET || "";
     const isValid = sadminSession && sadminSecret && await verifySadminToken(sadminSession.value, sadminSecret);
     if (!isValid) {
       url.pathname = "/sadmin/login";
