@@ -12,6 +12,7 @@ import {
   CreditCard,
   Settings as SettingsIcon,
   HelpCircle,
+  ArrowUpRight,
   Bell,
   Clock,
   Menu as MenuIcon,
@@ -201,8 +202,10 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }
         <div className="flex-1" />
 
         <div className="flex items-center gap-4">
-          <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="hidden sm:block text-sm font-bold text-[#ff5a00] hover:underline">
-            {isRTL ? "بوابة الموظفين" : "Employee Portal"}
+          <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs sm:text-sm font-bold text-[#ff5a00] hover:underline">
+            <span className="hidden sm:inline">{isRTL ? "تطبيق الموظفين" : "Employee App"}</span>
+            <span className="sm:hidden">{isRTL ? "التطبيق" : "App"}</span>
+            <ArrowUpRight className="w-4 h-4" />
           </a>
           <div className="flex items-center gap-2">
             <button
