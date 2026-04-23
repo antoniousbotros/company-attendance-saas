@@ -22,7 +22,8 @@ import {
   ListTodo,
   Megaphone,
   LocateFixed,
-  LogOut
+  LogOut,
+  Smartphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LanguageProvider, useLanguage } from "@/lib/LanguageContext";
@@ -184,7 +185,7 @@ function Sidebar({
 }
 
 function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }) {
-  const { t, toggleLang, lang } = useLanguage();
+  const { t, toggleLang, lang, isRTL } = useLanguage();
 
   return (
     <header className="h-16 bg-white border-b border-[#eeeeee] sticky top-0 z-30">
@@ -205,19 +206,20 @@ function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }
           </a>
           <div className="flex items-center gap-2">
             <button
-            onClick={toggleLang}
-            className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] border border-[#eeeeee] hover:bg-[#f5f5f5] transition-colors"
-            aria-label="Toggle language"
-            title={lang === "en" ? "العربية" : "English"}
-          >
-            <Globe className="w-[18px] h-[18px]" />
-          </button>
+              onClick={toggleLang}
+              className="h-9 w-9 flex items-center justify-center rounded-full text-[#4b5563] border border-[#eeeeee] hover:bg-[#f5f5f5] transition-colors"
+              aria-label="Toggle language"
+              title={lang === "en" ? "العربية" : "English"}
+            >
+              <Globe className="w-[18px] h-[18px]" />
+            </button>
 
-          <div
-            className="h-9 w-9 rounded-full bg-[#111] text-white flex items-center justify-center text-[13px] font-bold shadow-sm"
-            aria-label="Account"
-          >
-            A
+            <div
+              className="h-9 w-9 rounded-full bg-[#111] text-white flex items-center justify-center text-[13px] font-bold shadow-sm"
+              aria-label="Account"
+            >
+              A
+            </div>
           </div>
         </div>
       </div>
