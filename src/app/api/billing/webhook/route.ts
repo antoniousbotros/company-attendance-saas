@@ -29,6 +29,18 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
 
       // ── Payment succeeded — activate the plan ──────────────────────────────
+      case "checkout.session.completed": {
+        const session = event.data.object as any;
+        const { company_id, plan_id } = session.metadata ?? {};
+
+        if (!company_id || !plan_id) {
+          console.error("[billing/webhook] checkout.session.completed: missing metadata", session.id);
+          break;
+        }
+
+        const subscriptionId: string | null = session.subscription ?? null;
+        const customerId: string | null = session.customer ?? null;
+
         // Check if transaction already exists (deduplication)
         const { data: existing } = await supabaseAdmin
           .from("subscriptions")
@@ -84,7 +96,7 @@ export async function POST(req: NextRequest) {
           if (subscriptionId) {
              stripeUpdate.stripe_subscription_id = subscriptionId;
              // Update period end from subscription
-             const sub = await stripe.subscriptions.retrieve(subscriptionId);
+             const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
              stripeUpdate.current_period_end = new Date(sub.current_period_end * 1000).toISOString();
           }
           if (Object.keys(stripeUpdate).length > 0) {
@@ -103,8 +115,11 @@ export async function POST(req: NextRequest) {
           plan_id,
           started_at: new Date().toISOString(),
           // Use current_period_end if available
-          ends_at: subscriptionId ? new Date((await stripe.subscriptions.retrieve(subscriptionId)).current_period_end * 1000).toISOString() : null
+          ends_at: subscriptionId ? new Date(((await stripe.subscriptions.retrieve(subscriptionId)) as any).current_period_end * 1000).toISOString() : null
         });
+        console.log(`[billing/webhook] Plan activation logic finished for company=${company_id}`);
+        break;
+      }
 
 
       // ── Subscription cancelled / expired — downgrade to free ──────────────
@@ -152,7 +167,7 @@ export async function POST(req: NextRequest) {
         const plan_id = sub?.metadata?.plan_id;
 
         if (company_id) {
-          const periodEnd = sub ? new Date(sub.current_period_end * 1000).toISOString() : null;
+          const periodEnd = sub ? new Date((sub as any).current_period_end * 1000).toISOString() : null;
           
           await supabaseAdmin
             .from("companies")
@@ -194,7 +209,7 @@ export async function POST(req: NextRequest) {
             .update({ 
               plan_id: currentSubPlanId || plan_id, 
               pending_plan_id: null,
-              current_period_end: new Date(sub.current_period_end * 1000).toISOString()
+              current_period_end: new Date((sub as any).current_period_end * 1000).toISOString()
             })
             .eq("id", company_id);
           
