@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
           metadata: { company_id: company.id, plan_id, billing_period: period },
         },
         allow_promotion_codes: true,
+        payment_method_configuration: "pmc_1TPL22CnggmtrJcegSTjniza",
       });
 
       return NextResponse.json({ ok: true, url: session.url, gateway: "stripe" });
