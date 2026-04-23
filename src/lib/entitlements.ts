@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase";
 import { PLANS, Plan } from "@/lib/billing";
 
 export type CompanyAccess = {
@@ -14,10 +14,8 @@ export type CompanyAccess = {
  * It automatically applies LTD overrides if a valid permanent entitlement exists.
  */
 export async function getCompanyAccess(companyId: string): Promise<CompanyAccess> {
-  const supabase = createClient();
-
   // 1. Check LTD Entitlements First (O(1) indexed query)
-  const { data: entitlement, error: entitlementError } = await supabase
+  const { data: entitlement, error: entitlementError } = await supabaseAdmin
     .from("company_entitlements")
     .select("tier_id")
     .eq("company_id", companyId)
@@ -36,7 +34,7 @@ export async function getCompanyAccess(companyId: string): Promise<CompanyAccess
   }
 
   // 2. Fallback to Subscription logic
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error: companyError } = await supabaseAdmin
     .from("companies")
     .select("plan_id, subscription_status")
     .eq("id", companyId)

@@ -1,10 +1,20 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 import { getCompanyAccess } from "@/lib/entitlements";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) { return req.cookies.get(name)?.value; },
+          set() {},
+          remove() {},
+        },
+      }
+    );
     const { data: { user } } = await supabase.auth.getUser();
     
     if (!user) {
