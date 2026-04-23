@@ -99,6 +99,7 @@
 - **2026-04-15**: Security hardening — added `company_id` scoping to all team API queries, try/catch on all routes, sanitized error messages, crypto-secure OTP generation.
 
 ## CHANGE LOG
+- **v2.3.0**: **Lifetime Deals (LTD) & Olisaas Fulfillment.** Introduced `company_entitlements` layer bypassing Stripe subscription limits. Added `getCompanyAccess()` middleware, LTD redemption UI, and military-grade Olisaas incoming webhook processor with Postgres `FOR UPDATE` idempotency locks.
 - **v2.1.0**: Team portal UI redesign (analytics dashboard style), Recharts charts, company logo upload, Excel export for team leaders, full RTL/Arabic support.
 - **v2.0.0**: Employee Portal (`team.yawmy.app`), simplified pricing (4 plans, all features), sadmin pricing control, security hardening.
 - **v1.1.0**: Major UI overhaul (Notion Style), Cookie-based Auth, and multi-tenant bot support.
@@ -114,10 +115,17 @@
 - **2026-04-21**: Added mobile responsive card view for sales tracking (`< lg`). Cards show employee name prominently with explicit edit/delete buttons — swipe gesture removed on mobile to prevent conflict with horizontal scroll.
 - **2026-04-21**: **CRITICAL FIX** — Replaced `import { createHmac } from 'crypto'` in `src/middleware.ts` with Web Crypto API (`crypto.subtle.sign`). Node.js `crypto` module is not available in Vercel Edge Runtime; this was a silent runtime bug that could crash sadmin route protection on every request. Token generation in `api/sadmin/auth/route.ts` remains on Node.js (API route, not middleware) and is unaffected.
 
-## KNOWN ISSUES (updated v2.2.0)
+## DECISIONS LOG (v2.3.0)
+- **2026-04-23**: Engineered native Lifetime Deal (LTD) support using `company_entitlements` and `ltd_codes` tables to establish a permanent entitlement layer isolated from `subscriptions`.
+- **2026-04-23**: Created pure Postgres RPC `fulfill_olisaas_ltd` mapped to `SELECT ... FOR UPDATE` locks effectively achieving zero-race-condition fulfillment idemptoency from incoming Olisaas webhook blasts.
+- **2026-04-23**: Abstracted frontend pricing and limit-checks internally behind `fetch("/api/billing/access")` hitting `getCompanyAccess()`. 
+- **2026-04-23**: Implemented Auto-Provisioning Pipeline using internal Supabase Admin API to generate headless Users without interfering with the local `pg` triggers.
+
+## KNOWN ISSUES (updated v2.3.0)
 - **RESOLVED**: `crypto` module in middleware Edge Runtime — fixed in v2.2.0 (replaced with Web Crypto API).
 - **Pre-existing**: Sadmin auth uses HMAC tokens derived from the `SADMIN_PASSWORD` env var. If the password is weak or leaked, sadmin is compromised. Upgrade to dedicated sadmin user table with bcrypt in a future sprint.
 - **Pre-existing**: `employee_otp`, `employee_sessions`, `pricing_config` tables have no RLS. Access is only via `supabaseAdmin` (service role) in API routes. Safe for now but should add RLS as defence-in-depth.
 - **Pre-existing**: Sadmin pricing editor saves to `pricing_config` DB table, but customer-facing billing reads from hardcoded `billing.ts`. Price changes in sadmin UI do NOT propagate to customers until `billing.ts` is refactored to read from DB.
 - **Pre-existing**: Next.js 16 deprecation warning: `middleware.ts` file convention will become `proxy.ts`. Not breaking; rename in next major version bump.
 - **Pre-existing**: `middleware.ts` reads `companies.onboarding_step` on every authenticated request when `onb_done` cookie is absent. Can be expensive under load. Mitigation: cookie is set once onboarding is complete, so DB is only hit once per fresh session.
+- **NEW (v2.3.0)**: **Olisaas Secret Config Risk**: If `OLISAAS_FULFILLMENT_SECRET` is missing from the environment configuration (or doesn't match the Olisaas external dashboard), webhook fulfillments will silently and permanently reject with `401 Unauthorized` causing severe user experience issues tracking down unredeemed purchases.
