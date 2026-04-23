@@ -99,6 +99,7 @@
 - **2026-04-15**: Security hardening — added `company_id` scoping to all team API queries, try/catch on all routes, sanitized error messages, crypto-secure OTP generation.
 
 ## CHANGE LOG
+- **v2.3.2**: **UI Showcase & Stripe Verification.** Added interactive Showcase section to landing page (infographic, analytics, tasks). Verified Stripe Apple Pay compatibility for Hosted Checkout. Renamed Portal to "Employee App" in header with directional icons.
 - **v2.3.1**: **ATO Security & Monetization Overlay.** Mathematical JWT enforcement pushed across the Sadmin API preventing zero-click Account Takeovers. Established Postgres-level employee limit bounds natively via `company_entitlements` locking off API overage leakage. Resolved LTD overlap subscription bleed loop.
 - **v2.3.0**: **Lifetime Deals (LTD) & Olisaas Fulfillment.** Introduced `company_entitlements` layer bypassing Stripe subscription limits. Added `getCompanyAccess()` middleware, LTD redemption UI, and military-grade Olisaas incoming webhook processor with Postgres `FOR UPDATE` idempotency locks.
 - **v2.1.0**: Team portal UI redesign (analytics dashboard style), Recharts charts, company logo upload, Excel export for team leaders, full RTL/Arabic support.
@@ -126,6 +127,9 @@
 - **2026-04-23**: Isolated symmetric cryptographic secrets enforcing `SADMIN_JWT_SECRET` out of `--password` parameters directly securing Sadmin backend interactions gracefully.
 - **2026-04-23**: Migrated frontend limit overlays on the `employees` array strictly back to `PLPGSQL BEFORE INSERT` triggers preventing unauthorized vertical scaling.
 - **2026-04-23**: Abstracted the pricing layer overlay forcing `getCompanyAccess` to return `MAX(LTD, Subscription)` natively permitting lifetime members to still natively process Stripe checkout expansions when growing larger than their LTD base.
+- **2026-04-23**: **Landing Page Expansion**: Created `ShowcaseSection` with code-based mockups for Analytics (Recharts), Task Management UI, and Data-Flow Infographic to boost conversion.
+- **2026-04-23**: **Apple Pay Verification**: Audited `checkout/route.ts` against Stripe Hosted Checkout standards. Verified active Apple Pay configuration in user dashboard.
+
 
 ## KNOWN ISSUES (updated v2.3.1)
 - **RESOLVED**: `crypto` module in middleware Edge Runtime — fixed in v2.2.0 (replaced with Web Crypto API).
