@@ -36,8 +36,10 @@ function BillingPageInner() {
   const [company, setCompany] = useState({
     id: "",
     plan_id: "free",
+    pending_plan_id: null as string | null,
     subscription_status: "active",
     trial_ends_at: null as string | null,
+    current_period_end: null as string | null,
     isLifetime: false,
   });
 
@@ -71,11 +73,11 @@ function BillingPageInner() {
     async function loadBilling() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: comp } = await supabase
-        .from("companies")
-        .select("id, plan_id, subscription_status, trial_ends_at")
-        .eq("owner_id", user.id)
-        .single();
+        const { data: comp } = await supabase
+          .from("companies")
+          .select("id, plan_id, pending_plan_id, subscription_status, trial_ends_at, current_period_end")
+          .eq("owner_id", user.id)
+          .single();
       if (comp) {
         let effectivePlanId = comp.plan_id || "free";
         let effectiveStatus = comp.subscription_status || "active";
@@ -100,7 +102,15 @@ function BillingPageInner() {
             console.error("LTD load error", e);
         }
 
-        setCompany({ id: comp.id, plan_id: effectivePlanId, subscription_status: effectiveStatus, trial_ends_at: comp.trial_ends_at || null, isLifetime: lifetime });
+        setCompany({ 
+          id: comp.id, 
+          plan_id: effectivePlanId, 
+          pending_plan_id: comp.pending_plan_id || null,
+          subscription_status: effectiveStatus, 
+          trial_ends_at: comp.trial_ends_at || null, 
+          current_period_end: comp.current_period_end || null,
+          isLifetime: lifetime 
+        });
         const [empRes, txnRes] = await Promise.all([
           supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", comp.id),
           supabase.from("subscriptions").select("*").eq("company_id", comp.id).order("created_at", { ascending: false }),
@@ -202,8 +212,26 @@ function BillingPageInner() {
         <SectionCard className="bg-[#f9fafb]">
           <div className="text-start">
             <p className="text-[10px] font-bold text-[#6b7280] uppercase tracking-wider mb-1">{t.currentPlan}</p>
-            <p className="text-xl font-black text-[#111]">{isRTL ? currentPlan.nameAr : currentPlan.name}</p>
-            <StatusPill label={statusInfo.label} tone={statusInfo.tone} />
+            <div className="flex items-center gap-2">
+              <p className="text-xl font-black text-[#111]">{isRTL ? currentPlan.nameAr : currentPlan.name}</p>
+              <StatusPill label={statusInfo.label} tone={statusInfo.tone} />
+            </div>
+
+            {/* Pending Downgrade Notice */}
+            {company.pending_plan_id && (
+              <div className="mt-3 p-2 bg-[#fff8f0] border border-[#ffd4b8] rounded-lg">
+                <p className="text-[10px] font-black text-[#b45309] uppercase flex items-center gap-1">
+                   <CalendarClock className="w-3 h-3" />
+                   {isRTL ? "تخفيض مجدول" : "Scheduled Downgrade"}
+                </p>
+                <p className="text-xs font-semibold text-[#111] mt-0.5">
+                   {isRTL 
+                     ? `سيتم التحويل إلى باقة (${PLANS[company.pending_plan_id]?.nameAr || company.pending_plan_id}) في ${company.current_period_end ? new Date(company.current_period_end).toLocaleDateString() : 'نهاية الفترة'}`
+                     : `Changing to ${PLANS[company.pending_plan_id]?.name || company.pending_plan_id} on ${company.current_period_end ? new Date(company.current_period_end).toLocaleDateString() : 'period end'}`
+                   }
+                </p>
+              </div>
+            )}
           </div>
         </SectionCard>
         <SectionCard>
@@ -436,25 +464,33 @@ function BillingPageInner() {
               <table className="w-full text-start">
                 <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
                   <tr>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "التاريخ" : "Date"}</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "المبلغ" : "Amount"}</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "الحالة" : "Status"}</th>
-                    <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "رقم المرجع" : "Ref ID"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "التاريخ" : "Purchase Date"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "تاريخ التفعيل" : "Activation"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "تاريخ الانتهاء" : "Expiration"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "المبلغ" : "Amount"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "الحالة" : "Status"}</th>
+                    <th className="px-5 py-4 text-[10px] font-black text-[#6b7280] uppercase tracking-wider text-start">{isRTL ? "رقم المرجع" : "Ref ID"}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#f1f1f1]">
                   {transactions.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-[#f9fafb] transition-colors">
-                      <td className="px-6 py-4 text-sm font-semibold text-[#111]">{new Date(tx.created_at).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 text-sm font-black text-[#111]">{tx.amount} {tx.currency}</td>
-                      <td className="px-6 py-4">
+                    <tr key={tx.id} className="hover:bg-[#f9fafb] transition-colors border-b border-[#f1f1f1] last:border-0 text-start">
+                      <td className="px-5 py-4 text-sm font-semibold text-[#111]">{new Date(tx.created_at).toLocaleDateString()}</td>
+                      <td className="px-5 py-4 text-sm font-semibold text-[#111]">
+                        {tx.started_at ? new Date(tx.started_at).toLocaleDateString() : (isRTL ? "نشط" : "Active")}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-semibold text-[#444]">
+                        {tx.ends_at ? new Date(tx.ends_at).toLocaleDateString() : (isRTL ? "دائم" : "Forever")}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-black text-[#111]">{tx.amount} {tx.currency}</td>
+                      <td className="px-5 py-4">
                         <StatusPill
-                          label={tx.status}
+                          label={isRTL ? (tx.status === "succeeded" || tx.status === "paid" ? "تم الدفع" : tx.status === "pending" ? "قيد الانتظار" : "فشل") : tx.status}
                           tone={tx.status === "succeeded" || tx.status === "paid" ? "success" : tx.status === "pending" ? "neutral" : "danger"}
                         />
                       </td>
-                      <td className="px-6 py-4 text-xs text-[#9ca3af] font-mono">
-                        {tx.stripe_session_id || tx.paymob_order_id || tx.merchant_order_id || tx.id.substring(0, 8) + "..."}
+                      <td className="px-5 py-4 text-[10px] text-[#9ca3af] font-mono">
+                        {tx.stripe_session_id || tx.paymob_order_id || tx.merchant_order_id || tx.id.substring(0, 8)}
                       </td>
                     </tr>
                   ))}

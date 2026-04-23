@@ -1,33 +1,36 @@
 {
   "project_name": "SyncTime SaaS Attendance",
-  "version": "1.0.0",
   "stack": {
-    "frontend": "Next.js 16 (App Router)",
-    "backend": "Node.js (Serverless API)",
-    "database": "Supabase (PostgreSQL)",
-    "hosting": "Vercel"
+    "frontend": "Next.js 16 (App Router + Turbopack)",
+    "backend": "Next.js API Routes (Serverless) + Telegram Bot (Telegraf)",
+    "database": "Supabase (PostgreSQL + RLS + Realtime)",
+    "hosting": "Vercel (Frontend/API) + Supabase (DB/Storage)"
   },
   "architecture": {
     "type": "Monolith (Full-stack Next.js)",
     "multi_tenant": true,
-    "onboarding_flow": "3-step wizard",
-    "bot_provider": "Telegram Telegraf"
+    "subdomain_logic": true,
+    "subdomains": {
+      "www": "Marketing/Landing Page",
+      "app": "Main Dashboard (Owners)",
+      "team": "Employee App (Web Portal)",
+      "sadmin": "Administrative Control Plane (System Admins)"
+    }
   },
   "critical_modules": [
-    "src/app/api/telegram/webhook",
-    "src/lib/billing",
     "src/middleware.ts",
-    "src/lib/supabase"
+    "src/app/api/telegram/webhook/route.ts",
+    "src/app/api/billing/checkout/route.ts",
+    "src/app/api/olisaas/fulfill/route.ts",
+    "src/lib/supabase.ts",
+    "src/lib/billing.ts"
   ],
   "sensitive_areas": [
-    "auth",
+    "auth (Owner/Employee)",
     "billing",
-    "RLS_Policies",
-    "Telegram_Webhook"
-  ],
-  "monetization": {
-    "currency": "EGP",
-    "plans": ["starter", "growth", "pro", "enterprise"],
-    "usage_based": true
-  }
+    "subdomain_rewriting",
+    "database_schema",
+    "telegram_bot_parsing",
+    "owner_otp_verification"
+  ]
 }

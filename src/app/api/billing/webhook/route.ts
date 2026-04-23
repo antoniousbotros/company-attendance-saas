@@ -29,58 +29,83 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
 
       // ── Payment succeeded — activate the plan ──────────────────────────────
-      case "checkout.session.completed": {
-        const session = event.data.object as any;
-        const { company_id, plan_id } = session.metadata ?? {};
+        // Check if transaction already exists (deduplication)
+        const { data: existing } = await supabaseAdmin
+          .from("subscriptions")
+          .select("id")
+          .eq("stripe_session_id", session.id)
+          .single();
 
-        if (!company_id || !plan_id) {
-          console.error("[billing/webhook] checkout.session.completed: missing metadata", session.id);
+        if (existing) {
+          console.log(`[billing/webhook] Transaction ${session.id} already exists, skipping.`);
           break;
         }
 
-        const subscriptionId: string | null = session.subscription ?? null;
-        const customerId: string | null = session.customer ?? null;
-
-        // Activate plan — only use safe columns that always exist
-        await supabaseAdmin
+        // Get current company state to detect downgrade
+        const { data: comp } = await supabaseAdmin
           .from("companies")
-          .update({ plan_id, subscription_status: "active" })
-          .eq("id", company_id);
+          .select("plan_id")
+          .eq("id", company_id)
+          .single();
 
-        // Persist Stripe IDs — silently skip if migration columns don't exist yet
+        const planOrder = ["free", "starter", "pro", "business", "enterprise"];
+        const currentRank = planOrder.indexOf(comp?.plan_id || "free");
+        const nextRank = planOrder.indexOf(plan_id);
+
+        const isDowngrade = nextRank < currentRank;
+
+        if (isDowngrade) {
+          // It's a downgrade — set it as pending while keeping the current plan active
+          await supabaseAdmin
+            .from("companies")
+            .update({ 
+               pending_plan_id: plan_id,
+               subscription_status: "active" 
+            })
+            .eq("id", company_id);
+          console.log(`[billing/webhook] Downgrade detected: company=${company_id} plan=${plan_id} set as PENDING.`);
+        } else {
+          // It's an upgrade or same plan — activate immediately
+          await supabaseAdmin
+            .from("companies")
+            .update({ 
+               plan_id, 
+               pending_plan_id: null,
+               subscription_status: "active" 
+            })
+            .eq("id", company_id);
+          console.log(`[billing/webhook] Plan activated immediately: company=${company_id} plan=${plan_id}`);
+        }
+
+        // Persist Stripe IDs
         try {
           const stripeUpdate: Record<string, string | null> = {};
           if (customerId) stripeUpdate.stripe_customer_id = customerId;
-          if (subscriptionId) stripeUpdate.stripe_subscription_id = subscriptionId;
+          if (subscriptionId) {
+             stripeUpdate.stripe_subscription_id = subscriptionId;
+             // Update period end from subscription
+             const sub = await stripe.subscriptions.retrieve(subscriptionId);
+             stripeUpdate.current_period_end = new Date(sub.current_period_end * 1000).toISOString();
+          }
           if (Object.keys(stripeUpdate).length > 0) {
             await supabaseAdmin.from("companies").update(stripeUpdate).eq("id", company_id);
           }
-        } catch { /* migration columns not added yet */ }
+        } catch (e: any) { console.error("Stripe metadata update failed", e.message); }
 
-        // Record the transaction — use only original columns, add new ones safely
-        try {
-          await supabaseAdmin.from("subscriptions").insert({
-            company_id,
-            stripe_session_id: session.id,
-            stripe_subscription_id: subscriptionId,
-            amount: (session.amount_total ?? 0) / 100,
-            currency: (session.currency ?? "egp").toUpperCase(),
-            status: "succeeded",
-            plan_id,
-          });
-        } catch {
-          // Fallback: insert with only columns that definitely exist
-          await supabaseAdmin.from("subscriptions").insert({
-            company_id,
-            amount: (session.amount_total ?? 0) / 100,
-            currency: (session.currency ?? "egp").toUpperCase(),
-            status: "succeeded",
-          });
-        }
+        // Record the transaction
+        await supabaseAdmin.from("subscriptions").insert({
+          company_id,
+          stripe_session_id: session.id,
+          stripe_subscription_id: subscriptionId,
+          amount: (session.amount_total ?? 0) / 100,
+          currency: (session.currency ?? "egp").toUpperCase(),
+          status: "succeeded",
+          plan_id,
+          started_at: new Date().toISOString(),
+          // Use current_period_end if available
+          ends_at: subscriptionId ? new Date((await stripe.subscriptions.retrieve(subscriptionId)).current_period_end * 1000).toISOString() : null
+        });
 
-        console.log(`[billing/webhook] Plan activated: company=${company_id} plan=${plan_id}`);
-        break;
-      }
 
       // ── Subscription cancelled / expired — downgrade to free ──────────────
       case "customer.subscription.deleted": {
@@ -108,31 +133,76 @@ export async function POST(req: NextRequest) {
       // ── Renewal payment succeeded — keep subscription active ──────────────
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as any;
-        const sub = invoice.subscription
-          ? await stripe.subscriptions.retrieve(invoice.subscription)
-          : null;
+        
+        // Deduplicate: check if this invoice was already processed (or session fulfilled it)
+        const { data: existing } = await supabaseAdmin
+          .from("subscriptions")
+          .select("id")
+          .or(`stripe_invoice_id.eq.${invoice.id},stripe_session_id.eq.${invoice.id}`)
+          .single();
+
+        if (existing) {
+          console.log(`[billing/webhook] Invoice ${invoice.id} already processed, skipping.`);
+          break;
+        }
+
+        const subId = invoice.subscription;
+        const sub = subId ? await stripe.subscriptions.retrieve(subId) : null;
         const company_id = sub?.metadata?.company_id;
         const plan_id = sub?.metadata?.plan_id;
 
         if (company_id) {
+          const periodEnd = sub ? new Date(sub.current_period_end * 1000).toISOString() : null;
+          
           await supabaseAdmin
             .from("companies")
-            .update({ subscription_status: "active" })
+            .update({ 
+               subscription_status: "active",
+               current_period_end: periodEnd 
+            })
             .eq("id", company_id);
 
           // Log renewal
           await supabaseAdmin.from("subscriptions").insert({
             company_id,
-            stripe_session_id: invoice.id,
+            stripe_session_id: invoice.id, // Legacy mapping
+            stripe_invoice_id: invoice.id,
             stripe_subscription_id: invoice.subscription,
             amount: (invoice.amount_paid ?? 0) / 100,
             currency: (invoice.currency ?? "egp").toUpperCase(),
             status: "succeeded",
             plan_id: plan_id ?? null,
+            started_at: new Date(invoice.created * 1000).toISOString(),
+            ends_at: periodEnd
           });
         }
         break;
       }
+
+      // ── Subscription updated — handle scheduled plan changes ──────────────
+      case "customer.subscription.updated": {
+        const sub = event.data.object as any;
+        const { company_id, plan_id } = sub.metadata ?? {};
+        
+        if (company_id && plan_id) {
+          // If the subscription is actually on the plan we wanted (e.g. downgrade target reached)
+          // or if the subscription updated to a new plan ID
+          const currentSubPlanId = sub.items.data[0].plan.metadata?.plan_id || sub.metadata?.plan_id;
+          
+          await supabaseAdmin
+            .from("companies")
+            .update({ 
+              plan_id: currentSubPlanId || plan_id, 
+              pending_plan_id: null,
+              current_period_end: new Date(sub.current_period_end * 1000).toISOString()
+            })
+            .eq("id", company_id);
+          
+          console.log(`[billing/webhook] Subscription updated: company=${company_id} plan moved to ${currentSubPlanId}`);
+        }
+        break;
+      }
+
 
       // ── Renewal payment failed — flag account ─────────────────────────────
       case "invoice.payment_failed": {
