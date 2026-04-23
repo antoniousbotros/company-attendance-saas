@@ -1,270 +1,140 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import stripe from "@/lib/stripe";
+import { BillingService } from "@/lib/billing/service";
 
 export const dynamic = "force-dynamic";
 
-// Stripe webhooks must receive the RAW body — do NOT parse as JSON before verifying
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
   const sig = req.headers.get("stripe-signature") ?? "";
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET ?? "";
 
-  if (!webhookSecret) {
-    console.error("[billing/webhook] STRIPE_WEBHOOK_SECRET is not configured.");
-    return NextResponse.json({ error: "Webhook secret missing" }, { status: 500 });
-  }
-
+  // 1. Verify Signature
   let event;
   try {
     event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err: any) {
-    // Invalid signature — reject silently (could be a probe/attack)
     console.warn("[billing/webhook] Signature verification failed:", err.message);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  // ── Handle events ──────────────────────────────────────────────────────────
+  // 2. Idempotency Check
+  const isNew = await BillingService.startProcessing({
+    provider: 'stripe',
+    eventType: event.type,
+    eventId: event.id,
+    payload: event.data.object
+  });
+
+  if (!isNew) {
+    console.log(`[billing/webhook] Event ${event.id} already processed, skipping.`);
+    return NextResponse.json({ received: true, deduplicated: true });
+  }
+
   try {
     switch (event.type) {
-
-      // ── Payment succeeded — activate the plan ──────────────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as any;
-        const { company_id, plan_id } = session.metadata ?? {};
+        const { company_id, plan_id, billing_cycle } = session.metadata ?? {};
 
-        if (!company_id || !plan_id) {
-          console.error("[billing/webhook] checkout.session.completed: missing metadata", session.id);
-          break;
-        }
+        if (!company_id || !plan_id) break;
 
-        const subscriptionId: string | null = session.subscription ?? null;
-        const customerId: string | null = session.customer ?? null;
-        const paymentIntentId: string | null = session.payment_intent ?? null;
-
-        // Check if transaction already exists (deduplication)
-        const { data: existing } = await supabaseAdmin
-          .from("subscriptions")
-          .select("id")
-          .or(`stripe_session_id.eq.${session.id}${paymentIntentId ? `,stripe_payment_intent_id.eq.${paymentIntentId}` : ""}`)
-          .single();
-
-        if (existing) {
-          console.log(`[billing/webhook] Transaction ${session.id} already exists, skipping.`);
-          break;
-        }
-
-        // Get current company state to detect downgrade
-        const { data: comp } = await supabaseAdmin
-          .from("companies")
-          .select("plan_id, current_period_end")
-          .eq("id", company_id)
-          .single();
-
-        const planOrder = ["free", "starter", "pro", "business", "enterprise"];
-        const currentRank = planOrder.indexOf(comp?.plan_id || "free");
-        const nextRank = planOrder.indexOf(plan_id);
-
-        const isDowngrade = nextRank < currentRank;
-
-        if (isDowngrade) {
-          // It's a downgrade — set it as pending while keeping the current plan active
-          await supabaseAdmin
-            .from("companies")
-            .update({ 
-               pending_plan_id: plan_id,
-               subscription_status: "active" 
-            })
-            .eq("id", company_id);
-          console.log(`[billing/webhook] Downgrade detected: company=${company_id} plan=${plan_id} set as PENDING.`);
-        } else {
-          // It's an upgrade or same plan — activate immediately
-          await supabaseAdmin
-            .from("companies")
-            .update({ 
-               plan_id, 
-               pending_plan_id: null,
-               subscription_status: "active" 
-            })
-            .eq("id", company_id);
-          console.log(`[billing/webhook] Plan activated immediately: company=${company_id} plan=${plan_id}`);
-        }
-
-        // Persist Stripe IDs
-        try {
-          const stripeUpdate: Record<string, string | null> = {};
-          if (customerId) stripeUpdate.stripe_customer_id = customerId;
-          if (subscriptionId) {
-             stripeUpdate.stripe_subscription_id = subscriptionId;
-             // Update period end from subscription
-             const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
-             stripeUpdate.current_period_end = new Date(sub.current_period_end * 1000).toISOString();
-          }
-          if (Object.keys(stripeUpdate).length > 0) {
-            await supabaseAdmin.from("companies").update(stripeUpdate).eq("id", company_id);
-          }
-        } catch (e: any) { console.error("Stripe metadata update failed", e.message); }
-
-        // Determine started_at and ends_at
-        let started_at = new Date().toISOString();
-        let ends_at: string | null = null;
-
-        if (subscriptionId) {
-          try {
-            const sub = await stripe.subscriptions.retrieve(subscriptionId) as any;
-            // If it's a downgrade, it starts when the current plan ends
-            if (isDowngrade && comp?.current_period_end) {
-              started_at = new Date(comp.current_period_end).toISOString();
-            } else {
-              started_at = new Date(sub.current_period_start * 1000).toISOString();
-            }
-            ends_at = new Date(sub.current_period_end * 1000).toISOString();
-          } catch (e) { console.error("Stripe sub retrieve failed", e); }
-        }
-
-        // Record the transaction
-        await supabaseAdmin.from("subscriptions").insert({
-          company_id,
-          stripe_session_id: session.id,
-          stripe_subscription_id: subscriptionId,
-          stripe_payment_intent_id: paymentIntentId,
-          amount: (session.amount_total ?? 0) / 100,
-          currency: (session.currency ?? "egp").toUpperCase(),
-          status: "succeeded",
-          plan_id,
-          started_at,
-          ends_at
+        const subId = session.subscription;
+        const sub = subId ? await stripe.subscriptions.retrieve(subId) : null;
+        
+        // Use service to record and activate
+        await BillingService.recordPayment({
+            companyId: company_id,
+            provider: 'stripe',
+            providerPaymentId: session.id,
+            amount: (session.amount_total ?? 0) / 100,
+            currency: (session.currency ?? "egp").toUpperCase(),
+            status: 'paid',
+            planId: plan_id,
+            billingCycle: billing_cycle
         });
-        console.log(`[billing/webhook] Plan activation logic finished for company=${company_id}`);
+
+        await BillingService.activateEntitlement({
+            companyId: company_id,
+            planId: plan_id,
+            type: 'subscription',
+            source: 'stripe',
+            startAt: sub ? new Date((sub as any).current_period_start * 1000) : new Date(),
+            endAt: sub ? new Date((sub as any).current_period_end * 1000) : null
+        });
         break;
       }
 
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as any;
+        const subId = invoice.subscription;
+        if (!subId) break;
 
-      // ── Subscription cancelled / expired — downgrade to free ──────────────
+        const sub = await stripe.subscriptions.retrieve(subId) as any;
+        const { company_id, plan_id } = sub.metadata ?? {};
+        if (!company_id) break;
+
+        await BillingService.recordPayment({
+            companyId: company_id,
+            provider: 'stripe',
+            providerPaymentId: invoice.id,
+            amount: (invoice.amount_paid ?? 0) / 100,
+            currency: (invoice.currency ?? "egp").toUpperCase(),
+            status: 'paid',
+            planId: plan_id,
+        });
+
+        await BillingService.activateEntitlement({
+            companyId: company_id,
+            planId: plan_id ?? 'starter',
+            type: 'subscription',
+            source: 'stripe',
+            startAt: new Date(invoice.period_start * 1000),
+            endAt: new Date(invoice.period_end * 1000)
+        });
+        break;
+      }
+
       case "customer.subscription.deleted": {
         const sub = event.data.object as any;
         const { company_id } = sub.metadata ?? {};
-
-        if (!company_id) {
-          console.warn("[billing/webhook] customer.subscription.deleted: no company_id in metadata");
-          break;
-        }
-
-        await supabaseAdmin
-          .from("companies")
-          .update({ plan_id: "free", subscription_status: "cancelled" })
-          .eq("id", company_id);
-        // Clear subscription ID if column exists
-        try {
-          await supabaseAdmin.from("companies").update({ stripe_subscription_id: null }).eq("id", company_id);
-        } catch { /* migration not done */ }
-
-        console.log(`[billing/webhook] Subscription cancelled — company ${company_id} moved to free.`);
-        break;
-      }
-
-      // ── Renewal payment succeeded — keep subscription active ──────────────
-      case "invoice.payment_succeeded": {
-        const invoice = event.data.object as any;
-        const paymentIntentId = invoice.payment_intent;
-        
-        // Deduplicate: check if this invoice was already processed (or session fulfilled it)
-        const { data: existing } = await supabaseAdmin
-          .from("subscriptions")
-          .select("id")
-          .or(`stripe_invoice_id.eq.${invoice.id},stripe_session_id.eq.${invoice.id}${paymentIntentId ? `,stripe_payment_intent_id.eq.${paymentIntentId}` : ""}`)
-          .single();
-
-        if (existing) {
-          console.log(`[billing/webhook] Invoice ${invoice.id} already processed, skipping.`);
-          break;
-        }
-
-        const subId = invoice.subscription;
-        const sub = subId ? await stripe.subscriptions.retrieve(subId) : null;
-        const company_id = sub?.metadata?.company_id;
-        const plan_id = sub?.metadata?.plan_id;
-
         if (company_id) {
-          const periodEnd = sub ? new Date((sub as any).current_period_end * 1000).toISOString() : null;
-          
-          await supabaseAdmin
-            .from("companies")
-            .update({ 
-               subscription_status: "active",
-               current_period_end: periodEnd 
-            })
-            .eq("id", company_id);
-
-          // Log renewal
-          await supabaseAdmin.from("subscriptions").insert({
-            company_id,
-            stripe_session_id: invoice.id, 
-            stripe_invoice_id: invoice.id,
-            stripe_subscription_id: invoice.subscription,
-            stripe_payment_intent_id: paymentIntentId,
-            amount: (invoice.amount_paid ?? 0) / 100,
-            currency: (invoice.currency ?? "egp").toUpperCase(),
-            status: "succeeded",
-            plan_id: plan_id ?? null,
-            started_at: new Date(invoice.period_start * 1000).toISOString(),
-            ends_at: new Date(invoice.period_end * 1000).toISOString()
-          });
+            await BillingService.activateEntitlement({
+                companyId: company_id,
+                planId: 'free',
+                type: 'subscription',
+                source: 'stripe',
+                startAt: new Date(),
+                status: 'expired'
+            } as any);
         }
         break;
       }
 
-      // ── Subscription updated — handle scheduled plan changes ──────────────
       case "customer.subscription.updated": {
-        const sub = event.data.object as any;
-        const { company_id, plan_id } = sub.metadata ?? {};
-        
-        if (company_id && plan_id) {
-          // If the subscription is actually on the plan we wanted (e.g. downgrade target reached)
-          // or if the subscription updated to a new plan ID
-          const currentSubPlanId = sub.items.data[0].plan.metadata?.plan_id || sub.metadata?.plan_id;
-          
-          await supabaseAdmin
-            .from("companies")
-            .update({ 
-              plan_id: currentSubPlanId || plan_id, 
-              pending_plan_id: null,
-              current_period_end: new Date((sub as any).current_period_end * 1000).toISOString()
-            })
-            .eq("id", company_id);
-          
-          console.log(`[billing/webhook] Subscription updated: company=${company_id} plan moved to ${currentSubPlanId}`);
-        }
-        break;
+          const sub = event.data.object as any;
+          const { company_id } = sub.metadata ?? {};
+          if (!company_id) break;
+
+          // Sync period shifts or plan changes
+          await BillingService.activateEntitlement({
+              companyId: company_id,
+              planId: (sub as any).metadata.plan_id || 'starter',
+              type: 'subscription',
+              source: 'stripe',
+              startAt: new Date((sub as any).current_period_start * 1000),
+              endAt: new Date((sub as any).current_period_end * 1000)
+          });
+          break;
       }
-
-
-      // ── Renewal payment failed — flag account ─────────────────────────────
-      case "invoice.payment_failed": {
-        const invoice = event.data.object as any;
-        const sub = invoice.subscription
-          ? await stripe.subscriptions.retrieve(invoice.subscription)
-          : null;
-        const company_id = sub?.metadata?.company_id;
-
-        if (company_id) {
-          await supabaseAdmin
-            .from("companies")
-            .update({ subscription_status: "past_due" })
-            .eq("id", company_id);
-        }
-        break;
-      }
-
-      default:
-        // Ignore unhandled events
-        break;
     }
-  } catch (handlerErr: any) {
-    console.error("[billing/webhook] Handler error:", handlerErr.message);
-    // Return 200 so Stripe doesn't retry — the error is on our side
-    return NextResponse.json({ received: true, warning: handlerErr.message });
-  }
 
-  return NextResponse.json({ received: true });
+    await BillingService.finishProcessing(event.id);
+    return NextResponse.json({ received: true });
+
+  } catch (err: any) {
+    console.error("[billing/webhook] Processing error:", err.message);
+    return NextResponse.json({ received: true, error: err.message });
+  }
 }

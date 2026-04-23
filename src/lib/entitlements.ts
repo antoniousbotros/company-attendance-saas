@@ -9,55 +9,46 @@ export type CompanyAccess = {
 };
 
 /**
- * Universal access check.
- * This MUST be used throughout the app instead of raw `companies.plan_id`.
- * It automatically applies LTD overrides if a valid permanent entitlement exists.
+ * Universal access check using the User Entitlements source of truth.
+ * Hierarchy: Highest Tier among ACTIVE entitlements.
  */
 export async function getCompanyAccess(companyId: string): Promise<CompanyAccess> {
-  // Fetch both LTD and Subscription concurrently
-  const [ltdReq, compReq] = await Promise.all([
-    supabaseAdmin
-      .from("company_entitlements")
-      .select("tier_id")
-      .eq("company_id", companyId)
-      .eq("status", "active")
-      .single(),
-    supabaseAdmin
-      .from("companies")
-      .select("plan_id, subscription_status")
-      .eq("id", companyId)
-      .single()
-  ]);
+  const { data: entitlements, error } = await supabaseAdmin
+    .from("user_entitlements")
+    .select("*")
+    .eq("company_id", companyId)
+    .eq("status", "active");
 
-  const ltdPlanId = (ltdReq.data && !ltdReq.error) ? ltdReq.data.tier_id : null;
-  const isSubActive = compReq.data && ["active", "trialing"].includes(compReq.data.subscription_status || "");
-  const subPlanId = isSubActive ? (compReq.data?.plan_id || "free") : "free";
-
-  let finalPlanId = "free";
-  let isLifetime = false;
-
-  if (ltdPlanId) {
-    // If LTD exists, check if Subscription provides higher limits
-    const ltdLimit = PLANS[ltdPlanId]?.employeeLimit || 0;
-    const subLimit = PLANS[subPlanId]?.employeeLimit || 0;
-
-    if (subLimit > ltdLimit) {
-      finalPlanId = subPlanId;
-      isLifetime = false; // Using the paid sub because it's higher
-    } else {
-      finalPlanId = ltdPlanId;
-      isLifetime = true;
-    }
-  } else {
-    finalPlanId = subPlanId;
+  if (error || !entitlements || entitlements.length === 0) {
+    return {
+      tier: "free",
+      isLifetime: false,
+      limits: PLANS.free.employeeLimit,
+      planDetails: PLANS.free,
+    };
   }
 
-  const plan = PLANS[finalPlanId];
+  // Find the hierarchy: Highest employee limit among active ones
+  let bestPlanId = "free";
+  let isLifetime = false;
+
+  for (const ent of entitlements) {
+    const plan = PLANS[ent.plan_id];
+    if (!plan) continue;
+
+    const currentBest = PLANS[bestPlanId]?.employeeLimit || 0;
+    if (plan.employeeLimit >= currentBest) {
+      bestPlanId = ent.plan_id;
+      isLifetime = (ent.type === 'ltd');
+    }
+  }
+
+  const finalPlan = PLANS[bestPlanId] || PLANS.free;
 
   return {
-    tier: finalPlanId,
+    tier: bestPlanId,
     isLifetime: isLifetime,
-    limits: plan ? plan.employeeLimit : PLANS.free.employeeLimit,
-    planDetails: plan || PLANS.free,
+    limits: finalPlan.employeeLimit,
+    planDetails: finalPlan,
   };
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { supabaseAdmin } from "@/lib/supabase";
 import stripe from "@/lib/stripe";
+import { BillingService } from "@/lib/billing/service";
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +30,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid code format" }, { status: 400 });
     }
 
-    // Identify user's company (Assuming owner_id = user.id)
+    // Identify user's company
     const { data: company, error: companyError } = await supabase
       .from("companies")
       .select("id")
@@ -47,7 +48,6 @@ export async function POST(req: NextRequest) {
     });
 
     if (rpcError) {
-      console.error("LTD Redemption RPC Error:", rpcError);
       return NextResponse.json({ error: "Internal server error during redemption." }, { status: 500 });
     }
 
@@ -55,23 +55,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: result.error || "Failed to redeem code" }, { status: 400 });
     }
 
-    // Cancel existing subscriptions to close the billing leak
+    // NEW AUTH AUTHORITY: Activate Entitlement through the BillingService
+    await BillingService.activateEntitlement({
+        companyId: company.id,
+        planId: result.tier || 'pro',
+        type: 'ltd',
+        source: 'ltd_code',
+        startAt: new Date(),
+        endAt: null // Lifetime
+    });
+
+    // Cleanup existing subscriptions
     const { data: activeSubs } = await supabaseAdmin
-        .from("subscriptions")
-        .select("id, stripe_subscription_id")
+        .from("active_subscriptions")
+        .select("id, provider_subscription_id")
         .eq("company_id", company.id)
         .eq("status", "active");
 
     if (activeSubs && activeSubs.length > 0) {
        for (const sub of activeSubs) {
-           if (sub.stripe_subscription_id) {
+           if (sub.provider_subscription_id) {
                try {
-                   await stripe.subscriptions.cancel(sub.stripe_subscription_id, { prorate: true });
-               } catch (e) { console.warn("Failed to cancel stripe sub from LTD:", e); }
+                   await stripe.subscriptions.cancel(sub.provider_subscription_id);
+               } catch (e) { console.warn("LTD Cleanup: Stripe cancel failed", e); }
            }
        }
-       // Mark closed locally
-       await supabaseAdmin.from("subscriptions").update({ status: "canceled" }).eq("company_id", company.id);
+       await supabaseAdmin.from("active_subscriptions").update({ status: "canceled" }).eq("company_id", company.id);
     }
 
     return NextResponse.json({ 

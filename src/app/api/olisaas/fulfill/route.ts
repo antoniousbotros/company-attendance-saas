@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
 import { PLANS } from "@/lib/billing";
 import stripe from "@/lib/stripe";
+import { BillingService } from "@/lib/billing/service";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,155 +17,123 @@ function isAuthorized(authHeader: string | null): boolean {
   const token = authHeader.split(" ")[1];
   const secret = process.env.OLISAAS_FULFILLMENT_SECRET;
   
-  if (!secret) {
-    console.error("CRITICAL: OLISAAS_FULFILLMENT_SECRET is not configured.");
-    return false;
-  }
+  if (!secret) return false;
   
   try {
     const tokenBuffer = Buffer.from(token);
     const secretBuffer = Buffer.from(secret);
     return crypto.timingSafeEqual(tokenBuffer, secretBuffer);
   } catch (e) {
-    // Fails on length mismatch naturally during timingSafeEqual buffer compare
     return false;
   }
 }
 
 /** Business Layer: Map Olisaas generic tier strings to our internal billing system. */
 function mapTierIdToInternalPlan(externalTier: string): string {
-  // Configurable mapping depending on what Olisaas sends
   const TIER_MAP: Record<string, string> = {
     'tier1': 'starter',
     'tier2': 'pro',
     'tier3': 'business',
     'tier4': 'enterprise',
-    // Hard fallback mappings directly using Yawmy names
     'starter': 'starter',
     'pro': 'pro',
     'business': 'business',
     'enterprise': 'enterprise'
   };
 
-  const internalTier = TIER_MAP[externalTier.toLowerCase()] || 'starter'; // safe fallback
+  const internalTier = TIER_MAP[externalTier.toLowerCase()] || 'starter'; 
   return Object.keys(PLANS).includes(internalTier) ? internalTier : 'free';
 }
 
 export async function POST(request: Request) {
   try {
-    // 1. Security Check: Bearer Authorization
+    // 1. Security Check
     const authHeader = request.headers.get("authorization");
     if (!isAuthorized(authHeader)) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    // 2. Parse Body & Prevent Replay Attacks
+    // 2. Parse Body & Idempotency
     const body = await request.json();
-    const { email, tierId, productId, orderId, timestamp } = body;
+    const { email, tierId, orderId, timestamp } = body;
 
     if (!email || !tierId || !orderId || !timestamp) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const requestTimeMs = Number(timestamp);
-    const nowMs = Date.now();
-    const MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
+    // Idempotency check via BillingService Webhook Logs
+    const isNew = await BillingService.startProcessing({
+        provider: 'paymob', // Or 'olisaas' but we map it to paymob for ledger
+        eventType: 'fulfillment',
+        eventId: String(orderId),
+        payload: body
+    });
 
-    if (isNaN(requestTimeMs) || nowMs - requestTimeMs > MAX_AGE_MS) {
-      return NextResponse.json({ error: "Request expired (replay protection)" }, { status: 401 });
+    if (!isNew) {
+        return NextResponse.json({ success: true, message: "Already processed" });
     }
 
-    // 3. User / Tenant Resolution (Admin API)
-    // First, lookup user auth to prevent duplicates
+    // 3. User / Tenant Resolution
     let targetUserId = "";
     const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
-    if (listError) {
-      console.error("Olisaas User Lookup Error:", listError);
-      return NextResponse.json({ error: "Internal Auth Error" }, { status: 500 });
-    }
+    if (listError) return NextResponse.json({ error: "Internal Auth Error" }, { status: 500 });
 
     const existingUser = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
     if (existingUser) {
       targetUserId = existingUser.id;
     } else {
-      // Auto-Provision Account
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: email.trim().toLowerCase(),
-        email_confirm: true, // Auto confirm so they can hit "Reset Password" later
-        user_metadata: {
-          source: "olisaas_ltd",
-          full_name: "LTD User"
-        }
+        email_confirm: true,
+        user_metadata: { source: "olisaas_ltd", full_name: "LTD User" }
       });
 
-      if (createError || !newUser.user) {
-        console.error("Olisaas User Genesis Error:", createError);
-        return NextResponse.json({ error: "Failed to provision user" }, { status: 500 });
-      }
-      
+      if (createError || !newUser.user) return NextResponse.json({ error: "Failed to provision user" }, { status: 500 });
       targetUserId = newUser.user.id;
-      // Note: The Yawmy `handle_new_user` Postgres trigger fires automatically here!
-      // We must wait briefly (1s) to allow the PgTrigger to stamp the 'companies' row.
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
     }
 
-    // Lookup Company ID tied to User
     const { data: company, error: companyError } = await supabaseAdmin
       .from("companies")
       .select("id")
       .eq("owner_id", targetUserId)
       .single();
 
-    if (companyError || !company) {
-      console.error("Olisaas Company Match Error:", companyError);
-      return NextResponse.json({ error: "Company tenant resolving failure" }, { status: 500 });
-    }
+    if (companyError || !company) return NextResponse.json({ error: "Company tenant resolving failure" }, { status: 500 });
 
-    // 4. Map Tier and Execute Idempotent Postgres Lock
+    // 4. Execute Entitlement Activation
     const internalTierId = mapTierIdToInternalPlan(tierId);
 
-    const { data: result, error: rpcError } = await supabaseAdmin.rpc("fulfill_olisaas_ltd", {
-      p_company_id: company.id,
-      p_tier_id: internalTierId,
-      p_order_id: String(orderId).trim()
+    await BillingService.activateEntitlement({
+        companyId: company.id,
+        planId: internalTierId,
+        type: 'ltd',
+        source: 'paymob', // Olisaas orders are processed through the Paymob integration channel
+        startAt: new Date(),
+        endAt: null
     });
 
-    if (rpcError) {
-      console.error("Olisaas Fulfillment RPC Error:", rpcError);
-      return NextResponse.json({ error: "Database execution failure" }, { status: 500 });
-    }
-
-    if (!result.success) {
-      return NextResponse.json({ error: "Failed idempotency or internal error" }, { status: 400 });
-    }
-
-    // Cancel existing subscriptions to close the billing leak
+    // Cleanup existing subs
     const { data: activeSubs } = await supabaseAdmin
-        .from("subscriptions")
-        .select("id, stripe_subscription_id")
+        .from("active_subscriptions")
+        .select("id, provider_subscription_id")
         .eq("company_id", company.id)
         .eq("status", "active");
 
     if (activeSubs && activeSubs.length > 0) {
        for (const sub of activeSubs) {
-           if (sub.stripe_subscription_id) {
-               try {
-                   await stripe.subscriptions.cancel(sub.stripe_subscription_id, { prorate: true });
-               } catch (e) { console.warn("Failed to cancel stripe sub from Olisaas LTD:", e); }
+           if (sub.provider_subscription_id) {
+               try { await stripe.subscriptions.cancel(sub.provider_subscription_id); } catch (e) {}
            }
        }
-       // Mark closed locally
-       await supabaseAdmin.from("subscriptions").update({ status: "canceled" }).eq("company_id", company.id);
+       await supabaseAdmin.from("active_subscriptions").update({ status: "canceled" }).eq("company_id", company.id);
     }
 
-    // 5. Success
-    return NextResponse.json({ 
-      success: true, 
-      messageCode: result.status, // "activated" or "already_processed"
-      tier: result.tier 
-    }, { status: 200 });
+    await BillingService.finishProcessing(String(orderId));
+
+    return NextResponse.json({ success: true, tier: internalTierId }, { status: 200 });
 
   } catch (error: any) {
     console.error("Olisaas fulfillment fatal:", error);

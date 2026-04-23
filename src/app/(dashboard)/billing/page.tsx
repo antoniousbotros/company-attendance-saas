@@ -79,14 +79,9 @@ function BillingPageInner() {
           .eq("owner_id", user.id)
           .single();
       if (comp) {
-        let effectivePlanId = comp.plan_id || "free";
-        let effectiveStatus = comp.subscription_status || "active";
+        let effectivePlanId = "free";
+        let effectiveStatus = "active";
         let lifetime = false;
-
-        if (effectivePlanId === "free" && effectiveStatus !== "active") {
-          effectiveStatus = "active";
-          supabase.from("companies").update({ plan_id: "free", subscription_status: "active" }).eq("id", comp.id).then(() => {});
-        }
 
         try {
           const res = await fetch("/api/billing/access");
@@ -94,12 +89,10 @@ function BillingPageInner() {
           if (accessData && accessData.tier) {
             effectivePlanId = accessData.tier;
             lifetime = accessData.isLifetime || false;
-            if (lifetime) {
-                effectiveStatus = "active"; // LTD is always active
-            }
+            effectiveStatus = (accessData.planDetails?.status || "active");
           }
         } catch(e) {
-            console.error("LTD load error", e);
+          console.error("Entitlement load error", e);
         }
 
         setCompany({ 
@@ -111,6 +104,8 @@ function BillingPageInner() {
           current_period_end: comp.current_period_end || null,
           isLifetime: lifetime 
         });
+
+        // Unified Transaction View (Payments Ledger)
         const [empRes, txnRes] = await Promise.all([
           supabase.from("employees").select("*", { count: "exact", head: true }).eq("company_id", comp.id),
           supabase.from("subscriptions").select("*").eq("company_id", comp.id).order("created_at", { ascending: false }),
