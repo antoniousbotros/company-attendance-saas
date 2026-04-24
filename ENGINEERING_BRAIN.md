@@ -66,9 +66,10 @@
 ---
 
 ## CURRENT TASK
-- [ ] Refactor `billing.ts` to read directly from the `pricing_config` table.
+- [x] Refactor `billing.ts` to read directly from the `pricing_config` table.
+- [x] Implement Monetization v2 Architecture (Entitlements, Idempotency).
 - [ ] Enable RLS on `employee_sessions` and `employee_otp` tables.
-- [ ] Standardize the "Employee App" naming across all marketing materials.
+- [x] Standardize the "Employee App" naming across all marketing materials.
 
 ---
 
@@ -76,13 +77,16 @@
 
 - **2026-04-23**: Isolated symmetric cryptographic secrets enforcing `SADMIN_JWT_SECRET` separating human authenticators from machine cryptographic layers.
 - **2026-04-23**: Established native Lifetime Deal (LTD) support using `company_entitlements` layer bypassing Stripe subscription limits.
-- **2026-04-23**: Created `ShowcaseSection` with code-based mockups for Analytics (Recharts) and Data-Flow Infographic on the landing page.
+- **2026-04-23**: **Architectural Overhaul (v2.4)**: Deprecated decentralized plan tracking in favor of a unified `user_entitlements` authoritative engine. Decoupled Billing (Stripe/Paymob) from Access (Entitlements).
+- **2026-04-23**: ShowcaseSection with code-based mockups for Analytics (Recharts) and Data-Flow infographic on landing page.
 - **2026-04-23**: Verified Stripe Apple Pay compatibility for Hosted Checkout and verified `yawmy.app` domain association.
 
 ---
 
 ## CHANGE LOG
 
+- **v2.4.1**: **Onboarding UX & Branding.** Implemented guided Telegram Bot setup UI in Settings. Finalized "Employee App" naming standardization.
+- **v2.4.0**: **Monetization Engine v2.** Unified Entitlements system, Idempotent Webhook handlers, and Payment Ledger. Decoupled Billing State from Access Control.
 - **v2.3.2**: **UI Showcase & Stripe Verification.** Added interactive Showcase section to landing page. Verified Apple Pay. Renamed "Portal" to "Employee App".
 - **v2.3.1**: **ATO Security Hardening.** Implemented JWT session enforcement for system admins. Blocked API-overage leakage via Postgres triggers.
 - **v2.3.0**: **Lifetime Deals (LTD).** Added internal redemption system and Olisaas marketplace webhook fulfillment bridge.

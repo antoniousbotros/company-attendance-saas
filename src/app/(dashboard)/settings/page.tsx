@@ -909,20 +909,111 @@ export default function SettingsPage() {
 
         {/* Telegram Integration */}
         <SectionCard className="relative overflow-hidden">
-          <SectionHeader
-            icon={Bot}
-            title={isRTL ? "إعدادات تليجرام" : "Telegram Integration"}
-            subtitle={isRTL ? "ربط بوت الحضور والتواصل" : "Bot connection and messaging"}
-          />
-          <div className="space-y-8 relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-[#f0f9ff] text-[#0088cc] flex items-center justify-center shrink-0">
+                <Bot className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-[#111]">{isRTL ? "تيليجرام" : "Telegram"}</h2>
+                <p className="text-xs text-[#6b7280] mt-0.5">{isRTL ? "ربط بوت الحضور والتواصل" : "Bot connection and messaging"}</p>
+              </div>
+            </div>
+            <span className="bg-[#f0fdf4] text-[#166534] text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+              {isRTL ? "مجاني" : "Free"}
+            </span>
+          </div>
+
+          <div className="border-2 border-[#dbeafe] rounded-2xl p-6 md:p-8 space-y-8 bg-[#f8fbff]/50">
+            {/* Step 1 */}
+            <div className="relative">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-[#0088cc] text-white flex items-center justify-center font-black text-sm shrink-0">1</div>
+                <div className="space-y-4 flex-1">
+                  <div>
+                    <h3 className="text-sm font-black text-[#111]">{isRTL ? "أنشئ البوت في @BotFather" : "Create the Bot in @BotFather"}</h3>
+                    <div className="mt-3 space-y-1.5">
+                      {[
+                        isRTL ? "افتح BotFather واضغط Start" : "Open BotFather and press Start",
+                        isRTL ? "أرسل الأمر /newbot" : "Send /newbot command",
+                        isRTL ? "اختر اسماً للبوت (مثال: متجر بسيط)" : "Choose a name for the bot (e.g. My Attendance)",
+                        isRTL ? "اختر اسم مستخدم ينتهي بـ bot_" : "Choose a username ending in _bot",
+                        isRTL ? "سيرسل لك رسالة فيها التوكن - انسخه" : "It will send you a message with the Token - copy it",
+                      ].map((step, i) => (
+                        <div key={i} className="flex items-start gap-2 text-xs font-semibold text-[#6b7280]">
+                          <div className="w-1.5 h-1.5 rounded-full bg-[#cbd5e1] mt-1.5 shrink-0" />
+                          <p>{step}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <a 
+                    href="https://t.me/botfather" 
+                    target="_blank" 
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-[#0088cc] font-bold text-xs hover:underline"
+                  >
+                    {isRTL ? "فتح BotFather" : "Open BotFather"}
+                    <LinkIcon className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="relative">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-[#0088cc] text-white flex items-center justify-center font-black text-sm shrink-0">2</div>
+                <div className="space-y-4 flex-1">
+                  <h3 className="text-sm font-black text-[#111]">{isRTL ? "ألصق التوكن هنا" : "Paste the Token here"}</h3>
+                  <div className="max-w-xl">
+                    <input
+                      type="password"
+                      value={formData.telegram_token}
+                      onChange={(e) => setFormData({ ...formData, telegram_token: e.target.value })}
+                      className="w-full bg-white border-2 border-[#e5e7eb] rounded-xl py-4 px-5 text-sm font-semibold outline-none focus:border-[#0088cc] transition-all font-mono placeholder:text-[#ccc] shadow-sm"
+                      placeholder="123456:ABC-DEF_gHiJkLmNoPqRsTuVwXyZ"
+                    />
+                    <p className="mt-3 text-[11px] font-semibold text-[#9ca3af]">
+                      {isRTL ? "...ABC-DEF:123456 التوكن يبدأ بأرقام وبعدها حروف - مثل" : "Token starts with numbers followed by characters - e.g. 123456:ABC-DEF..."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-4 flex items-center justify-end gap-3">
+              <button 
+                type="button"
+                onClick={() => setFormData({ ...formData, telegram_token: "" })}
+                className="px-6 py-2.5 rounded-xl text-sm font-bold text-[#6b7280] hover:bg-[#f3f4f6] transition-colors"
+              >
+                {isRTL ? "إلغاء" : "Cancel"}
+              </button>
+              <button 
+                type="submit"
+                disabled={saving || !formData.telegram_token}
+                className="px-6 py-2.5 rounded-xl text-sm font-black bg-[#4f86f7] hover:bg-[#3b6ed6] text-white shadow-lg shadow-[#4f86f7]/20 disabled:opacity-50 disabled:shadow-none transition-all flex items-center gap-2"
+              >
+                {saving ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Bot className="w-4 h-4" />
+                )}
+                {isRTL ? "تفعيل البوت" : "Activate Bot"}
+              </button>
+            </div>
+          </div>
+
+          {/* Optional Bot Settings (Secondary) */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-[#f1f1f1] pt-8">
             <Field label={isRTL ? "اسم البوت (اختياري)" : "Bot Name (Optional)"}>
               <input
                 type="text"
                 value={formData.bot_name}
-                onChange={(e) =>
-                  setFormData({ ...formData, bot_name: e.target.value })
-                }
-                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                onChange={(e) => setFormData({ ...formData, bot_name: e.target.value })}
+                className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
                 placeholder="@YawmyBot"
               />
             </Field>
@@ -931,43 +1022,12 @@ export default function SettingsPage() {
               <select
                 value={formData.bot_language}
                 onChange={(e) => setFormData({ ...formData, bot_language: e.target.value })}
-                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
+                className="w-full bg-[#f9fafb] border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors"
               >
-                <option value="en">{isRTL ? "الإنجليزية (English)" : "English"}</option>
-                <option value="ar">{isRTL ? "العربية (Arabic)" : "Arabic"}</option>
+                <option value="en">English</option>
+                <option value="ar">العربية</option>
               </select>
             </Field>
-
-            <Field
-              label={isRTL ? "رمز البوت (Token)" : "Telegram Bot Token"}
-              hint={
-                isRTL
-                  ? "احصل عليه من @BotFather في تليجرام. لا تشاركه مع أي شخص."
-                  : "Get this from @BotFather on Telegram. Never share it."
-              }
-            >
-              <input
-                type="password"
-                value={formData.telegram_token}
-                onChange={(e) =>
-                  setFormData({ ...formData, telegram_token: e.target.value })
-                }
-                className="w-full bg-white border border-[#e5e7eb] rounded-lg py-3 px-4 text-sm font-semibold outline-none focus:border-[#ff5a00] transition-colors font-mono"
-                placeholder="123456789:ABCDefgh..."
-              />
-            </Field>
-
-            {formData.telegram_token && (
-              <div className="bg-[#fff1e8] p-4 rounded-xl border border-[#fee2e2] flex items-center justify-between">
-                <div className="flex items-center gap-3 text-[#ff5a00]">
-                  <ShieldCheck className="w-5 h-5" />
-                  <span className="text-xs font-bold uppercase tracking-wider">
-                    {isRTL ? "اتصال مشفر وآمن" : "Securely Encrypted"}
-                  </span>
-                </div>
-                <StatusPill tone="success" label={isRTL ? "جاهز" : "Linked"} />
-              </div>
-            )}
           </div>
         </SectionCard>
 
