@@ -1,10 +1,12 @@
 import Stripe from "stripe";
 
-if (!process.env.STRIPE_SECRET_KEY) {
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+
+if (!stripeKey) {
   console.warn("[stripe.ts] STRIPE_SECRET_KEY is not set.");
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_missing", {
+const stripe = new Stripe(stripeKey || "no_stripe_key_provided", {
   apiVersion: "2026-03-25.dahlia",
 });
 

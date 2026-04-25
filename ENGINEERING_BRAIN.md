@@ -67,8 +67,8 @@
 
 ## CURRENT TASK
 - [x] Refactor `billing.ts` to read directly from the `pricing_config` table.
-- [x] Implement Monetization v2 Architecture (Entitlements, Idempotency).
-- [ ] Enable RLS on `employee_sessions` and `employee_otp` tables.
+- [x] Implement Advanced Subscription Lifecycle (Trial, Upgrades, Scheduled Downgrades).
+- [x] Enable RLS on `employee_sessions` and `employee_otp` tables.
 - [x] Standardize the "Employee App" naming across all marketing materials.
 
 ---
@@ -85,6 +85,7 @@
 
 ## CHANGE LOG
 
+- **v2.5.0**: **Subscription Lifecycle Engine.** Implemented 7-day Pro Trials, Unified Entitlement Hierarchy (LTD > Sub > Trial > Free), and Native SQL Limit Enforcement.
 - **v2.4.1**: **Onboarding UX & Branding.** Implemented guided Telegram Bot setup UI in Settings. Finalized "Employee App" naming standardization.
 - **v2.4.0**: **Monetization Engine v2.** Unified Entitlements system, Idempotent Webhook handlers, and Payment Ledger. Decoupled Billing State from Access Control.
 - **v2.3.2**: **UI Showcase & Stripe Verification.** Added interactive Showcase section to landing page. Verified Apple Pay. Renamed "Portal" to "Employee App".

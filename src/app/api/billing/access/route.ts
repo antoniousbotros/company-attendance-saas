@@ -1,41 +1,45 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { getCompanyAccess } from "@/lib/entitlements";
 
-export async function GET(req: NextRequest) {
-  try {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) { return req.cookies.get(name)?.value; },
-          set() {},
-          remove() {},
+export async function GET() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
         },
-      }
-    );
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options });
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: "", ...options });
+        },
+      },
     }
+  );
 
-    const { data: company } = await supabase
-      .from("companies")
-      .select("id")
-      .eq("owner_id", user.id)
-      .single();
+  const { data: { user } } = await supabase.auth.getUser();
 
-    if (!company) {
-      return NextResponse.json({ error: "Company not found" }, { status: 404 });
-    }
-
-    const access = await getCompanyAccess(company.id);
-    return NextResponse.json(access);
-    
-  } catch (error: any) {
-    console.error("Error fetching company access:", error.message);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  // Get current company
+  const { data: company } = await supabase
+    .from("companies")
+    .select("id")
+    .eq("owner_id", user.id)
+    .single();
+
+  if (!company) {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+
+  const access = await getCompanyAccess(company.id);
+  return NextResponse.json(access);
 }

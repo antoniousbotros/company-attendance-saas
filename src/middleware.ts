@@ -157,6 +157,40 @@ export async function middleware(request: NextRequest) {
         url.pathname = '/overview';
         return NextResponse.redirect(url);
       }
+
+      // 3. Entitlement Checks (Hard Boundary)
+      if (url.pathname.startsWith('/employees/add') || url.pathname === '/api/employees/create') {
+        const { data: company } = await supabase.from('companies').select('id').eq('owner_id', user.id).single();
+        if (company) {
+          // Fetch highest active entitlement
+          const { data: entitlements } = await supabase
+            .from('user_entitlements')
+            .select('plan_id, type')
+            .eq('company_id', company.id)
+            .eq('status', 'active');
+          
+          const { count: currentSize } = await supabase.from('employees').select('*', { count: 'exact', head: true }).eq('company_id', company.id);
+          
+          // Logic: Find highest limit among active entitlements
+          let maxAllowed = 3; // Default free
+          if (entitlements) {
+            const limits = { free: 3, basic: 10, pro: 30, business: 75, enterprise: 200 };
+            for(const ent of entitlements) {
+               const l = limits[ent.plan_id as keyof typeof limits] || 3;
+               if(l > maxAllowed) maxAllowed = l;
+            }
+          }
+
+          if ((currentSize || 0) >= maxAllowed) {
+            if (url.pathname.startsWith('/api')) {
+              return NextResponse.json({ error: 'LIMIT_REACHED', limit: maxAllowed }, { status: 403 });
+            }
+            url.pathname = '/billing';
+            url.searchParams.set('upgrade', 'limit_reached');
+            return NextResponse.redirect(url);
+          }
+        }
+      }
     }
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : String(e);

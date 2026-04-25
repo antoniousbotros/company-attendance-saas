@@ -261,16 +261,25 @@ function DashboardChrome({
   const { isRTL } = useLanguage();
   const [showRolesModal, setShowRolesModal] = useState(false);
   const [showTeamBanner, setShowTeamBanner] = useState(false);
+  const [access, setAccess] = useState<any>(null);
 
   useEffect(() => {
     const dismissed = localStorage.getItem("team_banner_dismissed");
     if (!dismissed) setShowTeamBanner(true);
+
+    fetch("/api/billing/access")
+      .then(res => res.json())
+      .then(data => setAccess(data))
+      .catch(console.error);
   }, []);
 
   const dismissBanner = () => {
     localStorage.setItem("team_banner_dismissed", "true");
     setShowTeamBanner(false);
   };
+
+  const isTrialActive = access?.isTrial && access?.status === 'active';
+  const isTrialExpired = access?.isTrial && access?.status === 'expired';
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] text-[#111] flex font-sans">
@@ -284,7 +293,34 @@ function DashboardChrome({
       >
         <TopBar setIsSidebarOpen={setIsSidebarOpen} />
         
-        {showTeamBanner && (
+        {/* Trial Banners */}
+        {isTrialActive && (
+          <div className="bg-[#0284c7] text-white px-4 md:px-8 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold animate-in slide-in-from-top duration-500 z-20">
+             <div className="flex-1 text-center">
+                {isRTL 
+                 ? `بقي ${access?.daysLeft} أيام في الفترة التجريبية للباقة الاحترافية (Pro).` 
+                 : `You have ${access?.daysLeft} days left in your Pro Trial.`}
+             </div>
+             <Link href="/billing" className="bg-white text-[#0284c7] px-3 py-1 rounded-full hover:bg-gray-100 transition-colors shrink-0">
+               {isRTL ? "اشترك الآن" : "Unlock Forever"}
+             </Link>
+          </div>
+        )}
+
+        {isTrialExpired && (
+          <div className="bg-red-600 text-white px-4 md:px-8 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold z-20">
+             <div className="flex-1 text-center">
+                {isRTL 
+                 ? "انتهت الفترة التجريبية! يرجى الاشتراك للاستمرار في استخدام المميزات الاحترافية." 
+                 : "Trial Expired! Subscribe to keep your Premium features active."}
+             </div>
+             <Link href="/billing" className="bg-white text-red-600 px-3 py-1 rounded-full hover:bg-white/90 transition-colors shrink-0">
+               {isRTL ? "تفعيل الحساب" : "Activate Now"}
+             </Link>
+          </div>
+        )}
+
+        {showTeamBanner && !isTrialExpired && (
           <div className="bg-[#1e8e3e] text-white px-4 md:px-8 py-3 relative flex items-center justify-between text-start md:text-center z-20">
             <div className="flex flex-col md:flex-row md:items-center justify-center gap-2 md:gap-4 flex-1">
               <span className="text-sm font-medium">

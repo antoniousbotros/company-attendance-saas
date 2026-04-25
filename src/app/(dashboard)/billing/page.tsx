@@ -156,7 +156,9 @@ function BillingPageInner() {
   // Subscription status label + tone
   const statusConfig: Record<string, { label: string; tone: "success" | "danger" | "neutral" }> = {
     active:    { label: t.active,                                         tone: "success" },
+    trial:     { label: isRTL ? "فترة تجريبية" : "Trial",                 tone: "neutral" },
     trialing:  { label: t.activeTrial,                                    tone: "neutral" },
+    expired:   { label: isRTL ? "منتهي" : "Expired",                      tone: "danger"  },
     past_due:  { label: isRTL ? "تأخر في الدفع" : "Past Due",          tone: "danger"  },
     cancelled: { label: isRTL ? "ملغي" : "Cancelled",                   tone: "danger"  },
   };

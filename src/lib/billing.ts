@@ -9,6 +9,7 @@ export interface Plan {
 
 // 30% yearly discount constant
 export const YEARLY_DISCOUNT = 0.30;
+export const TRIAL_DAYS = 7;
 
 export const PLANS: Record<string, Plan> = {
   free: {
