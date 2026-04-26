@@ -175,7 +175,9 @@ export default function TeamHomePage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="relative group">
-            {employee?.companies?.logo_url ? (
+            {employee?.avatar_url ? (
+              <img src={employee.avatar_url} alt="" className="w-14 h-14 rounded-2xl object-cover shadow-md group-hover:scale-105 transition-transform duration-300" />
+            ) : employee?.companies?.logo_url ? (
               <img src={employee.companies.logo_url} alt="" className="w-14 h-14 rounded-2xl object-cover shadow-md group-hover:scale-105 transition-transform duration-300" />
             ) : (
               <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
