@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { Clock, Mail, Lock, Languages } from "lucide-react";
+import { Mail, Lock, Languages } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { translations, type Language } from "@/lib/i18n";
 
@@ -75,12 +75,7 @@ export default function LoginPage() {
           
           {/* Logo Brand Header */}
           <div className="flex flex-col items-start space-y-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-[#ff5a00] rounded-lg flex items-center justify-center shadow-lg shadow-[#ff5a00]/30">
-                <Clock className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-black tracking-tighter text-[#111]">Yawmy {isRTL && "يومي"}</span>
-            </div>
+            <img src="/logos/yawmy-logo.svg" alt="Yawmy" className="h-12 w-auto" />
             
             <div className="space-y-2">
                <h1 className="text-4xl md:text-5xl font-black tracking-tight text-[#111]">

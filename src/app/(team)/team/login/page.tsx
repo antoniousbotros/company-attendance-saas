@@ -138,14 +138,9 @@ export default function TeamLoginPage() {
 
       <div className="w-full max-w-[400px] z-10">
         {/* Logo Section */}
-        <div className="mb-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30 ring-4 ring-white">
-            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-          </div>
-          <h2 className="text-sm font-black text-foreground tracking-[0.3em] uppercase">Yawmy Portal</h2>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-60">Advanced Team Management</p>
+        <div className="mb-12 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <img src="/logos/yawmy-logo.svg" alt="Yawmy" className="h-12 w-auto mb-4" />
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mt-1 opacity-60">Team Portal</p>
         </div>
 
         <div className="premium-card p-8 md:p-10 shadow-2xl shadow-slate-900/5 relative overflow-hidden">

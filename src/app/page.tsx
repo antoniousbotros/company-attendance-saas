@@ -133,12 +133,9 @@ function LandingPageContent() {
       {/* 1. HERO SECTION & NAVIGATION */}
       <nav className="fixed top-0 w-full z-50 border-b border-[#eeeeee] bg-white/90 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#ff5a00] rounded-xl flex items-center justify-center shadow-lg shadow-[#ff5a00]/30">
-              <Clock className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-2xl font-black tracking-tighter text-[#111]">Yawmy {isRTL && "يومي"}</span>
-          </div>
+          <Link href="/" className="flex items-center">
+            <img src="/logos/yawmy-logo.svg" alt="Yawmy" className="h-10 w-auto" />
+          </Link>
           
           <div className="flex items-center gap-4 md:gap-8">
             <button
@@ -347,9 +344,8 @@ function LandingPageContent() {
       {/* FOOTER */}
       <footer className="py-12 bg-white border-t border-[#eeeeee]">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2 text-grayscale">
-            <Clock className="w-6 h-6 text-[#111]" />
-            <span className="text-2xl font-black tracking-tighter text-[#111]">Yawmy {isRTL && "يومي"}</span>
+          <div className="flex items-center">
+            <img src="/logos/yawmy-logo.svg" alt="Yawmy" className="h-10 w-auto" />
           </div>
           <div className="flex gap-8 text-sm font-bold text-[#6b7280]">
              <Link href="/blog" className="hover:text-[#ff5a00] transition-colors">{t.nav.blog}</Link>

@@ -96,11 +96,9 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-[360px]">
 
         {/* Logo */}
-        <div className="mb-12 text-center">
-          <div className="w-12 h-12 bg-[#ff5a00] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#ff5a00]/20">
-            <Lock className="w-6 h-6 text-white" />
-          </div>
-          <p className="text-[11px] font-semibold text-[#b0b0b0] tracking-[0.2em] uppercase">Yawmy · Reset Password</p>
+        <div className="mb-12 text-center flex flex-col items-center">
+          <img src="/logos/yawmy-logo.svg" alt="Yawmy" className="h-10 w-auto mb-4" />
+          <p className="text-[11px] font-semibold text-[#b0b0b0] tracking-[0.2em] uppercase">Reset Password</p>
         </div>
 
         {/* ── Step 1: Email ── */}

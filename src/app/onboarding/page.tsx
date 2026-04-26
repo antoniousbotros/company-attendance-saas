@@ -189,11 +189,8 @@ export default function OnboardingPage() {
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-[#f0f0f0] bg-white">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#ff5a00] rounded-lg flex items-center justify-center">
-            <span className="text-white font-black text-xs">Y</span>
-          </div>
-          <span className="font-black text-[#111] text-sm">Yawmy</span>
+        <div className="flex items-center">
+          <img src="/logos/yawmy-logo.svg" alt="Yawmy" className="h-8 w-auto" />
         </div>
         <button
           onClick={() => setLang(lang === "ar" ? "en" : "ar")}
