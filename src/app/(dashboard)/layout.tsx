@@ -91,6 +91,19 @@ function Sidebar({
     router.push("/login");
   };
 
+  const [profile, setProfile] = React.useState<{name:string;email:string}|null>(null);
+
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setProfile({
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Admin',
+          email: data.user.email || '',
+        });
+      }
+    });
+  }, []);
+
   return (
     <>
       {isOpen && (
@@ -102,7 +115,7 @@ function Sidebar({
 
       <aside
         className={cn(
-          "fixed top-0 bottom-0 z-50 w-[240px] bg-white flex flex-col transition-transform duration-200 ease-out lg:translate-x-0",
+          "fixed top-0 bottom-0 z-50 w-[260px] bg-white flex flex-col transition-transform duration-200 ease-out lg:translate-x-0",
           isRTL
             ? "right-0 border-l border-[#eeeeee]"
             : "left-0 border-r border-[#eeeeee]",
@@ -112,13 +125,14 @@ function Sidebar({
             ? "translate-x-full"
             : "-translate-x-full"
         )}
+        dir={isRTL ? "rtl" : "ltr"}
       >
         {/* Logo header */}
-        <div className="h-16 flex items-center justify-between px-5 border-b border-[#f5f5f5]">
+        <div className="h-16 flex items-center justify-between px-5 border-b border-[#f0f0f0]">
           <BrandLogo />
           <button
             onClick={() => setIsOpen(false)}
-            className="lg:hidden p-1 hover:bg-[#f5f5f5] rounded-md text-[#6b7280]"
+            className="lg:hidden p-1.5 hover:bg-[#f5f5f5] rounded-md text-[#9ca3af]"
             aria-label="Close menu"
           >
             <X className="w-4 h-4" />
@@ -126,10 +140,13 @@ function Sidebar({
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-5 px-3 space-y-6">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
           {groups.map((group) => (
             <div key={group.label}>
-              <div className="px-3 mb-2 text-[12px] text-[#9ca3af] font-medium">
+              <div className={cn(
+                "px-3 mb-1.5 text-[10px] font-black text-[#c4c4c4] uppercase tracking-[0.12em]",
+                isRTL && "text-right"
+              )}>
                 {group.label}
               </div>
               <ul className="space-y-0.5">
@@ -142,14 +159,24 @@ function Sidebar({
                         href={item.href}
                         onClick={() => setIsOpen(false)}
                         className={cn(
-                          "flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors",
+                          "flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium transition-all duration-150",
+                          isRTL && "flex-row-reverse text-right",
                           isActive
-                            ? "bg-[#f5f5f5] text-[#111] font-bold border-r-2 border-[#ff5a00] -mr-[1px]"
-                            : "text-[#6b7280] hover:text-[#111] hover:bg-[#f9fafb]"
+                            ? "bg-[#fff4ee] text-[#ff5a00] font-bold"
+                            : "text-[#6b7280] hover:text-[#111] hover:bg-[#f9f9f9]"
                         )}
                       >
-                        <Icon className={cn("w-[18px] h-[18px] shrink-0", isActive ? "text-[#ff5a00]" : "text-[#9ca3af]")} />
-                        <span className="truncate">{item.name}</span>
+                        <Icon className={cn(
+                          "w-[17px] h-[17px] shrink-0 transition-colors",
+                          isActive ? "text-[#ff5a00]" : "text-[#c4c4c4]"
+                        )} />
+                        <span className="truncate flex-1">{item.name}</span>
+                        {isActive && (
+                          <span className={cn(
+                            "w-1 h-4 rounded-full bg-[#ff5a00] shrink-0",
+                            isRTL ? "mr-auto" : "ml-auto"
+                          )} />
+                        )}
                       </Link>
                     </li>
                   );
@@ -159,26 +186,31 @@ function Sidebar({
           ))}
         </nav>
 
-        {/* Bottom Actions */}
-        <div className="px-3 pb-3 space-y-2 border-t border-[#f5f5f5] pt-4">
+        {/* Profile + Sign Out */}
+        <div className="border-t border-[#f0f0f0] p-3 space-y-1">
+          {profile && (
+            <div className={cn(
+              "flex items-center gap-3 px-3 py-2.5 rounded-md bg-[#f9f9f9]",
+              isRTL && "flex-row-reverse text-right"
+            )}>
+              <div className="w-8 h-8 rounded-full bg-[#111] text-white flex items-center justify-center text-[12px] font-black shrink-0">
+                {profile.name.charAt(0).toUpperCase()}
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[12px] font-bold text-[#111] truncate">{profile.name}</span>
+                <span className="text-[10px] text-[#9ca3af] truncate">{profile.email}</span>
+              </div>
+            </div>
+          )}
           <button
             onClick={handleSignOut}
-            className="w-full flex justify-start items-center gap-3 px-3 py-2 rounded-md text-[14px] text-red-600 hover:bg-red-50 transition-colors"
+            className={cn(
+              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-[#dc2626] hover:bg-[#fef2f2] transition-all duration-150",
+              isRTL && "flex-row-reverse text-right"
+            )}
           >
-            <LogOut className={cn("w-[18px] h-[18px] shrink-0", isRTL && "rotate-180")} />
-            <span className="truncate">{isRTL ? "تسجيل الخروج" : "Sign Out"}</span>
-          </button>
-        </div>
-
-        {/* Collapse chevron (decorative on desktop — functional for mobile close) */}
-        <div className="px-4 pb-4 mt-auto">
-          <div className="w-full h-px bg-[#f5f5f5] mb-4" />
-          <button
-            onClick={() => setIsOpen(false)}
-            className="w-full py-2 flex items-center justify-center gap-2 text-[11px] font-bold text-[#9ca3af] hover:text-[#111] transition-colors uppercase tracking-widest"
-          >
-            <ChevronLeft className={cn("w-3 h-3", isRTL && "rotate-180")} />
-            <span>{isRTL ? "تصغير القائمة" : "Collapse"}</span>
+            <LogOut className={cn("w-[16px] h-[16px] shrink-0")} />
+            <span>{isRTL ? "تسجيل الخروج" : "Sign Out"}</span>
           </button>
         </div>
       </aside>
@@ -198,16 +230,16 @@ function PageBanner() {
   if (!activeItem) return null;
 
   return (
-    <div className="bg-[#fcfcfc] border-b border-[#eeeeee] py-10 px-8">
+    <div className="bg-[#f0f9f4] border-b border-[#d1fae5] py-6 px-8" dir={isRTL ? "rtl" : "ltr"}>
       <div className="max-w-[1200px] mx-auto w-full">
-        <h1 className="text-3xl font-bold tracking-tight text-[#111]">
-          {activeItem.name}
-        </h1>
-        <div className="flex items-center gap-2 mt-2 text-xs font-bold text-[#9ca3af] uppercase tracking-wider">
+        <div className={cn("flex items-center gap-2 mb-1 text-[10px] font-black text-[#9ca3af] uppercase tracking-[0.12em]", isRTL && "flex-row-reverse")}>
           <span>{isRTL ? "لوحة التحكم" : "Dashboard"}</span>
           <span className="opacity-30">/</span>
-          <span className="text-primary">{activeItem.name}</span>
+          <span className="text-[#ff5a00]">{activeItem.name}</span>
         </div>
+        <h1 className={cn("text-2xl font-black tracking-tight text-[#111]", isRTL && "text-right")}>
+          {activeItem.name}
+        </h1>
       </div>
     </div>
   );
@@ -316,7 +348,7 @@ function DashboardChrome({
       <div
         className={cn(
           "flex-1 flex flex-col min-h-screen min-w-0 bg-white",
-          isRTL ? "lg:mr-[240px]" : "lg:ml-[240px]"
+          isRTL ? "lg:mr-[260px]" : "lg:ml-[260px]"
         )}
       >
         <TopBar setIsSidebarOpen={setIsSidebarOpen} />
