@@ -173,10 +173,12 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
       <div className="min-h-screen bg-[#f5f5f5] text-[#111] flex font-sans">
         
         {/* 🏢 Desktop Sidebar */}
-        <aside className={cn(
-          "hidden lg:flex flex-col w-[240px] bg-[#f5f5f5] border-r border-[#eeeeee] fixed inset-y-0 z-50",
-          isRTL ? "right-0" : "left-0"
-        )}>
+        <aside
+          dir={isRTL ? "rtl" : "ltr"}
+          className={cn(
+            "hidden lg:flex flex-col w-[240px] bg-[#f5f5f5] border-r border-[#eeeeee] fixed inset-y-0 z-50",
+            isRTL ? "right-0 border-r-0 border-l border-[#eeeeee]" : "left-0"
+          )}>
            <div className="p-8">
               <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
                  <div className="w-10 h-10 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-sm">
@@ -192,28 +194,29 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
            <nav className="flex-1 px-4 space-y-1">
               {navItems.map((item) => {
                  const isActive = pathname === item.href;
-                 return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold transition-all",
-                        isActive 
-                          ? "bg-white text-[#111] border-l-4 border-[#ff5a00] shadow-sm" 
-                          : "text-[#6b7280] hover:bg-white/50 hover:text-[#111]",
-                        isRTL && isActive && "border-l-0 border-r-4",
-                        isRTL && "flex-row-reverse text-right"
-                      )}
-                    >
-                       <item.icon className="w-4 h-4" />
-                       {item.name}
-                    </Link>
-                 );
+                  return (
+                     <Link
+                       key={item.href}
+                       href={item.href}
+                       className={cn(
+                         "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold transition-all",
+                         isRTL ? "flex-row-reverse" : "",
+                         isActive 
+                           ? isRTL
+                             ? "bg-white text-[#ff5a00] border-r-4 border-[#ff5a00] shadow-sm"
+                             : "bg-white text-[#111] border-l-4 border-[#ff5a00] shadow-sm"
+                           : "text-[#6b7280] hover:bg-white/50 hover:text-[#111]",
+                       )}
+                     >
+                        <item.icon className={cn("w-4 h-4 shrink-0", isActive && "text-[#ff5a00]")} />
+                        {item.name}
+                     </Link>
+                  );
               })}
            </nav>
 
            <div className="p-4 border-t border-[#eeeeee] space-y-2">
-              <Link href="/team/profile" className={cn("flex items-center gap-3 p-3 rounded-md hover:bg-white/50 transition-colors", isRTL && "flex-row-reverse text-right")}>
+              <Link href="/team/profile" className={cn("flex items-center gap-3 p-3 rounded-md hover:bg-white/50 transition-colors", isRTL && "flex-row-reverse")}>
                  <div className="w-8 h-8 rounded-md bg-[#eeeeee] flex items-center justify-center text-[#6b7280] overflow-hidden border border-[#eeeeee]">
                     {employee?.avatar_url ? (
                       <img src={employee.avatar_url} alt="" className="w-full h-full object-cover" />
@@ -221,14 +224,14 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                       <User className="w-4 h-4" />
                     )}
                  </div>
-                 <div className="flex flex-col">
+                 <div className={cn("flex flex-col", isRTL && "items-end")}>
                     <span className="text-xs font-bold text-[#111]">{employee?.name?.split(" ")[0]}</span>
                     <span className="text-[10px] text-[#9ca3af]">{t.profile}</span>
                  </div>
               </Link>
               <button 
                 onClick={handleLogout}
-                className={cn("w-full flex items-center gap-3 p-3 rounded-md text-[#dc2626] hover:bg-red-50 transition-colors text-sm font-bold", isRTL && "flex-row-reverse text-right")}
+                className={cn("w-full flex items-center gap-3 p-3 rounded-md text-[#dc2626] hover:bg-red-50 transition-colors text-sm font-bold", isRTL && "flex-row-reverse")}
               >
                  <LogOut className="w-4 h-4" />
                  {t.signOut}
@@ -308,18 +311,18 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
           </aside>
 
           {/* 🖼️ Page Banner */}
-          <div className="page-banner">
-             <div className={cn("flex flex-col gap-1", isRTL && "items-end")}>
-                <div className={cn("flex items-center gap-2 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1", isRTL && "flex-row-reverse")}>
+          <div className="page-banner" dir={isRTL ? "rtl" : "ltr"}>
+             <div className="flex flex-col gap-1">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1">
                    <Link href="/team" className="hover:text-[#ff5a00] transition-colors">{t.home}</Link>
                    {pathname !== "/team" && (
                      <>
-                       {isRTL ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                       {isRTL ? <ChevronRight className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
                        <span className="text-[#6b7280]">{navItems.find(i => i.href === pathname)?.name || t.profile}</span>
                      </>
                    )}
                 </div>
-                <h1 className="text-3xl font-black text-[#111] tracking-tight">
+                <h1 className="text-2xl font-black text-[#111] tracking-tight">
                    {navItems.find(i => i.href === pathname)?.name || t.profile}
                 </h1>
              </div>
