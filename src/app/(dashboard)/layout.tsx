@@ -160,7 +160,6 @@ function Sidebar({
                         onClick={() => setIsOpen(false)}
                         className={cn(
                           "flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium transition-all duration-150",
-                          isRTL && "flex-row-reverse text-right",
                           isActive
                             ? "bg-[#fff4ee] text-[#ff5a00] font-bold"
                             : "text-[#6b7280] hover:text-[#111] hover:bg-[#f9f9f9]"
@@ -189,10 +188,7 @@ function Sidebar({
         {/* Profile + Sign Out */}
         <div className="border-t border-[#f0f0f0] p-3 space-y-1">
           {profile && (
-            <div className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-md bg-[#f9f9f9]",
-              isRTL && "flex-row-reverse text-right"
-            )}>
+            <div className="flex items-center gap-3 px-3 py-2.5 rounded-md bg-[#f9f9f9]">
               <div className="w-8 h-8 rounded-full bg-[#111] text-white flex items-center justify-center text-[12px] font-black shrink-0">
                 {profile.name.charAt(0).toUpperCase()}
               </div>
@@ -204,10 +200,7 @@ function Sidebar({
           )}
           <button
             onClick={handleSignOut}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-[#dc2626] hover:bg-[#fef2f2] transition-all duration-150",
-              isRTL && "flex-row-reverse text-right"
-            )}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-medium text-[#dc2626] hover:bg-[#fef2f2] transition-all duration-150"
           >
             <LogOut className={cn("w-[16px] h-[16px] shrink-0")} />
             <span>{isRTL ? "تسجيل الخروج" : "Sign Out"}</span>
