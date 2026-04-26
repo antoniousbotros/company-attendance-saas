@@ -177,17 +177,17 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
         <aside
           dir={isRTL ? "rtl" : "ltr"}
           className={cn(
-            "hidden lg:flex flex-col w-[240px] bg-[#f5f5f5] fixed inset-y-0 z-50",
-            isRTL ? "right-0 border-l border-[#eeeeee]" : "left-0 border-r border-[#eeeeee]"
+            "hidden lg:flex flex-col w-[240px] bg-[#ff5a00] text-white fixed inset-y-0 z-50",
+            isRTL ? "right-0" : "left-0"
           )}>
            <div className="p-6">
               <div className="flex items-center gap-3">
-                 <div className="w-9 h-9 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-sm shrink-0">
+                 <div className="w-9 h-9 bg-white rounded-md flex items-center justify-center text-[#ff5a00] font-black text-sm shrink-0">
                     {companyName.charAt(0)}
                  </div>
                  <div className="flex flex-col">
-                    <span className="text-[13px] font-black tracking-tight leading-tight">{companyName}</span>
-                    <span className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Portal</span>
+                    <span className="text-[13px] font-black tracking-tight leading-tight text-white">{companyName}</span>
+                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Portal</span>
                  </div>
               </div>
            </div>
@@ -202,34 +202,34 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-semibold transition-all",
                         isActive
-                          ? "bg-white text-[#ff5a00] font-bold shadow-sm border-l-2 border-[#ff5a00]"
-                          : "text-[#6b7280] hover:bg-white/60 hover:text-[#111]",
+                          ? "bg-white text-[#ff5a00] font-bold shadow-sm"
+                          : "text-white/70 hover:bg-white/10 hover:text-white",
                       )}
                     >
-                       <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#ff5a00]" : "text-[#9ca3af]")} />
+                       <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#ff5a00]" : "text-white/70")} />
                        {item.name}
                     </Link>
                  );
               })}
            </nav>
 
-           <div className="p-3 border-t border-[#eeeeee] space-y-1">
-              <Link href="/team/profile" className="flex items-center gap-3 p-3 rounded-md hover:bg-white/60 transition-colors">
-                 <div className="w-8 h-8 rounded-full bg-[#eeeeee] flex items-center justify-center text-[#6b7280] overflow-hidden border border-[#e5e5e5] shrink-0">
+           <div className="p-3 border-t border-white/10 space-y-1">
+              <Link href="/team/profile" className="flex items-center gap-3 p-3 rounded-md hover:bg-white/10 transition-colors">
+                 <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white/70 overflow-hidden shrink-0">
                     {employee?.avatar_url ? (
                       <img src={employee.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <User className="w-4 h-4" />
+                      <User className="w-4 h-4 text-white/80" />
                     )}
                  </div>
                  <div className="flex flex-col min-w-0">
-                    <span className="text-xs font-bold text-[#111] truncate">{employee?.name?.split(" ")[0]}</span>
-                    <span className="text-[10px] text-[#9ca3af]">{t.profile}</span>
+                     <span className="text-xs font-bold text-white truncate">{employee?.name?.split(" ")[0]}</span>
+                    <span className="text-[10px] text-white/70">{t.profile}</span>
                  </div>
               </Link>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 p-3 rounded-md text-[#dc2626] hover:bg-red-50 transition-colors text-sm font-semibold"
+                className="w-full flex items-center gap-3 p-3 rounded-md text-white hover:bg-white/10 transition-colors text-sm font-semibold"
               >
                  <LogOut className="w-4 h-4 shrink-0" />
                  {t.signOut}
@@ -342,7 +342,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
 
           {/* 📱 Mobile Bottom Tab Bar */}
           <nav className={cn(
-            "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#eeeeee] flex items-stretch",
+            "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#ff5a00] text-white flex items-stretch",
             "safe-area-inset-bottom"
           )}>
             {navItems.filter(item => item.href !== "/team/announcements").map((item) => {
@@ -353,12 +353,12 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                   href={item.href}
                   className={cn(
                     "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold transition-all",
-                    isActive ? "text-[#ff5a00]" : "text-[#9ca3af]"
+                    isActive ? "text-white" : "text-white/60 hover:text-white"
                   )}
                 >
                   <item.icon className={cn("w-5 h-5 transition-all", isActive && "scale-110")} />
                   <span className="truncate max-w-[50px] text-center">{item.name}</span>
-                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#ff5a00]" />}
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-white" />}
                 </Link>
               );
             })}
