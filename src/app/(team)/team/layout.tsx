@@ -326,9 +326,33 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
           </div>
 
           {/* 🚀 Main Content */}
-          <main className="flex-1 px-8 py-10 max-w-[1200px] w-full mx-auto bg-white min-h-[calc(100vh-64px-116px)]">
+          <main className="flex-1 px-4 md:px-8 py-6 md:py-10 max-w-[1200px] w-full mx-auto bg-white min-h-[calc(100vh-64px-116px)] pb-24 lg:pb-10">
             {children}
           </main>
+
+          {/* 📱 Mobile Bottom Tab Bar */}
+          <nav className={cn(
+            "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#eeeeee] flex items-stretch",
+            "safe-area-inset-bottom"
+          )}>
+            {[...navItems, { name: t.profile, icon: User, href: "/team/profile" }].map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 text-[10px] font-bold transition-all",
+                    isActive ? "text-[#ff5a00]" : "text-[#9ca3af]"
+                  )}
+                >
+                  <item.icon className={cn("w-5 h-5 transition-all", isActive && "scale-110")} />
+                  <span className="truncate max-w-[50px] text-center">{item.name}</span>
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-0.5 rounded-full bg-[#ff5a00]" />}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </TeamContext.Provider>
