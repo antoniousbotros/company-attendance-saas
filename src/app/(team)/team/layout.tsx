@@ -176,64 +176,61 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
         <aside
           dir={isRTL ? "rtl" : "ltr"}
           className={cn(
-            "hidden lg:flex flex-col w-[240px] bg-[#f5f5f5] border-r border-[#eeeeee] fixed inset-y-0 z-50",
-            isRTL ? "right-0 border-r-0 border-l border-[#eeeeee]" : "left-0"
+            "hidden lg:flex flex-col w-[240px] bg-[#f5f5f5] fixed inset-y-0 z-50",
+            isRTL ? "right-0 border-l border-[#eeeeee]" : "left-0 border-r border-[#eeeeee]"
           )}>
-           <div className="p-8">
-              <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
-                 <div className="w-10 h-10 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-sm">
+           <div className="p-6">
+              <div className="flex items-center gap-3">
+                 <div className="w-9 h-9 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-sm shrink-0">
                     {companyName.charAt(0)}
                  </div>
-                 <div className={cn("flex flex-col", isRTL && "items-end")}>
-                    <span className="text-[14px] font-black tracking-tight">{companyName}</span>
+                 <div className="flex flex-col">
+                    <span className="text-[13px] font-black tracking-tight leading-tight">{companyName}</span>
                     <span className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Portal</span>
                  </div>
               </div>
            </div>
 
-           <nav className="flex-1 px-4 space-y-1">
+           <nav className="flex-1 px-3 space-y-0.5">
               {navItems.map((item) => {
                  const isActive = pathname === item.href;
-                  return (
-                     <Link
-                       key={item.href}
-                       href={item.href}
-                       className={cn(
-                         "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold transition-all",
-                         isRTL ? "flex-row-reverse" : "",
-                         isActive 
-                           ? isRTL
-                             ? "bg-white text-[#ff5a00] border-r-4 border-[#ff5a00] shadow-sm"
-                             : "bg-white text-[#111] border-l-4 border-[#ff5a00] shadow-sm"
-                           : "text-[#6b7280] hover:bg-white/50 hover:text-[#111]",
-                       )}
-                     >
-                        <item.icon className={cn("w-4 h-4 shrink-0", isActive && "text-[#ff5a00]")} />
-                        {item.name}
-                     </Link>
-                  );
+                 return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-[13px] font-semibold transition-all",
+                        isActive
+                          ? "bg-white text-[#ff5a00] font-bold shadow-sm border-l-2 border-[#ff5a00]"
+                          : "text-[#6b7280] hover:bg-white/60 hover:text-[#111]",
+                      )}
+                    >
+                       <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-[#ff5a00]" : "text-[#9ca3af]")} />
+                       {item.name}
+                    </Link>
+                 );
               })}
            </nav>
 
-           <div className="p-4 border-t border-[#eeeeee] space-y-2">
-              <Link href="/team/profile" className={cn("flex items-center gap-3 p-3 rounded-md hover:bg-white/50 transition-colors", isRTL && "flex-row-reverse")}>
-                 <div className="w-8 h-8 rounded-md bg-[#eeeeee] flex items-center justify-center text-[#6b7280] overflow-hidden border border-[#eeeeee]">
+           <div className="p-3 border-t border-[#eeeeee] space-y-1">
+              <Link href="/team/profile" className="flex items-center gap-3 p-3 rounded-md hover:bg-white/60 transition-colors">
+                 <div className="w-8 h-8 rounded-full bg-[#eeeeee] flex items-center justify-center text-[#6b7280] overflow-hidden border border-[#e5e5e5] shrink-0">
                     {employee?.avatar_url ? (
                       <img src={employee.avatar_url} alt="" className="w-full h-full object-cover" />
                     ) : (
                       <User className="w-4 h-4" />
                     )}
                  </div>
-                 <div className={cn("flex flex-col", isRTL && "items-end")}>
-                    <span className="text-xs font-bold text-[#111]">{employee?.name?.split(" ")[0]}</span>
+                 <div className="flex flex-col min-w-0">
+                    <span className="text-xs font-bold text-[#111] truncate">{employee?.name?.split(" ")[0]}</span>
                     <span className="text-[10px] text-[#9ca3af]">{t.profile}</span>
                  </div>
               </Link>
-              <button 
+              <button
                 onClick={handleLogout}
-                className={cn("w-full flex items-center gap-3 p-3 rounded-md text-[#dc2626] hover:bg-red-50 transition-colors text-sm font-bold", isRTL && "flex-row-reverse")}
+                className="w-full flex items-center gap-3 p-3 rounded-md text-[#dc2626] hover:bg-red-50 transition-colors text-sm font-semibold"
               >
-                 <LogOut className="w-4 h-4" />
+                 <LogOut className="w-4 h-4 shrink-0" />
                  {t.signOut}
               </button>
            </div>
