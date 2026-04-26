@@ -25,6 +25,7 @@ type Employee = {
   working_hours_per_day?: number;
   overtime_rate?: number;
   birth_date?: string | null;
+  avatar_url?: string | null;
   created_at?: string;
   company_id: string;
 };
@@ -541,9 +542,13 @@ export default function EmployeesPage() {
                     </td>
                     <td className="px-4 py-5 text-start">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold uppercase ring-1 ring-[#ffd4b8] shrink-0">
-                          {emp.name.substring(0, 2)}
-                        </div>
+                        {emp.avatar_url ? (
+                          <img src={emp.avatar_url} alt="" className="w-10 h-10 rounded-xl object-cover ring-1 ring-[#ffd4b8] shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-xl bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold uppercase ring-1 ring-[#ffd4b8] shrink-0">
+                            {emp.name.substring(0, 2)}
+                          </div>
+                        )}
                         <div className="text-start max-w-[200px]">
                           <p className="text-sm font-bold text-[#111] truncate">{emp.name}</p>
                           <p className="text-[10px] text-[#9ca3af] font-bold uppercase tracking-wider">{emp.department || (isRTL ? "غير محدد التخصص" : "Unassigned Dept")}</p>
@@ -853,6 +858,11 @@ export default function EmployeesPage() {
             </div>
 
             <div className={cn("px-6 py-8 space-y-6 max-h-[70vh] overflow-y-auto", isRTL && "text-right")}>
+              {editingEmployee.avatar_url && (
+                <div className="flex justify-center mb-6">
+                  <img src={editingEmployee.avatar_url} alt="" className="w-20 h-20 rounded-2xl object-cover ring-2 ring-primary/20" />
+                </div>
+              )}
               <div className="space-y-1.5 text-start" dir={isRTL ? "rtl" : "ltr"}>
                 <label className="block text-[11px] font-bold text-[#6b7280] uppercase tracking-wider">
                   {isRTL ? "الاسم الرباعي" : "Full Name"}

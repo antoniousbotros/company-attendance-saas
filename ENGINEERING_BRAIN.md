@@ -71,6 +71,7 @@
 - [x] Enable RLS on `employee_sessions` and `employee_otp` tables.
 - [x] Fix Telegram location conflict and clean up report message formatting.
 - [x] Complete Sales Tracking dashboard localization and team management UX.
+- [x] Overhaul Team Portal Mobile UI and implement Employee Profile management.
 
 ---
 
@@ -83,11 +84,13 @@
 - **2026-04-23**: Verified Stripe Apple Pay compatibility for Hosted Checkout and verified `yawmy.app` domain association.
 - **2026-04-26**: **Telegram Context-Aware Logic**: Implemented `isFresh` location hijacking (60s window) and explicit draft-report invalidation upon attendance commands.
 - **2026-04-26**: **Sales Tracking UX**: Added rapid team deletion from Global Field Creator and standardized all UI messaging via unified i18n keys.
+- **2026-04-26**: **Team Portal Mobile UX (v2.6)**: Shifted to a Drawer-based navigation for secondary actions (Profile, News, Logout) to declutter the bottom dock. Implemented employee self-service for profile images and birthdays.
 
 ---
 
 ## CHANGE LOG
 
+- **v2.6.0**: **Mobile UX Overhaul & Employee Profiles.** Redesigned the Team Portal for premium mobile feel with a new Sidebar Drawer. Implemented Profile management (Avatar upload, Birthday sync) and integrated visibility in the Admin Dashboard.
 - **v2.5.1**: **UX & Logic Hardening.** Fixed Telegram location conflict (hijacking), cleaned up report messages (removed reference codes), and completed Sales Tracking localization.
 - **v2.5.0**: **Subscription Lifecycle Engine.** Implemented 7-day Pro Trials, Unified Entitlement Hierarchy (LTD > Sub > Trial > Free), and Native SQL Limit Enforcement.
 - **v2.4.1**: **Onboarding UX & Branding.** Implemented guided Telegram Bot setup UI in Settings. Finalized "Employee App" naming standardization.

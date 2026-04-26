@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     const { data: employee } = await supabaseAdmin
       .from("employees")
-      .select("id, name, phone, department, company_id, companies(name, logo_url, enable_geofencing, office_lat, office_lng, office_radius, work_start_time, late_threshold, sales_tracking_enabled, bot_language)")
+      .select("id, name, phone, department, birth_date, avatar_url, company_id, companies(name, logo_url, enable_geofencing, office_lat, office_lng, office_radius, work_start_time, late_threshold, sales_tracking_enabled, bot_language, enable_wfh)")
       .eq("id", session.employee_id)
       .eq("company_id", session.company_id)
       .single();
