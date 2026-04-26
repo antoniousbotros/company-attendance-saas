@@ -211,33 +211,6 @@ function Sidebar({
   );
 }
 
-function PageBanner() {
-  const pathname = usePathname();
-  const { isRTL } = useLanguage();
-  const groups = useNav();
-
-  const activeItem = groups
-    .flatMap((g) => g.items)
-    .find((item) => pathname.startsWith(item.href));
-
-  if (!activeItem) return null;
-
-  return (
-    <div className="bg-[#f0f9f4] border-b border-[#d1fae5] py-6 px-8" dir={isRTL ? "rtl" : "ltr"}>
-      <div className="max-w-[1200px] mx-auto w-full">
-        <div className={cn("flex items-center gap-2 mb-1 text-[10px] font-black text-[#9ca3af] uppercase tracking-[0.12em]", isRTL && "flex-row-reverse")}>
-          <span>{isRTL ? "لوحة التحكم" : "Dashboard"}</span>
-          <span className="opacity-30">/</span>
-          <span className="text-[#ff5a00]">{activeItem.name}</span>
-        </div>
-        <h1 className={cn("text-2xl font-black tracking-tight text-[#111]", isRTL && "text-right")}>
-          {activeItem.name}
-        </h1>
-      </div>
-    </div>
-  );
-}
-
 function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }) {
   const { toggleLang, lang, isRTL } = useLanguage();
 
@@ -368,8 +341,6 @@ function DashboardChrome({
           </div>
         )}
 
-        <PageBanner />
-        
         {/* Trial Banners */}
         {isTrialActive && (
           <div className="bg-[#0284c7] text-white px-4 md:px-8 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold animate-in slide-in-from-top duration-500 z-20">
