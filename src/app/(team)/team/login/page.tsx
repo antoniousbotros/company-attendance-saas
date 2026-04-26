@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowRight, ChevronRight, Building2, ChevronLeft, Eye, EyeOff } from "lucide-react";
+import { ArrowRight, ChevronRight, Building2, ChevronLeft, Eye, EyeOff, Smartphone, ShieldCheck, Lock, Loader2 } from "lucide-react";
 import { countryCodes } from "@/lib/countryCodes";
+import { cn } from "@/lib/utils";
 
 type Step = "phone" | "select_company" | "otp" | "password";
 
@@ -67,7 +68,6 @@ export default function TeamLoginPage() {
         if (companyId) setSelectedCompanyId(companyId);
         setStep("password");
       } else {
-        // telegram mode — send OTP
         if (companyId) setSelectedCompanyId(companyId);
         await sendOTP(companyId);
       }
@@ -131,156 +131,221 @@ export default function TeamLoginPage() {
 
   // ── UI ───────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-[340px]">
+    <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Background Orbs */}
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
 
-        {/* Logo */}
-        <div className="mb-12 text-center">
-          <div className="w-12 h-12 bg-[#ff5a00] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-[#ff5a00]/15">
-            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div className="w-full max-w-[400px] z-10">
+        {/* Logo Section */}
+        <div className="mb-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000">
+          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/30 ring-4 ring-white">
+            <svg className="w-8 h-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
           </div>
-          <p className="text-[11px] font-semibold text-[#b0b0b0] tracking-[0.2em] uppercase">Employee Portal</p>
+          <h2 className="text-sm font-black text-foreground tracking-[0.3em] uppercase">Yawmy Portal</h2>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 opacity-60">Advanced Team Management</p>
         </div>
 
-        {/* ── Phone Step ── */}
-        {step === "phone" && (
-          <div className="space-y-8 animate-in fade-in duration-300">
-            <div>
-              <h1 className="text-[28px] font-black text-[#111] tracking-tight leading-tight">Sign in</h1>
-              <p className="text-[14px] text-[#999] mt-2 leading-relaxed">Enter your phone number to continue.</p>
-            </div>
-
-            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
-
-            <div className="space-y-2">
-              <div className="flex items-center border-b-2 border-[#e5e7eb] focus-within:border-[#111] transition-colors">
-                <select value={countryCode} onChange={(e) => setCountryCode(e.target.value)} className="bg-transparent py-4 text-[15px] font-semibold text-[#111] outline-none pe-2" dir="ltr">
-                  {countryCodes.map((c) => (<option key={c.iso} value={c.code}>{c.iso} {c.code}</option>))}
-                </select>
-                <input
-                  type="tel"
-                  placeholder="Phone number"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && phone && handlePhoneContinue()}
-                  className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
-                  autoFocus
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={() => handlePhoneContinue()}
-              disabled={loading || !phone}
-              className="w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30"
-            >
-              {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
-            </button>
-          </div>
-        )}
-
-        {/* ── Select Company ── */}
-        {step === "select_company" && (
-          <div className="space-y-6 animate-in fade-in duration-300">
-            <div>
-              <button onClick={() => { setStep("phone"); setError(""); }} className="text-[#999] hover:text-[#111] mb-4 flex items-center gap-1 text-sm font-medium"><ChevronLeft className="w-4 h-4" /> Back</button>
-              <h1 className="text-[28px] font-black text-[#111] tracking-tight">Choose workspace</h1>
-              <p className="text-[14px] text-[#999] mt-2">Multiple accounts found.</p>
-            </div>
-            <div className="space-y-1">
-              {companies.map((c) => (
-                <button key={c.company_id} onClick={() => handleCompanySelect(c.company_id)} disabled={loading}
-                  className="w-full flex items-center gap-4 py-4 px-1 border-b border-[#f5f5f5] last:border-0 hover:bg-[#fafafa] transition-colors text-start disabled:opacity-50 group">
-                  <div className="w-10 h-10 bg-[#f5f5f5] rounded-xl flex items-center justify-center group-hover:bg-[#ff5a00] transition-colors">
-                    <Building2 className="w-5 h-5 text-[#999] group-hover:text-white transition-colors" />
-                  </div>
-                  <span className="text-[15px] font-semibold text-[#111] flex-1">{c.company_name}</span>
-                  {loading ? <div className="w-4 h-4 border-2 border-[#ddd] border-t-[#111] rounded-full animate-spin" /> : <ChevronRight className="w-4 h-4 text-[#ddd]" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── Password Step ── */}
-        {step === "password" && (
-          <div className="space-y-8 animate-in fade-in duration-300">
-            <div>
-              <button onClick={() => { setStep("phone"); setPassword(""); setError(""); }} className="text-[#999] hover:text-[#111] mb-4 flex items-center gap-1 text-sm font-medium"><ChevronLeft className="w-4 h-4" /> Back</button>
-              <h1 className="text-[28px] font-black text-[#111] tracking-tight leading-tight">Enter password</h1>
-              <p className="text-[14px] text-[#999] mt-2">Use the password your manager gave you.</p>
-            </div>
-
-            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
-
-            <div className="flex items-center border-b-2 border-[#e5e7eb] focus-within:border-[#111] transition-colors">
-              <input
-                ref={passwordRef}
-                type={showPassword ? "text" : "password"}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                onKeyDown={(e) => e.key === "Enter" && password && handlePasswordLogin()}
-                className="flex-1 bg-transparent py-4 text-[15px] font-semibold text-[#111] placeholder:text-[#ccc] outline-none"
+        <div className="premium-card p-8 md:p-10 shadow-2xl shadow-slate-900/5 relative overflow-hidden">
+          {/* Step indicator dot */}
+          <div className="absolute top-4 right-4 flex gap-1">
+            {["phone", "select_company", "otp", "password"].includes(step) && [1,2,3].map(i => (
+              <div key={i} className={cn("w-1 h-1 rounded-full transition-all duration-500", 
+                (step === "phone" && i === 1) || (step === "select_company" && i === 1) || (step === "password" && i === 2) || (step === "otp" && i === 2)
+                ? "bg-primary w-3" : "bg-muted")} 
               />
-              <button onClick={() => setShowPassword((v) => !v)} className="text-[#bbb] hover:text-[#111] transition-colors p-2">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-
-            <button
-              onClick={handlePasswordLogin}
-              disabled={loading || !password.trim()}
-              className="w-full bg-[#111] text-white font-semibold py-4 rounded-2xl hover:bg-black transition-all flex items-center justify-center gap-2 disabled:opacity-30"
-            >
-              {loading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : <>Sign in <ArrowRight className="w-4 h-4" /></>}
-            </button>
+            ))}
           </div>
-        )}
 
-        {/* ── OTP Step ── */}
-        {step === "otp" && (
-          <div className="space-y-8 animate-in fade-in duration-300">
-            <div>
-              <button onClick={() => { setStep("phone"); setOtpDigits(["","","","","",""]); setError(""); }} className="text-[#999] hover:text-[#111] mb-4 flex items-center gap-1 text-sm font-medium"><ChevronLeft className="w-4 h-4" /> Back</button>
-              <h1 className="text-[28px] font-black text-[#111] tracking-tight">Verification</h1>
-              <p className="text-[14px] text-[#999] mt-2">Enter the 6-digit code sent to your Telegram.</p>
-            </div>
-
-            {error && <p className="text-[13px] text-[#e04f00] font-semibold">{error}</p>}
-
-            <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
-              {otpDigits.map((digit, i) => (
-                <input
-                  key={i}
-                  ref={(el) => { otpRefs.current[i] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpChange(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  className="w-12 h-14 text-center text-[20px] font-black text-[#111] border-b-2 border-[#e5e7eb] focus:border-[#111] bg-transparent outline-none transition-colors"
-                />
-              ))}
-            </div>
-
-            {loading && (
-              <div className="flex justify-center">
-                <div className="w-5 h-5 border-2 border-[#111]/10 border-t-[#111] rounded-full animate-spin" />
+          {/* ── Phone Step ── */}
+          {step === "phone" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Smartphone className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">Authentication</span>
+                </div>
+                <h1 className="text-3xl font-black text-foreground tracking-tight leading-none">Welcome back</h1>
+                <p className="text-sm font-medium text-muted-foreground mt-3 leading-relaxed">Enter your registered phone number to access your dashboard.</p>
               </div>
-            )}
 
-            <div className="text-center">
-              <button onClick={() => sendOTP(selectedCompanyId || undefined)} disabled={loading} className="text-[13px] text-[#999] font-medium hover:text-[#111] transition-colors disabled:opacity-50">
-                Resend code
+              {error && (
+                <div className="bg-danger-soft border border-danger/10 p-3 rounded-xl flex items-center gap-3 animate-in shake duration-300">
+                  <div className="w-1.5 h-1.5 rounded-full bg-danger" />
+                  <p className="text-xs font-black text-danger uppercase tracking-tight">{error}</p>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div className="flex items-center bg-muted/50 rounded-2xl p-1 focus-within:bg-white focus-within:ring-2 ring-primary/20 transition-all border border-border/50">
+                  <select 
+                    value={countryCode} 
+                    onChange={(e) => setCountryCode(e.target.value)} 
+                    className="bg-transparent py-4 px-4 text-sm font-black text-foreground outline-none border-e border-border/50" 
+                    dir="ltr"
+                  >
+                    {countryCodes.map((c) => (<option key={c.iso} value={c.code}>{c.iso} {c.code}</option>))}
+                  </select>
+                  <input
+                    type="tel"
+                    placeholder="Phone number"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && phone && handlePhoneContinue()}
+                    className="flex-1 bg-transparent py-4 px-4 text-sm font-black text-foreground placeholder:text-muted-foreground/40 outline-none"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={() => handlePhoneContinue()}
+                disabled={loading || !phone}
+                className="w-full h-14 bg-foreground text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-800 active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-20 shadow-lg shadow-slate-900/10"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4 stroke-[3]" /></>}
               </button>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="mt-16 text-center">
-          <p className="text-[11px] text-[#ddd] font-medium">Yawmy &middot; 2026</p>
+          {/* ── Select Company ── */}
+          {step === "select_company" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <button onClick={() => { setStep("phone"); setError(""); }} className="group text-muted-foreground hover:text-foreground mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors">
+                  <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back
+                </button>
+                <h1 className="text-3xl font-black text-foreground tracking-tight">Workspace</h1>
+                <p className="text-sm font-medium text-muted-foreground mt-3">Select the account you want to sign in with.</p>
+              </div>
+
+              <div className="grid gap-2">
+                {companies.map((c) => (
+                  <button key={c.company_id} onClick={() => handleCompanySelect(c.company_id)} disabled={loading}
+                    className="w-full flex items-center gap-4 p-4 bg-muted/30 hover:bg-primary-soft hover:border-primary/20 border border-border/50 rounded-2xl transition-all text-start disabled:opacity-50 group relative">
+                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-sm group-hover:bg-primary group-hover:text-white transition-all">
+                      <Building2 className="w-6 h-6 stroke-[2]" />
+                    </div>
+                    <span className="text-sm font-black text-foreground flex-1 tracking-tight">{c.company_name}</span>
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground opacity-30 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Password Step ── */}
+          {step === "password" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <button onClick={() => { setStep("phone"); setPassword(""); setError(""); }} className="group text-muted-foreground hover:text-foreground mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors">
+                  <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back
+                </button>
+                <div className="flex items-center gap-2 mb-2">
+                  <Lock className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">Security</span>
+                </div>
+                <h1 className="text-3xl font-black text-foreground tracking-tight">Security Check</h1>
+                <p className="text-sm font-medium text-muted-foreground mt-3 leading-relaxed">Enter your private password to unlock your workspace access.</p>
+              </div>
+
+              {error && (
+                <div className="bg-danger-soft border border-danger/10 p-3 rounded-xl flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-danger" />
+                  <p className="text-xs font-black text-danger uppercase tracking-tight">{error}</p>
+                </div>
+              )}
+
+              <div className="relative">
+                <input
+                  ref={passwordRef}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Private Password"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                  onKeyDown={(e) => e.key === "Enter" && password && handlePasswordLogin()}
+                  className="w-full bg-muted/50 border border-border/50 rounded-2xl px-5 py-4 text-sm font-black text-foreground placeholder:text-muted-foreground/40 outline-none focus:bg-white focus:ring-2 ring-primary/20 transition-all"
+                />
+                <button onClick={() => setShowPassword((v) => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-2">
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              <button
+                onClick={handlePasswordLogin}
+                disabled={loading || !password.trim()}
+                className="w-full h-14 bg-primary text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-20 shadow-lg shadow-primary/20"
+              >
+                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Access Portal <ArrowRight className="w-4 h-4 stroke-[3]" /></>}
+              </button>
+            </div>
+          )}
+
+          {/* ── OTP Step ── */}
+          {step === "otp" && (
+            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+              <div>
+                <button onClick={() => { setStep("phone"); setOtpDigits(["","","","","",""]); setError(""); }} className="group text-muted-foreground hover:text-foreground mb-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors">
+                  <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> Back
+                </button>
+                <div className="flex items-center gap-2 mb-2">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">Verification</span>
+                </div>
+                <h1 className="text-3xl font-black text-foreground tracking-tight">Verify Identity</h1>
+                <p className="text-sm font-medium text-muted-foreground mt-3">We've sent a 6-digit security code to your Telegram.</p>
+              </div>
+
+              {error && (
+                <div className="bg-danger-soft border border-danger/10 p-3 rounded-xl flex items-center gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-danger" />
+                  <p className="text-xs font-black text-danger uppercase tracking-tight">{error}</p>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-between" onPaste={handleOtpPaste}>
+                {otpDigits.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { otpRefs.current[i] = el; }}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    className="w-full max-w-[50px] h-14 text-center text-xl font-black text-foreground bg-muted/50 border border-border/50 rounded-xl focus:bg-white focus:border-primary focus:ring-2 ring-primary/20 outline-none transition-all"
+                  />
+                ))}
+              </div>
+
+              {loading && (
+                <div className="flex justify-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              )}
+
+              <div className="text-center">
+                <button onClick={() => sendOTP(selectedCompanyId || undefined)} disabled={loading} className="text-[10px] font-black text-muted-foreground uppercase tracking-widest hover:text-primary transition-colors disabled:opacity-50">
+                  Didn't receive it? <span className="text-primary underline decoration-primary/20 underline-offset-4 ml-1">Resend code</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer info */}
+        <div className="mt-12 text-center animate-in fade-in duration-1000 delay-500">
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] flex items-center justify-center gap-4">
+            <span>Security First</span>
+            <span className="w-1 h-1 bg-border rounded-full" />
+            <span>Yawmy Cloud</span>
+            <span className="w-1 h-1 bg-border rounded-full" />
+            <span>v2.4.0</span>
+          </p>
+          <p className="text-[9px] font-bold text-muted-foreground/30 mt-4 uppercase tracking-[0.1em]">&copy; 2026 Yawmy Technology Group. All rights reserved.</p>
         </div>
       </div>
     </div>

@@ -86,16 +86,16 @@ function SwipeableTask({
   const isActive = toggling === task.id;
 
   const statusStyle = (s: string) => {
-    if (s === "in_progress") return "bg-[#fff1e8] text-[#ff5a00]";
-    if (s === "completed") return "bg-[#e6f6ec] text-[#1e8e3e]";
-    if (s === "late") return "bg-[#fef2f2] text-[#b91c1c]";
-    return "bg-[#f1f1f1] text-[#4b5563]";
+    if (s === "in_progress") return "bg-primary-soft text-primary";
+    if (s === "completed") return "bg-success-soft text-success";
+    if (s === "late") return "bg-danger-soft text-danger";
+    return "bg-muted text-muted-foreground";
   };
 
   const statusLabel = (s: string) => {
     const labels: Record<string, { en: string; ar: string }> = {
       pending: { en: "Pending", ar: "معلق" },
-      in_progress: { en: "In Progress", ar: "قيد التنفيذ" },
+      in_progress: { en: "Active", ar: "قيد التنفيذ" },
       completed: { en: "Done", ar: "مكتمل" },
       late: { en: "Late", ar: "متأخر" },
     };
@@ -144,7 +144,7 @@ function SwipeableTask({
           userSelect: "none",
         }}
         className={cn(
-          "bg-white rounded-2xl shadow-sm p-4 flex items-start gap-3",
+          "premium-card p-4 flex items-start gap-4 transition-opacity",
           isDone && "opacity-55",
           "cursor-grab active:cursor-grabbing"
         )}
@@ -156,54 +156,51 @@ function SwipeableTask({
             disabled={!!isActive}
             onPointerDown={(e) => e.stopPropagation()}
             className={cn(
-              "flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
-              isDone ? "bg-[#1e8e3e] border-[#1e8e3e]" : "border-[#d1d5db] hover:border-[#ff5a00]"
+              "flex-shrink-0 mt-0.5 w-6 h-6 rounded-xl border-2 flex items-center justify-center transition-all duration-300",
+              isDone ? "bg-success border-success shadow-sm shadow-success/20" : "border-border-strong hover:border-primary"
             )}
           >
-            {isActive ? <Loader2 className="w-2.5 h-2.5 text-[#ff5a00] animate-spin" /> : isDone ? <Check className="w-3 h-3 text-white" strokeWidth={3} /> : null}
+            {isActive ? <Loader2 className="w-3.5 h-3.5 text-primary animate-spin" /> : isDone ? <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /> : null}
           </button>
         ) : (
-          <div className={cn("flex-shrink-0 mt-1.5 w-2 h-2 rounded-full",
-            task.status === "completed" ? "bg-[#1e8e3e]" :
-            task.status === "in_progress" ? "bg-[#ff5a00]" :
-            task.status === "late" ? "bg-[#b91c1c]" : "bg-[#d1d5db]"
+          <div className={cn("flex-shrink-0 mt-2 w-2 h-2 rounded-full shadow-sm",
+            task.status === "completed" ? "bg-success" :
+            task.status === "in_progress" ? "bg-primary" :
+            task.status === "late" ? "bg-danger" : "bg-muted-foreground"
           )} />
         )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2 mb-1">
-            <h3 className={cn("text-sm font-bold text-[#111] leading-snug truncate", isDone && "line-through opacity-70 flex items-center gap-2")}>
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <h3 className={cn("text-sm font-black text-foreground leading-tight truncate", isDone && "line-through opacity-50")}>
               {task.title}
-              {task.link && <ImageIcon className="w-3.5 h-3.5 text-[#ff5a00] inline-block ms-1" />}
+              {task.link && <ImageIcon className="w-3.5 h-3.5 text-primary inline-block ms-2 opacity-70" />}
             </h3>
             {isSelf ? (
-              <span className="flex-shrink-0 text-[8px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#f3f0ff] text-[#7c3aed]">
-                {isRTL ? "شخصي" : "Personal"}
+              <span className="flex-shrink-0 text-[9px] font-black uppercase px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100">
+                {isRTL ? "شخصي" : "SELF"}
               </span>
             ) : (
-              <span className={`flex-shrink-0 text-[8px] font-bold uppercase px-2 py-0.5 rounded-full ${statusStyle(task.status)}`}>
+              <span className={cn("flex-shrink-0 text-[9px] font-black uppercase px-2 py-1 rounded-lg border", statusStyle(task.status))}>
                 {statusLabel(task.status)}
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-3 text-[11px] text-[#9ca3af] font-medium">
+          <div className="flex flex-wrap gap-4 text-[11px] text-muted-foreground font-bold uppercase tracking-tight">
             {!isSelf && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3" />
+              <span className="flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 opacity-60" />
                 {tab === "my_tasks"
-                  ? `${isRTL ? "من" : "From"}: ${task.assigned_by_name}`
-                  : `${isRTL ? "إلى" : "To"}: ${task.assigned_to_name}`}
+                  ? `${isRTL ? "من" : "FROM"}: ${task.assigned_by_name}`
+                  : `${isRTL ? "إلى" : "TO"}: ${task.assigned_to_name}`}
               </span>
             )}
             {task.deadline && (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 opacity-60" />
                 {new Date(task.deadline).toLocaleString(isRTL ? "ar-EG" : "en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
               </span>
-            )}
-            {isDone && task.completed_at && (
-              <span className="text-[#1e8e3e]">{isRTL ? "أُنجز" : "Done"} {new Date(task.completed_at).toLocaleDateString()}</span>
             )}
           </div>
           {tab === "my_tasks" && task.status === "pending" && !isSelf && (
@@ -211,9 +208,9 @@ function SwipeableTask({
               onPointerDown={(e) => e.stopPropagation()}
               onClick={() => onStart(task.id)}
               disabled={!!isActive}
-              className="mt-2 text-[10px] font-bold text-[#ff5a00] bg-[#fff1e8] px-2.5 py-1 rounded-lg hover:bg-[#ffe4d1] transition-all disabled:opacity-50"
+              className="mt-3 text-[10px] font-black text-primary bg-primary-soft px-4 py-1.5 rounded-xl hover:bg-primary hover:text-white transition-all disabled:opacity-50 shadow-sm shadow-primary/5 uppercase tracking-widest"
             >
-              {isRTL ? "بدء" : "Start"}
+              {isRTL ? "بدء العمل" : "START TASK"}
             </button>
           )}
         </div>
@@ -259,7 +256,6 @@ function CalendarView({
   const daysInMonth = getDaysInMonth(year, month);
   const firstDay = getFirstDayOfMonth(year, month);
   
-  // Adjusted for Sunday=0 to Saturday=6
   const paddingDays = Array.from({ length: firstDay }).map((_, i) => i);
   const monthDays = Array.from({ length: daysInMonth }).map((_, i) => i + 1);
 
@@ -269,9 +265,7 @@ function CalendarView({
   const isSameDay = (d1: Date, d2: Date) => 
     d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
 
-  // Normalize all tasks that have a deadline
   const calendarTasks = tasks.filter(t => t.deadline);
-
   const tasksForDay = (day: number) => {
     const dayDate = new Date(year, month, day);
     return calendarTasks.filter(t => isSameDay(new Date(t.deadline), dayDate));
@@ -279,29 +273,34 @@ function CalendarView({
 
   const selectedDayTasks = calendarTasks.filter(t => isSameDay(new Date(t.deadline), selectedDate));
 
-  const weekDaysAr = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-  const weekDaysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const weekDaysAr = ["أحد", "إثنين", "ثلاثاء", "أربعاء", "خميس", "جمعة", "سبت"];
+  const weekDaysEn = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
   const weekDays = isRTL ? weekDaysAr : weekDaysEn;
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between mb-4 px-2">
-        <h2 className="text-sm font-black text-[#111]">
-          {currentDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })}
-        </h2>
-        <div className="flex gap-2">
-          <button onClick={isRTL ? nextMonth : prevMonth} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronLeft className="w-5 h-5 text-[#6b7280]" />
+    <div className="premium-card p-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-xl font-black text-foreground tracking-tight">
+            {currentDate.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', { month: 'long', year: 'numeric' })}
+          </h2>
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1">
+            {isRTL ? "تصفح مهامك المجدولة" : "BROWSE SCHEDULED TASKS"}
+          </p>
+        </div>
+        <div className="flex gap-2 bg-muted/50 p-1 rounded-xl border border-border/50">
+          <button onClick={isRTL ? nextMonth : prevMonth} className="p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={isRTL ? prevMonth : nextMonth} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronRight className="w-5 h-5 text-[#6b7280]" />
+          <button onClick={isRTL ? prevMonth : nextMonth} className="p-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-muted-foreground hover:text-foreground">
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 mb-4">
+      <div className="grid grid-cols-7 gap-1.5 mb-8">
         {weekDays.map(d => (
-          <div key={d} className="text-center text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide py-2">
+          <div key={d} className="text-center text-[9px] font-black text-muted-foreground uppercase tracking-widest py-3">
             {d}
           </div>
         ))}
@@ -319,21 +318,21 @@ function CalendarView({
               key={day}
               onClick={() => setSelectedDate(dayDate)}
               className={cn(
-                "h-10 rounded-xl flex flex-col items-center justify-center relative transition-all",
+                "aspect-square rounded-2xl flex flex-col items-center justify-center relative transition-all duration-300 group",
                 isSelected
-                  ? "bg-[#ff5a00] text-white font-black shadow-md"
+                  ? "bg-primary text-white font-black shadow-lg shadow-primary/30 scale-105 z-10"
                   : isToday
-                  ? "bg-[#fff1e8] text-[#ff5a00] font-bold"
-                  : "hover:bg-gray-50 text-[#4b5563] font-medium"
+                  ? "bg-primary-soft text-primary font-black ring-1 ring-primary/20"
+                  : "hover:bg-muted text-foreground/70 font-bold"
               )}
             >
               <span className="text-sm">{day}</span>
               {dayTasks.length > 0 && (
-                <div className="flex flex-wrap gap-0.5 mt-0.5 justify-center">
+                <div className="flex gap-0.5 mt-1 justify-center">
                   {dayTasks.slice(0, 3).map((t, i) => (
                     <div key={i} className={cn(
                       "w-1 h-1 rounded-full",
-                      isSelected ? "bg-white/80" : t.status === "completed" ? "bg-[#1e8e3e]" : t.status === "in_progress" ? "bg-[#ff5a00]" : "bg-[#d1d5db]"
+                      isSelected ? "bg-white" : t.status === "completed" ? "bg-success" : t.status === "in_progress" ? "bg-primary" : "bg-muted-foreground/40"
                     )} />
                   ))}
                 </div>
@@ -343,19 +342,24 @@ function CalendarView({
         })}
       </div>
 
-      <div className="border-t border-[#f5f5f5] pt-4 mt-2">
-        <h3 className="text-xs font-bold text-[#6b7280] mb-3">
-          {isRTL ? "مهام يوم" : "Tasks for"}{" "}
-          <span className="text-[#111]">{selectedDate.toLocaleDateString(isRTL ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric" })}</span>
-        </h3>
+      <div className="space-y-6 pt-6 border-t border-border/50">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+            {isRTL ? "مهام يوم" : "TASKS FOR"}{" "}
+            <span className="text-foreground ml-2">{selectedDate.toLocaleDateString(isRTL ? "ar-EG" : "en-US", { weekday: "long", month: "short", day: "numeric" })}</span>
+          </h3>
+          <div className="bg-muted px-2 py-1 rounded-lg text-[9px] font-black text-muted-foreground uppercase">
+            {selectedDayTasks.length} {isRTL ? "مهام" : "TASKS"}
+          </div>
+        </div>
         
         {selectedDayTasks.length === 0 ? (
-          <div className="text-center py-6">
-            <span className="text-2xl mb-1 block">🏖️</span>
-            <p className="text-[11px] text-[#9ca3af] font-medium">{isRTL ? "لا توجد مهام في هذا اليوم" : "No tasks scheduled for this day."}</p>
+          <div className="py-12 flex flex-col items-center justify-center text-muted-foreground gap-3 opacity-40">
+            <CalendarIcon className="w-10 h-10 stroke-[1.5]" />
+            <p className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "لا توجد مهام" : "No tasks scheduled"}</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-4">
             {selectedDayTasks.map(t => (
               <SwipeableTask
                 key={t.id}
@@ -403,50 +407,70 @@ function EditTaskModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-end lg:items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-end md:items-center justify-center p-4 animate-in fade-in duration-300" onClick={onClose}>
       <div
-        className="bg-white rounded-t-2xl lg:rounded-2xl w-full max-w-sm p-5 space-y-4 animate-in slide-in-from-bottom-4 duration-300"
+        className="premium-card w-full max-w-md p-6 md:p-8 space-y-8 animate-in slide-in-from-bottom-8 duration-500 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Pencil className="w-4 h-4 text-[#1e8e3e]" />
-            <h2 className="text-base font-black text-[#111]">{isRTL ? "تعديل المهمة" : "Edit Task"}</h2>
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-success-soft rounded-xl flex items-center justify-center text-success">
+              <Pencil className="w-5 h-5 stroke-[2.5]" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-foreground tracking-tight">{isRTL ? "تعديل المهمة" : "Edit Task"}</h2>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{isRTL ? "تحديث تفاصيل المهمة" : "UPDATE TASK DETAILS"}</p>
+            </div>
           </div>
-          <button onClick={onClose} className="text-[#9ca3af] hover:text-[#111]"><X className="w-5 h-5" /></button>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition-colors text-muted-foreground"><X className="w-6 h-6" /></button>
         </div>
-        <div>
-          <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1">{isRTL ? "عنوان المهمة" : "Task title"}</label>
-          <input
-            autoFocus
-            type="text"
-            value={title}
-            dir="auto"
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#1e8e3e]"
-          />
+
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">{isRTL ? "عنوان المهمة" : "TASK TITLE"}</label>
+            <input
+              autoFocus
+              type="text"
+              value={title}
+              dir="auto"
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3.5 text-sm font-black text-foreground outline-none focus:border-success/50 focus:bg-white transition-all"
+              placeholder={isRTL ? "ما الذي يجب فعله؟" : "What needs to be done?"}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">{isRTL ? "الموعد النهائي" : "DEADLINE"}</label>
+            <input
+              type="datetime-local"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+              className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3.5 text-sm font-black text-foreground outline-none focus:border-success/50 focus:bg-white transition-all appearance-none"
+            />
+          </div>
         </div>
-        <div>
-          <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1">{isRTL ? "الموعد النهائي" : "Deadline"}</label>
-          <input
-            type="datetime-local"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#1e8e3e]"
-          />
-        </div>
-        <div className="flex gap-2">
-          <button onClick={onClose} className="flex-1 border border-[#e0e0e0] text-[#6b7280] font-bold py-2.5 rounded-xl hover:bg-[#f5f5f5] transition-all text-sm">
-            {isRTL ? "إلغاء" : "Cancel"}
+
+        <div className="flex gap-3 pt-2">
+          <button 
+            onClick={onClose} 
+            className="flex-1 h-14 bg-muted text-muted-foreground text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-muted-strong hover:text-foreground transition-all"
+          >
+            {isRTL ? "إلغاء" : "CANCEL"}
           </button>
           <button
             onClick={handleSave}
             disabled={!title.trim() || saving}
-            className="flex-1 bg-[#1e8e3e] text-white font-black py-2.5 rounded-xl hover:bg-[#166d31] transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+            className="flex-1 h-14 bg-success text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-success/20 disabled:opacity-40 flex items-center justify-center gap-2"
           >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {isRTL ? "حفظ" : "Save"}
+            {saving ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Check className="w-4 h-4 stroke-[3]" />
+                {isRTL ? "حفظ التغييرات" : "SAVE CHANGES"}
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -608,60 +632,113 @@ export default function TeamTasksPage() {
   ];
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <CheckSquare className="w-5 h-5 text-[#ff5a00]" />
-        <h1 className="text-lg font-black text-[#111]">{isRTL ? "المهام" : "Tasks"}</h1>
-      </div>
-
-      {/* Swipe hint banner */}
-      {(tab === "my_tasks" || tab === "assigned_by_me") && !loading && filteredTasks.length > 0 && (
-        <div className="flex items-center justify-between text-[10px] text-[#9ca3af] font-medium px-1">
-          <span className="flex items-center gap-1">
-            <span className="text-[#1e8e3e]">←</span> {isRTL ? "يمين: تعديل" : "Right: Edit"}
-          </span>
-          <span className="flex items-center gap-1">
-            {isRTL ? "يسار: حذف" : "Left: Delete"} <span className="text-[#ef4444]">→</span>
-          </span>
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+          <CheckSquare className="w-6 h-6 stroke-[2.5]" />
         </div>
-      )}
+        <div>
+          <h1 className="text-2xl font-black text-foreground tracking-tight">{isRTL ? "إدارة المهام" : "Task Board"}</h1>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "تابع مهامك اليومية" : "Track your daily activities"}</p>
+        </div>
+      </div>
 
-      {/* Tabs */}
-      <div className="flex bg-white rounded-full p-1 shadow-sm">
-        <button onClick={() => setTab("my_tasks")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all", tab === "my_tasks" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
-          {isRTL ? "مهامي" : "My Tasks"} ({myTasks.length})
+      {/* Tabs - Premium Segmented Control */}
+      <div className="flex bg-muted/50 backdrop-blur-sm rounded-2xl p-1.5 border border-border/50">
+        <button 
+          onClick={() => setTab("my_tasks")} 
+          className={cn(
+            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
+            tab === "my_tasks" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {isRTL ? "مهامي" : "MY TASKS"} <span className="opacity-40 ml-1">({myTasks.length})</span>
         </button>
-        <button onClick={() => setTab("assigned_by_me")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all", tab === "assigned_by_me" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
-          {isRTL ? "كلفت بها" : "I Assigned"} ({assignedByMe.length})
+        <button 
+          onClick={() => setTab("assigned_by_me")} 
+          className={cn(
+            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
+            tab === "assigned_by_me" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {isRTL ? "مكلف بها" : "DELEGATED"} <span className="opacity-40 ml-1">({assignedByMe.length})</span>
         </button>
-        <button onClick={() => setTab("calendar")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all flex items-center justify-center gap-1", tab === "calendar" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
-          <CalendarIcon className="w-3 h-3" />
-          {isRTL ? "التقويم" : "Calendar"}
+        <button 
+          onClick={() => setTab("calendar")} 
+          className={cn(
+            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300 flex items-center justify-center gap-2", 
+            tab === "calendar" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <CalendarIcon className="w-3.5 h-3.5" />
+          {isRTL ? "التقويم" : "CALENDAR"}
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {filters.map((f) => (
-          <button key={f.key} onClick={() => setStatusFilter(f.key)} className={cn("px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition-all border", statusFilter === f.key ? "bg-[#111] text-white border-[#111]" : "bg-white text-[#6b7280] border-[#e0e0e0]")}>
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Unified Composer */}
-      {tab === "my_tasks" && (
-        <div className={cn("bg-white rounded-2xl shadow-sm border transition-all duration-200", showAssignPanel ? "border-[#ff5a00] ring-1 ring-[#ff5a00]/20" : "border-dashed border-[#e0e0e0]")}>
-          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-3">
-            <div className="w-5 h-5 rounded-full border-2 border-[#d1d5db] flex-shrink-0 hidden sm:block" />
-            <div className="flex-1 min-w-0 flex items-center bg-transparent border-b border-transparent focus-within:border-[#e0e0e0] transition-colors relative">
-              {imagePreview && (
-                <div className="relative w-7 h-7 flex-shrink-0 rounded-md overflow-hidden ring-1 ring-[#e0e0e0] inline-block me-2">
-                  <img src={imagePreview} alt="upload" className="w-full h-full object-cover" />
-                  <button onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute -top-1 -right-1 bg-white text-red-500 rounded-full shadow-sm"><X className="w-3 h-3" /></button>
-                </div>
+      {/* Filters & Hints Row */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {filters.map((f) => (
+            <button 
+              key={f.key} 
+              onClick={() => setStatusFilter(f.key)} 
+              className={cn(
+                "px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border", 
+                statusFilter === f.key 
+                  ? "bg-foreground text-white border-foreground" 
+                  : "bg-white text-muted-foreground border-border hover:border-muted-foreground"
               )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        
+        {/* Swipe hint banner */}
+        {(tab === "my_tasks" || tab === "assigned_by_me") && !loading && filteredTasks.length > 0 && (
+          <div className="flex items-center gap-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest opacity-60">
+            <span className="flex items-center gap-1">
+              <span className="text-success">←</span> {isRTL ? "يمين: تعديل" : "SWIPE RIGHT: EDIT"}
+            </span>
+            <div className="w-1 h-1 bg-muted-foreground rounded-full" />
+            <span className="flex items-center gap-1">
+              {isRTL ? "يسار: حذف" : "SWIPE LEFT: DELETE"} <span className="text-danger">→</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Unified Composer - Redesigned as a Premium Action Card */}
+      {tab === "my_tasks" && (
+        <div className={cn(
+          "premium-card transition-all duration-500 overflow-hidden", 
+          showAssignPanel ? "ring-2 ring-primary/20 border-primary/30" : "border-dashed border-border-strong hover:border-primary/50"
+        )}>
+          <div className="flex items-center gap-3 p-4">
+            <div className="relative group">
+              {imagePreview ? (
+                <div className="relative w-11 h-11 rounded-xl overflow-hidden shadow-md ring-2 ring-white">
+                  <img src={imagePreview} alt="upload" className="w-full h-full object-cover" />
+                  <button 
+                    onClick={() => { setImageFile(null); setImagePreview(null); }} 
+                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-11 h-11 bg-muted rounded-xl flex items-center justify-center text-muted-foreground hover:bg-primary-soft hover:text-primary transition-all duration-300"
+                >
+                  <Camera className="w-5 h-5" />
+                </button>
+              )}
+              <input type="file" accept="image/*" capture="environment" hidden ref={fileInputRef} onChange={handleImageCapture} />
+            </div>
+
+            <div className="flex-1 min-w-0">
               <input
                 ref={inputRef}
                 type="text"
@@ -669,53 +746,82 @@ export default function TeamTasksPage() {
                 onChange={(e) => setTitle(e.target.value)}
                 onFocus={ensureCoworkers}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                placeholder={isRTL ? "أضف مهمة لنفسك..." : "Add a task for yourself..."}
-                className="flex-1 min-w-0 text-sm font-medium text-[#111] placeholder:text-[#bbb] outline-none bg-transparent h-8"
+                placeholder={isRTL ? "ماذا تريد أن تنجز اليوم؟" : "What needs to be done?"}
+                className="w-full text-base font-bold text-foreground placeholder:text-muted-foreground/40 outline-none bg-transparent"
                 dir="auto"
               />
             </div>
-            <input 
-              type="file" 
-              accept="image/*" 
-              capture="environment" 
-              hidden 
-              ref={fileInputRef} 
-              onChange={handleImageCapture}
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex-shrink-0 p-1.5 rounded-lg text-[#6b7280] hover:text-[#ff5a00] hover:bg-[#fff1e8] transition-colors"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-            <button
-              onClick={async () => { await ensureCoworkers(); setShowAssignPanel((v) => !v); if (showAssignPanel) { setAssignTo(""); setDeadline(""); } }}
-              className={cn("flex-shrink-0 flex items-center gap-1 text-[10px] font-bold px-2 py-1.5 rounded-lg transition-all border", isAssigning ? "bg-[#ff5a00] text-white border-[#ff5a00]" : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]")}
-            >
-              <UserPlus className="w-3 h-3" />
-              {isAssigning ? (selectedCoworker?.name || (isRTL ? "تعيين" : "Assign")) : (isRTL ? "تكليف" : "Assign")}
-            </button>
-            <button onClick={handleSubmit} disabled={!title.trim() || submitting} className="w-7 h-7 rounded-lg bg-[#ff5a00] flex items-center justify-center disabled:opacity-30 hover:bg-[#e04f00] transition-all flex-shrink-0">
-              {submitting ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Plus className="w-3.5 h-3.5 text-white" />}
-            </button>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => { await ensureCoworkers(); setShowAssignPanel((v) => !v); if (showAssignPanel) { setAssignTo(""); setDeadline(""); } }}
+                className={cn(
+                  "h-10 px-4 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 border", 
+                  isAssigning 
+                    ? "bg-primary text-white border-primary shadow-md shadow-primary/20" 
+                    : "bg-white text-muted-foreground border-border hover:border-primary hover:text-primary"
+                )}
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{isAssigning ? (selectedCoworker?.name || "ASSIGNED") : (isRTL ? "تكليف" : "DELEGATE")}</span>
+              </button>
+
+              <button 
+                onClick={handleSubmit} 
+                disabled={!title.trim() || submitting} 
+                className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:scale-100"
+              >
+                {submitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5 stroke-[3]" />}
+              </button>
+            </div>
           </div>
+
           {showAssignPanel && (
-            <div className="px-4 pb-3 border-t border-[#f5f5f5] pt-3 space-y-2 animate-in slide-in-from-top-2 duration-200">
-              <p className="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide">{isRTL ? "تكليف إلى:" : "Assign to:"}</p>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setAssignTo("")} className={cn("px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all", assignTo === "" ? "bg-[#7c3aed] text-white border-[#7c3aed]" : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#7c3aed] hover:text-[#7c3aed]")}>
-                  {isRTL ? "🙋 شخصي" : "🙋 Personal"}
-                </button>
-                {coworkers.map((c) => (
-                  <button key={c.id} onClick={() => setAssignTo(c.id)} className={cn("px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all", assignTo === c.id ? "bg-[#ff5a00] text-white border-[#ff5a00]" : "bg-white text-[#6b7280] border-[#e0e0e0] hover:border-[#ff5a00] hover:text-[#ff5a00]")}>
-                    {c.name}
+            <div className="px-5 pb-5 pt-1 space-y-5 animate-in slide-in-from-top-4 duration-500">
+              <div className="h-px bg-border/50" />
+              
+              <div className="space-y-3">
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{isRTL ? "تعيين المهمة إلى:" : "DELEGATE TO:"}</p>
+                <div className="flex flex-wrap gap-2">
+                  <button 
+                    onClick={() => setAssignTo("")} 
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight border transition-all duration-300", 
+                      assignTo === "" 
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-200" 
+                        : "bg-white text-muted-foreground border-border hover:border-indigo-600 hover:text-indigo-600"
+                    )}
+                  >
+                    🙋 {isRTL ? "نفسي" : "MYSELF"}
                   </button>
-                ))}
+                  {coworkers.map((c) => (
+                    <button 
+                      key={c.id} 
+                      onClick={() => setAssignTo(c.id)} 
+                      className={cn(
+                        "px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight border transition-all duration-300", 
+                        assignTo === c.id 
+                          ? "bg-primary text-white border-primary shadow-md shadow-primary/20" 
+                          : "bg-white text-muted-foreground border-border hover:border-primary hover:text-primary"
+                      )}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Clock className="w-3.5 h-3.5 text-[#9ca3af] flex-shrink-0" />
-                <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className="flex-1 text-[12px] font-medium text-[#111] outline-none bg-transparent border-b border-[#e0e0e0] focus:border-[#ff5a00] pb-0.5 transition-colors" />
-                <span className="text-[10px] text-[#9ca3af] font-medium">{isRTL ? "الموعد (اختياري)" : "Deadline (optional)"}</span>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex-1 flex items-center gap-3 bg-muted/50 rounded-xl px-4 py-2.5 border border-border/50 transition-within:border-primary/50">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <input 
+                    type="datetime-local" 
+                    value={deadline} 
+                    onChange={(e) => setDeadline(e.target.value)} 
+                    className="flex-1 text-[12px] font-black text-foreground outline-none bg-transparent uppercase" 
+                  />
+                  <span className="text-[9px] text-muted-foreground font-black uppercase whitespace-nowrap">{isRTL ? "الموعد النهائي" : "DUE DATE"}</span>
+                </div>
               </div>
             </div>
           )}

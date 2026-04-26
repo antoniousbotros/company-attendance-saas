@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { LocateFixed, MapPin, Search, Calendar, Users, Briefcase, Plus, Save, Trash2, ArrowRight, Image as ImageIcon, X, ZoomIn, Download, FileDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/lib/LanguageContext";
 
 // Supabase generated types conceptually
 type Team = { id: string; name: string; leader_id: string | null; show_notes?: boolean; require_notes?: boolean; };
@@ -13,6 +14,7 @@ type TeamMember = { id: string; team_id: string; employee_id: string; role: stri
 type ReportObj = { id: string; employee_name: string; team_name: string; team_id?: string; date: string; created_at: string; location_lat: number; location_lng: number; notes: string; values: Record<string, string> };
 
 export default function SalesTrackingPage() {
+    const { t, isRTL } = useLanguage();
     const [activeTab, setActiveTab] = useState<"reports"|"settings">("reports");
     const [isLoading, setIsLoading] = useState(true);
     
@@ -107,14 +109,14 @@ export default function SalesTrackingPage() {
     }
 
     return (
-        <div className="space-y-6 max-w-6xl mx-auto" dir="rtl">
+        <div className="space-y-6 max-w-6xl mx-auto" dir={isRTL ? "rtl" : "ltr"}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
+                <div className={cn(isRTL ? "text-right" : "text-left")}>
                     <h1 className="text-2xl font-bold font-['Tajawal'] text-gray-900 tracking-tight flex items-center gap-2">
                         <LocateFixed className="w-7 h-7 text-[#ff5a00]" />
-                        شاشة التقارير الميدانية والمبيعات
+                        {t.salesTrackingTitle}
                     </h1>
-                    <p className="text-gray-500 text-sm mt-1">تتبع نشاط الفرق وزيارات العملاء لحظياً من البوت.</p>
+                    <p className="text-gray-500 text-sm mt-1">{t.salesTrackingSubtitle}</p>
                 </div>
             </div>
 
@@ -127,7 +129,7 @@ export default function SalesTrackingPage() {
                             activeTab === "reports" ? "bg-[#ff5a00] text-white shadow-md" : "text-gray-600 hover:bg-gray-50"
                         )}
                     >
-                        سجل التقارير
+                        {t.reportsTab}
                     </button>
                     <button
                         onClick={() => setActiveTab("settings")}
@@ -136,7 +138,7 @@ export default function SalesTrackingPage() {
                             activeTab === "settings" ? "bg-black text-white shadow-md" : "text-gray-600 hover:bg-gray-50"
                         )}
                     >
-                        إدارة الفرق والنماذج
+                        {t.settingsTab}
                     </button>
                 </div>
             )}
@@ -163,6 +165,7 @@ export default function SalesTrackingPage() {
 // ----------------------------------------------------
 
 function ReportsView({ reports, fields, teams, employees, onReportsChange }: { reports: ReportObj[], fields: Field[], teams: Team[], employees: Employee[], onReportsChange: (r: ReportObj[]) => void }) {
+    const { t, isRTL } = useLanguage();
     const [filterTeam, setFilterTeam] = useState("");
     const [filterEmployee, setFilterEmployee] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
@@ -223,7 +226,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
     // Auto-fit: measure max content length → derive pixel width
     const autoFitCol = (key: string, currentDedupedCols: typeof dedupedCols, currentReports: ReportObj[]) => {
         const HEADER_NAMES: Record<string, string> = {
-            date: 'التاريخ والوقت', employee: 'الموظف', team: 'الفريق', notes: 'الملاحظات', location: 'الموقع'
+            date: t.dateTime, employee: t.employee, team: t.team, notes: t.notes, location: t.location
         };
         let maxLen = (HEADER_NAMES[key] || key).length;
         currentReports.forEach(r => {
@@ -232,7 +235,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
             else if (key === 'employee') val = r.employee_name || '';
             else if (key === 'team')     val = r.team_name || '';
             else if (key === 'notes')    val = r.notes || '';
-            else if (key === 'location') val = r.location_lat ? 'View Map' : '';
+            else if (key === 'location') val = r.location_lat ? t.viewMap : '';
             else {
                 const dc = currentDedupedCols.find(c => c.label === key);
                 if (dc) val = getColValue(r, dc);
@@ -262,13 +265,13 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
 
         // Build header row
         const headers = [
-            "تاريخ التقرير",
-            "وقت الإرسال",
-            "اسم الموظف",
-            "الفريق",
+            t.date,
+            t.dateTime.split(" ")[1] || "Time",
+            t.employee,
+            t.team,
             ...dynamicCols.map(c => c.label),
-            "الملاحظات",
-            "رابط الموقع",
+            t.notes,
+            t.location,
         ];
 
         ws.addRow(headers);
@@ -299,7 +302,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                 r.team_name,
                 ...dynamicCols.map(c => {
                     const val = getColValue(r, c);
-                    return c.isImage ? (val ? "✅ تم الرفع" : "—") : (val || "—");
+                    return c.isImage ? (val ? t.uploaded : "—") : (val || "—");
                 }),
                 r.notes || "—",
                 mapsLink,
@@ -319,7 +322,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
             // Make the maps link a hyperlink
             if (r.location_lat) {
                 const lastCell = row.getCell(row.cellCount);
-                lastCell.value = { text: "عرض على الخريطة", hyperlink: mapsLink };
+                lastCell.value = { text: t.viewMap, hyperlink: mapsLink };
                 lastCell.font = { color: { argb: "FF0070C0" }, underline: true };
             }
         });
@@ -344,7 +347,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
         const a = document.createElement("a");
         a.href = url;
         const dateStr = new Date().toISOString().slice(0, 10);
-        a.download = `تقارير-ميدانية-${dateStr}.xlsx`;
+        a.download = `${t.fieldReportsFilename}-${dateStr}.xlsx`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -365,27 +368,27 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
             {/* Filters */}
             <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-wrap gap-4 items-center">
                 <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs text-gray-500 mb-1">الفريق</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t.team}</label>
                     <select 
                         value={filterTeam} onChange={e => setFilterTeam(e.target.value)}
                         className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
                     >
-                        <option value="">الكل</option>
+                        <option value="">{t.all}</option>
                         {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                 </div>
                 <div className="flex-1 min-w-[200px]">
-                    <label className="block text-xs text-gray-500 mb-1">الموظف</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t.employee}</label>
                     <select 
                         value={filterEmployee} onChange={e => setFilterEmployee(e.target.value)}
                         className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none"
                     >
-                        <option value="">الكل</option>
+                        <option value="">{t.all}</option>
                         {employees.map(e => <option key={e.id} value={e.name}>{e.name}</option>)}
                     </select>
                 </div>
                 <div className="flex-1 min-w-[150px]">
-                    <label className="block text-xs text-gray-500 mb-1">من تاريخ</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t.fromDate}</label>
                     <input 
                         type="date" 
                         value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
@@ -393,7 +396,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                     />
                 </div>
                 <div className="flex-1 min-w-[150px]">
-                    <label className="block text-xs text-gray-500 mb-1">إلى تاريخ</label>
+                    <label className="block text-xs text-gray-500 mb-1">{t.toDate}</label>
                     <input 
                         type="date" 
                         value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
@@ -404,10 +407,10 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800">أحدث التقارير الميدانية</h3>
+                    <h3 className="font-bold text-gray-800">{t.latestReports}</h3>
                     <div className="flex items-center gap-3">
                         <span className="bg-orange-50 text-[#ff5a00] text-xs font-bold px-3 py-1 rounded-full">
-                            {filteredReports.length} تقارير
+                            {filteredReports.length} {t.reports}
                         </span>
                         <button
                             onClick={exportToExcel}
@@ -415,7 +418,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                             className="flex items-center gap-2 bg-[#ff5a00] hover:bg-[#e04f00] disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95"
                         >
                             <FileDown className="w-4 h-4" />
-                            تصدير Excel
+                            {t.exportExcel}
                         </button>
                     </div>
                 </div>
@@ -423,7 +426,7 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                 {/* ── Mobile: card list (lg and below) ──────────────────────────────── */}
                 <div className="lg:hidden space-y-2 p-3">
                     {filteredReports.length === 0 ? (
-                        <div className="text-center py-12 text-gray-400">لا توجد تقارير مطابقة.</div>
+                        <div className="text-center py-12 text-gray-400">{t.noReportsMatch}</div>
                     ) : filteredReports.map(r => (
                         <div key={r.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-2">
                             {/* Employee + date header */}
@@ -469,12 +472,12 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                                 {r.location_lat ? (
                                     <a href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center gap-1 text-xs text-green-600 font-semibold hover:underline">
-                                        <MapPin className="w-3.5 h-3.5" /> خريطة
+                                        <MapPin className="w-3.5 h-3.5" /> {t.viewMap}
                                     </a>
                                 ) : <span />}
                                 <div className="flex gap-2">
-                                    <button onClick={() => setEditingReport(r)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition-colors">تعديل</button>
-                                    <button onClick={() => setDeletingReport(r)} className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 transition-colors">حذف</button>
+                                    <button onClick={() => setEditingReport(r)} className="text-xs bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg font-bold hover:bg-emerald-100 transition-colors">{t.editReport}</button>
+                                    <button onClick={() => setDeletingReport(r)} className="text-xs bg-red-50 text-red-500 px-3 py-1.5 rounded-lg font-bold hover:bg-red-100 transition-colors">{t.deleteReport}</button>
                                 </div>
                             </div>
                         </div>
@@ -485,22 +488,19 @@ function ReportsView({ reports, fields, teams, employees, onReportsChange }: { r
                 <div className="hidden lg:block overflow-x-auto w-full">
                     <div style={{ minWidth: (colWidths.date ?? 130) + (colWidths.employee ?? 160) + (colWidths.team ?? 100) + dedupedCols.reduce((s, c) => s + (colWidths[c.label] ?? 150), 0) + (colWidths.notes ?? 160) + (colWidths.location ?? 80) }}>
                         {/* Header row */}
-                        <div className="flex bg-[#fafafa] text-gray-500 text-[13px] font-semibold border-b border-gray-100 select-none">
-                            {/* Sticky section: date + employee (always visible) */}
-                            <div className="sticky right-0 z-20 flex bg-[#fafafa] shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-                                <ResizableColHeader colKey="date"     width={colWidths.date     ?? 130} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>التاريخ والوقت</ResizableColHeader>
-                                <ResizableColHeader colKey="employee" width={colWidths.employee ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الموظف</ResizableColHeader>
+                            <div className={cn("sticky z-20 flex bg-[#fafafa] shadow-[0_2px_8px_rgba(0,0,0,0.05)]", isRTL ? "right-0" : "left-0")}>
+                                <ResizableColHeader colKey="date"     width={colWidths.date     ?? 130} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{t.dateTime}</ResizableColHeader>
+                                <ResizableColHeader colKey="employee" width={colWidths.employee ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{t.employee}</ResizableColHeader>
                             </div>
                             {/* Scrollable section */}
                             <div className="flex">
-                                <ResizableColHeader colKey="team"     width={colWidths.team     ?? 100} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الفريق</ResizableColHeader>
+                                <ResizableColHeader colKey="team"     width={colWidths.team     ?? 100} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{t.team}</ResizableColHeader>
                                 {dedupedCols.map(col => (
                                     <ResizableColHeader key={col.label} colKey={col.label} width={colWidths[col.label] ?? 150} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{col.label}</ResizableColHeader>
                                 ))}
-                                <ResizableColHeader colKey="notes"    width={colWidths.notes    ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>الملاحظات</ResizableColHeader>
-                                <ResizableColHeader colKey="location" width={colWidths.location ?? 80}  onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)} center>الموقع</ResizableColHeader>
+                                <ResizableColHeader colKey="notes"    width={colWidths.notes    ?? 160} onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)}>{t.notes}</ResizableColHeader>
+                                <ResizableColHeader colKey="location" width={colWidths.location ?? 80}  onWidthChange={setColWidth} onAutoFit={k => autoFitCol(k, dedupedCols, filteredReports)} center>{t.location}</ResizableColHeader>
                             </div>
-                        </div>
 
                         {/* Body rows */}
                         {filteredReports.length === 0 ? (
@@ -780,6 +780,7 @@ function ResizableColHeader({
 
 // ── EditReportModal ────────────────────────────────────────────
 function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportObj; fields: Field[]; onClose: () => void; onSaved: (updated: ReportObj) => void }) {
+    const { t, isRTL } = useLanguage();
     const [editedValues, setEditedValues] = useState<Record<string, string>>({ ...report.values });
     const [editedNotes, setEditedNotes] = useState(report.notes);
     const [saving, setSaving] = useState(false);
@@ -807,7 +808,7 @@ function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportO
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-4" onClick={onClose}>
             <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()} dir="rtl">
                 <div className="flex items-center justify-between p-5 border-b border-gray-100">
-                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><Pencil className="w-5 h-5 text-[#ff5a00]" /> تعديل التقرير</h3>
+                    <h3 className="font-bold text-lg text-gray-900 flex items-center gap-2"><Pencil className="w-5 h-5 text-[#ff5a00]" /> {t.editReport}</h3>
                     <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
                 </div>
                 <div className="px-5 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center gap-3 text-sm text-gray-500">
@@ -815,7 +816,7 @@ function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportO
                     <span className="text-gray-300">•</span>
                     <span>{report.team_name}</span>
                     <span className="text-gray-300">•</span>
-                    <span>{new Date(report.date).toLocaleDateString('ar-EG')}</span>
+                    <span>{new Date(report.date).toLocaleDateString(isRTL ? 'ar-EG' : 'en-GB')}</span>
                 </div>
                 <div className="p-5 space-y-4 max-h-[55vh] overflow-y-auto">
                     {editableFields.map(({ fid, field }) => (
@@ -827,7 +828,7 @@ function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportO
                                     onChange={e => setEditedValues(prev => ({ ...prev, [fid]: e.target.value }))}
                                     className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#ff5a00] transition-all"
                                 >
-                                    <option value="">اختر...</option>
+                                    <option value="">...</option>
                                     {field!.options!.map(o => <option key={o} value={o}>{o}</option>)}
                                 </select>
                             ) : (
@@ -841,7 +842,7 @@ function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportO
                         </div>
                     ))}
                     <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-1.5">الملاحظات</label>
+                        <label className="block text-xs font-bold text-gray-500 mb-1.5">{t.notes}</label>
                         <textarea
                             value={editedNotes}
                             onChange={e => setEditedNotes(e.target.value)}
@@ -851,14 +852,14 @@ function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportO
                     </div>
                 </div>
                 <div className="p-5 border-t border-gray-100 flex gap-3">
-                    <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">إلغاء</button>
+                    <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">{t.cancel}</button>
                     <button
                         onClick={handleSave}
                         disabled={saving}
                         className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-[#ff5a00] hover:bg-[#e04f00] disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
                     >
                         {saving ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-                        حفظ التعديلات
+                        {t.saveChanges}
                     </button>
                 </div>
             </div>
@@ -868,6 +869,7 @@ function EditReportModal({ report, fields, onClose, onSaved }: { report: ReportO
 
 // ── DeleteConfirmModal ─────────────────────────────────────────
 function DeleteConfirmModal({ reportDate, employeeName, onCancel, onConfirm }: { reportDate: string; employeeName: string; onCancel: () => void; onConfirm: () => void }) {
+    const { t, isRTL } = useLanguage();
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-4" onClick={onCancel}>
             <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()} dir="rtl">
@@ -875,13 +877,19 @@ function DeleteConfirmModal({ reportDate, employeeName, onCancel, onConfirm }: {
                     <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
                         <Trash2 className="w-7 h-7 text-red-500" />
                     </div>
-                    <h3 className="font-bold text-lg text-gray-900 mb-1">حذف التقرير</h3>
-                    <p className="text-sm text-gray-500">سيتم حذف تقرير <span className="font-semibold text-gray-800">{employeeName}</span> بتاريخ <span className="font-semibold text-gray-800">{new Date(reportDate).toLocaleDateString('ar-EG')}</span> بشكل نهائي.</p>
+                    <h3 className="font-bold text-lg text-gray-900 mb-1">{t.deleteReport}</h3>
+                    <p className="text-sm text-gray-500">
+                        {isRTL ? (
+                            <>سيتم حذف تقرير <span className="font-semibold text-gray-800">{employeeName}</span> بتاريخ <span className="font-semibold text-gray-800">{new Date(reportDate).toLocaleDateString('ar-EG')}</span> بشكل نهائي.</>
+                        ) : (
+                            <>Report for <span className="font-semibold text-gray-800">{employeeName}</span> on <span className="font-semibold text-gray-800">{new Date(reportDate).toLocaleDateString('en-GB')}</span> will be permanently deleted.</>
+                        )}
+                    </p>
                 </div>
                 <div className="px-5 pb-5 flex gap-3">
-                    <button onClick={onCancel} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">إلغاء</button>
+                    <button onClick={onCancel} className="flex-1 py-3 rounded-xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors">{t.cancel}</button>
                     <button onClick={onConfirm} className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-red-500 hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
-                        <Trash2 className="w-4 h-4" /> حذف نهائياً
+                        <Trash2 className="w-4 h-4" /> {t.confirmDelete}
                     </button>
                 </div>
             </div>
@@ -890,6 +898,7 @@ function DeleteConfirmModal({ reportDate, employeeName, onCancel, onConfirm }: {
 }
 
 function TeamSettingsView({ companyId, initialTeams, initialFields, employees, initialMembers }: { companyId: string, initialTeams: Team[], initialFields: Field[], employees: Employee[], initialMembers: TeamMember[] }) {
+    const { t, isRTL } = useLanguage();
     const [teams, setTeams] = useState<Team[]>(initialTeams);
     const [fields, setFields] = useState<Field[]>(initialFields);
     const [members, setMembers] = useState<TeamMember[]>(initialMembers);
@@ -908,9 +917,9 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
 
     const handleGlobalCreate = async () => {
         setGMsg(null);
-        if (!gLabel.trim()) { setGMsg({ ok: false, text: "⚠️ اكتب اسم الحقل أولاً." }); return; }
-        if (gTeams.length === 0) { setGMsg({ ok: false, text: "⚠️ اختر فريقاً واحداً على الأقل." }); return; }
-        if (gType === "select" && !gOptions.trim()) { setGMsg({ ok: false, text: "⚠️ اكتب خيارات القائمة." }); return; }
+        if (!gLabel.trim()) { setGMsg({ ok: false, text: t.writeFieldName }); return; }
+        if (gTeams.length === 0) { setGMsg({ ok: false, text: t.selectOneTeam }); return; }
+        if (gType === "select" && !gOptions.trim()) { setGMsg({ ok: false, text: t.writeListOptions }); return; }
         setGBusy(true);
         const opts = gType === "select" ? gOptions.split(",").map(s => s.trim()).filter(Boolean) : [];
         const inserts = gTeams.map(tid => ({
@@ -925,7 +934,7 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
         if (error) { setGMsg({ ok: false, text: "حدث خطأ: " + error.message }); return; }
         if (data) {
             setFields(prev => [...prev, ...data]);
-            setGMsg({ ok: true, text: `✅ تم إضافة "${gLabel.trim()}" إلى ${data.length} فريق.` });
+            setGMsg({ ok: true, text: t.fieldAddedToTeams.replace("{label}", gLabel.trim()).replace("{count}", data.length.toString()) });
             setGLabel(""); setGOptions(""); setGTeams([]);
             setTimeout(() => setGMsg(null), 4000);
         }
@@ -937,18 +946,28 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
         if (data) { setTeams([...teams, data]); setNewTeamName(""); }
     };
 
+    const handleDeleteTeam = async (teamId: string) => {
+        const { error } = await supabase.from("teams").delete().eq("id", teamId);
+        if (error) {
+            alert(t.saved + ": " + error.message);
+            return;
+        }
+        setTeams(prev => prev.filter(t => t.id !== teamId));
+        setGTeams(prev => prev.filter(tid => tid !== teamId));
+    };
+
     return (
         <div className="space-y-6">
             {/* ── Global Field Creator ── */}
             <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-1 flex items-center gap-2">
-                    <Plus className="w-5 h-5 text-[#ff5a00]" /> إضافة حقل لعدة فرق دفعة واحدة
+                    <Plus className="w-5 h-5 text-[#ff5a00]" /> {t.globalFieldTitle}
                 </h3>
-                <p className="text-xs text-gray-400 mb-4">أنشئ حقلاً مرة واحدة وطبّقه على أي عدد من الفرق بضغطة زر.</p>
+                <p className="text-xs text-gray-400 mb-4">{t.globalFieldSubtitle}</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
                     <input
-                        placeholder="اسم الحقل (مثال: اسم الدكتور)"
+                        placeholder={t.fieldNamePlaceholder}
                         value={gLabel}
                         onChange={e => { setGLabel(e.target.value); setGMsg(null); }}
                         className="sm:col-span-1 px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#ff5a00] transition-colors"
@@ -958,14 +977,14 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
                         onChange={e => setGType(e.target.value)}
                         className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#ff5a00] transition-colors"
                     >
-                        <option value="text">نص حر</option>
-                        <option value="number">رقم</option>
-                        <option value="select">خيارات متعددة</option>
-                        <option value="image">صورة</option>
+                        <option value="text">{t.textType}</option>
+                        <option value="number">{t.numberType}</option>
+                        <option value="select">{t.selectType}</option>
+                        <option value="image">{t.imageType}</option>
                     </select>
                     {gType === "select" ? (
                         <input
-                            placeholder="الخيارات مفصولة بفواصل"
+                            placeholder={t.optionsPlaceholder}
                             value={gOptions}
                             onChange={e => setGOptions(e.target.value)}
                             className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#ff5a00] transition-colors"
@@ -980,26 +999,33 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
                             onClick={() => setGTeams(gTeams.length === teams.length ? [] : teams.map(t => t.id))}
                             className="px-3 py-1.5 rounded-lg text-xs font-bold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                         >
-                            {gTeams.length === teams.length ? "إلغاء الكل" : "تحديد الكل"}
+                            {gTeams.length === teams.length ? t.deselectAll : t.selectAll}
                         </button>
                         {teams.map(team => (
-                            <button
-                                key={team.id}
-                                type="button"
-                                onClick={() => toggleGTeam(team.id)}
-                                className={cn(
-                                    "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all",
-                                    gTeams.includes(team.id)
-                                        ? "bg-[#ff5a00] text-white border-[#ff5a00] shadow-sm"
-                                        : "bg-white text-gray-600 border-gray-200 hover:border-[#ff5a00] hover:text-[#ff5a00]"
-                                )}
-                            >
-                                {gTeams.includes(team.id) ? "✓ " : ""}{team.name}
-                            </button>
+                            <div key={team.id} className="relative group/team">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleGTeam(team.id)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-lg text-xs font-bold border transition-all flex items-center gap-2",
+                                        gTeams.includes(team.id)
+                                            ? "bg-[#ff5a00] text-white border-[#ff5a00] shadow-sm"
+                                            : "bg-white text-gray-600 border-gray-200 hover:border-[#ff5a00] hover:text-[#ff5a00]"
+                                    )}
+                                >
+                                    {gTeams.includes(team.id) ? "✓ " : ""}{team.name}
+                                </button>
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteTeam(team.id); }}
+                                    className="absolute -top-1.5 -right-1.5 bg-white shadow-md border border-gray-100 p-0.5 rounded-full text-gray-400 hover:text-red-500 opacity-0 group-hover/team:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
                         ))}
                     </div>
                 ) : (
-                    <p className="text-xs text-gray-400 mb-4">أنشئ فريقاً أولاً لتتمكن من تطبيق الحقول.</p>
+                    <p className="text-xs text-gray-400 mb-4">{t.createTeamFirst}</p>
                 )}
 
                 {gMsg && (
@@ -1015,8 +1041,8 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
                     className="px-6 py-2.5 bg-[#ff5a00] hover:bg-[#e04f00] disabled:opacity-40 text-white text-sm font-bold rounded-xl transition-all shadow-sm hover:shadow-md active:scale-95 flex items-center gap-2"
                 >
                     {gBusy
-                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> جارٍ الإنشاء...</>
-                        : <><Plus className="w-4 h-4" /> إنشاء الحقل{gTeams.length > 0 ? ` في ${gTeams.length} فريق` : ""}</>
+                        ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> {t.creating}</>
+                        : <><Plus className="w-4 h-4" /> {t.createField}{gTeams.length > 0 ? ` ${t.inTeams.replace("{count}", gTeams.length.toString())}` : ""}</>
                     }
                 </button>
             </div>
@@ -1025,11 +1051,11 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1">
                     <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100">
-                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-gray-400"/> فرق العمل</h3>
+                        <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Briefcase className="w-5 h-5 text-gray-400"/> {t.workTeams}</h3>
                         <div className="flex flex-col gap-3">
                             <input
                                 className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-[#ff5a00] transition-colors"
-                                placeholder="اسم الفريق (مثال: المبيعات الخارجية)"
+                                placeholder={t.teamNamePlaceholder}
                                 value={newTeamName} onChange={e => setNewTeamName(e.target.value)}
                                 onKeyDown={e => e.key === "Enter" && handleCreateTeam()}
                             />
@@ -1037,7 +1063,7 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
                                 onClick={handleCreateTeam}
                                 className="w-full bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                             >
-                                <Plus className="w-4 h-4"/> إضافة فريق
+                                <Plus className="w-4 h-4"/> {t.addTeam}
                             </button>
                         </div>
                     </div>
@@ -1053,13 +1079,14 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
                             members={members.filter(m => m.team_id === team.id)}
                             onFieldsChange={(updated) => setFields(prev => [...prev.filter(f => f.team_id !== team.id), ...updated])}
                             onMembersChange={(updated) => setMembers(prev => [...prev.filter(m => m.team_id !== team.id), ...updated])}
+                            onDelete={() => handleDeleteTeam(team.id)}
                         />
                     ))}
                     {teams.length === 0 && (
                         <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200 text-gray-400 flex flex-col items-center">
                             <Users className="w-12 h-12 text-gray-200 mb-3" />
-                            <p>لا توجد فرق عمل حتى الان.</p>
-                            <p className="text-sm">أنشئ فريقك الأول للبدء في تجميع التقارير الميدانية.</p>
+                            <p>{t.noTeamsYet}</p>
+                            <p className="text-sm">{t.createFirstTeam}</p>
                         </div>
                     )}
                 </div>
@@ -1068,7 +1095,8 @@ function TeamSettingsView({ companyId, initialTeams, initialFields, employees, i
     );
 }
 
-function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersChange }: { team: Team, fields: Field[], employees: Employee[], members: TeamMember[], onFieldsChange: (f: Field[]) => void, onMembersChange: (m: TeamMember[]) => void }) {
+function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersChange, onDelete }: { team: Team, fields: Field[], employees: Employee[], members: TeamMember[], onFieldsChange: (f: Field[]) => void, onMembersChange: (m: TeamMember[]) => void, onDelete: () => void }) {
+    const { t, isRTL } = useLanguage();
     const [localFields, setLocalFields] = useState<Field[]>(fields);
     const [localMembers, setLocalMembers] = useState<TeamMember[]>(members);
     const [newLabel, setNewLabel] = useState("");
@@ -1081,15 +1109,16 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     // Notes configuration state
     const [showNotes, setShowNotes] = useState(team.show_notes ?? true);
     const [requireNotes, setRequireNotes] = useState(team.require_notes ?? false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
     const handleAddField = async () => {
         setErrorMsg("");
         if (!newLabel.trim()) {
-            setErrorMsg("⚠️ يرجى كتابة اسم الحقل المخصص في الجزء العلوي أولاً.");
+            setErrorMsg(t.typeFieldName);
             return;
         }
         if (newType === 'select' && !newOptionsText.trim()) {
-            setErrorMsg("⚠️ يرجى كتابة الخيارات في الجزء السفلي.");
+            setErrorMsg(t.typeOptions);
             return;
         }
         
@@ -1105,7 +1134,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
             
             if (error) {
                 console.error("Supabase Error adding field:", error);
-                alert("تعذر حفظ الحقل المخصص. تأكد من اتصالك بالإنترنت وأن لديك صلاحية: " + error.message);
+                alert(t.errorSavingField + error.message);
                 return;
             }
             
@@ -1118,7 +1147,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
             }
         } catch (err) {
             console.error("Network or Syntax Error adding field:", err);
-            alert("حدث خطأ غير متوقع.");
+            alert(t.unexpectedError);
         }
     };
 
@@ -1146,7 +1175,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
         }).select().single();
 
         if (error) {
-            alert("خطأ أثناء الإضافة: " + error.message);
+            alert(t.errorAddingMember + error.message);
             return;
         }
 
@@ -1169,7 +1198,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     const handleToggleRole = async (memberId: string, newRole: string) => {
         const { error } = await supabase.from("team_members").update({ role: newRole }).eq("id", memberId);
         if (error) {
-            alert("خطأ أثناء تغيير الصلاحية: " + error.message);
+            alert(t.errorChangingRole + error.message);
             return;
         }
         const next = localMembers.map(m => m.id === memberId ? { ...m, role: newRole } : m);
@@ -1180,25 +1209,61 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
     return (
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 relative overflow-hidden group">
             <div className="flex items-center justify-between mb-4">
-                <h4 className="font-bold text-[16px] text-gray-900 drop-shadow-sm">{team.name}</h4>
+                <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-[16px] text-gray-900 drop-shadow-sm">{team.name}</h4>
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                        title={t.deleteReport}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
                 <div className="flex space-x-reverse space-x-1">
                     <button onClick={() => setActiveTab("fields")} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold transition-colors", activeTab === "fields" ? "bg-[#ff5a00] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
-                        {localFields.length} حقول مخصصة
+                        {localFields.length} {t.customFields}
                     </button>
                     <button onClick={() => setActiveTab("members")} className={cn("px-3 py-1.5 rounded-full text-xs font-semibold transition-colors", activeTab === "members" ? "bg-[#ff5a00] text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200")}>
-                        {localMembers.length} أعضاء
+                        {localMembers.length} {t.members}
                     </button>
                 </div>
             </div>
 
+            {showDeleteConfirm && (
+                <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
+                    <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
+                        <Trash2 className="w-6 h-6 text-red-500" />
+                    </div>
+                    <h5 className="font-bold text-gray-900 mb-1">{t.deleteTeamConfirm}</h5>
+                    <p className="text-xs text-gray-500 mb-4">{t.deleteTeamWarning}</p>
+                    <div className="flex gap-3 w-full max-w-[240px]">
+                        <button
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="flex-1 py-2 rounded-lg text-xs font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                            {t.back}
+                        </button>
+                        <button
+                            onClick={() => {
+                                onDelete();
+                                setShowDeleteConfirm(false);
+                            }}
+                            className="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-red-500 hover:bg-red-600 transition-colors"
+                        >
+                            {t.confirmDelete}
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-[#fafafa] rounded-xl p-4 border border-gray-100 min-h-[250px]">
-                <p className="text-xs text-gray-500 font-bold mb-3">{activeTab === "fields" ? "نموذج التقرير الميداني (يظهر في التليجرام):" : "أعضاء الفريق ومسؤولياتهم:"}</p>
+                <p className="text-xs text-gray-500 font-bold mb-3">{activeTab === "fields" ? t.formPreviewTitle : t.membersTitle}</p>
                 <div className="flex flex-col gap-2">
                     {activeTab === "fields" && (
                         <>
                             <div className="flex items-center justify-between p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600">
-                                <span className="flex items-center gap-2 font-medium">1. إرسال الموقع الجغرافي <MapPin className="w-3.5 h-3.5 text-blue-500"/></span>
-                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">إجباري آلياً</span>
+                                <span className="flex items-center gap-2 font-medium">1. {t.geoLocationField} <MapPin className="w-3.5 h-3.5 text-blue-500"/></span>
+                                <span className="text-[10px] bg-gray-100 px-2 py-0.5 rounded text-gray-400">{t.autoForced}</span>
                             </div>
 
                             {localFields.map((f, i) => (
@@ -1208,7 +1273,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                             <span className="text-gray-400 text-xs w-4">{i + 2}.</span> 
                                             {f.label}
                                             <span className="text-[10px] bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded ml-2">
-                                                {f.field_type === 'number' ? 'رقم' : f.field_type === 'select' ? 'خيارات متعددة' : f.field_type === 'image' ? 'صورة' : 'نص'}
+                                                {f.field_type === 'number' ? t.numberType : f.field_type === 'select' ? t.selectType : f.field_type === 'image' ? t.imageType : t.textType}
                                             </span>
                                         </span>
                                         <button onClick={() => handleDeleteField(f.id)} className="text-red-400 hover:text-red-600 p-1 rounded-md hover:bg-red-50 transition-colors">
@@ -1228,17 +1293,17 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                             <div className="flex flex-col p-2.5 bg-white border border-dashed border-gray-300 rounded-lg text-sm text-gray-400 gap-2 overflow-hidden transition-all duration-300 focus-within:border-[#ff5a00]">
                                 <div className="flex items-center gap-2">
                                     <input 
-                                        placeholder="اسم الحقل المخصص (مثال: تقييم العميل)" 
+                                        placeholder={t.fieldPlaceholder} 
                                         className="bg-transparent border-none outline-none flex-1 font-semibold text-gray-900 placeholder:text-gray-300"
                                         value={newLabel} onChange={e => setNewLabel(e.target.value)}
                                         onFocus={() => setErrorMsg("")}
                                     />
                                     <div className="flex items-center gap-2 border-r border-gray-200 pr-2">
                                         <select className="bg-transparent text-xs font-bold text-[#ff5a00] outline-none cursor-pointer" value={newType} onChange={e => setNewType(e.target.value)}>
-                                            <option value="text">نص سريع</option>
-                                            <option value="number">رقم</option>
-                                            <option value="select">خيارات متعددة</option>
-                                            <option value="image">صورة</option>
+                                            <option value="text">{t.textType}</option>
+                                            <option value="number">{t.numberType}</option>
+                                            <option value="select">{t.selectType}</option>
+                                            <option value="image">{t.imageType}</option>
                                         </select>
                                         {newType !== 'select' && (
                                             <button onClick={handleAddField} className="bg-black text-white p-1 rounded-md hover:bg-gray-800 transition-colors" type="button">
@@ -1250,13 +1315,13 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                 {newType === 'select' && (
                                     <div className="flex items-center gap-2 border-t border-gray-100 pt-2 pb-1">
                                         <input 
-                                            placeholder="اكتب الخيارات هنا وافصل بينها بفاصلة. مثال: مهتم, غير مهتم, مشغول" 
+                                            placeholder={t.optionsPlaceholderFull} 
                                             className="bg-gray-50 border border-gray-200 rounded-md px-3 py-1.5 outline-none flex-1 font-medium text-[11px] text-gray-800 focus:border-[#ff5a00] transition-colors"
                                             value={newOptionsText} onChange={e => setNewOptionsText(e.target.value)}
                                             onFocus={() => setErrorMsg("")}
                                         />
                                         <button onClick={handleAddField} className="bg-[#ff5a00] text-white px-4 py-1.5 rounded-md text-xs font-bold hover:bg-[#e04f00] shadow-sm transition-colors" type="button">
-                                            إضافة الحقل
+                                            {t.createField}
                                         </button>
                                     </div>
                                 )}
@@ -1269,16 +1334,16 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                             
                             <div className="flex flex-col gap-2 p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm text-sm text-gray-600 mt-1">
                                 <div className="flex items-center justify-between">
-                                    <span className="flex items-center gap-2 font-medium">الأخير. ملاحظات التقرير</span>
+                                    <span className="flex items-center gap-2 font-medium">{t.finalReportNotes}</span>
                                     <div className="flex items-center gap-4 text-xs font-bold">
                                         <label className="flex items-center gap-1.5 cursor-pointer hover:text-black">
                                             <input type="checkbox" className="accent-black" checked={showNotes} onChange={e => handleToggleNotesFlag('show_notes', e.target.checked)} />
-                                            إظهار الحقل
+                                            {t.showField}
                                         </label>
                                         {showNotes && (
                                             <label className="flex items-center gap-1.5 cursor-pointer hover:text-[#ff5a00] text-gray-400">
                                                 <input type="checkbox" className="accent-[#ff5a00]" checked={requireNotes} onChange={e => handleToggleNotesFlag('require_notes', e.target.checked)} />
-                                                إجباري
+                                                {t.required}
                                             </label>
                                         )}
                                     </div>
@@ -1295,19 +1360,19 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                     value={selectedEmployeeId}
                                     onChange={(e) => setSelectedEmployeeId(e.target.value)}
                                 >
-                                    <option value="">-- إختر موظف لإضافته --</option>
+                                    <option value="">{t.chooseEmployee}</option>
                                     {employees.filter(e => !localMembers.find(m => m.employee_id === e.id)).map(e => (
                                         <option key={e.id} value={e.id}>{e.name}</option>
                                     ))}
                                 </select>
                                 <button type="button" onClick={handleAddMember} disabled={!selectedEmployeeId} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-gray-800 disabled:opacity-50 flex shrink-0 items-center gap-2">
-                                    <Plus className="w-4 h-4"/> إضافة
+                                    <Plus className="w-4 h-4"/> {t.addMember}
                                 </button>
                             </div>
 
                             {localMembers.length === 0 ? (
                                 <div className="text-center py-6 text-gray-400 text-sm">
-                                    لا يوجد أعضاء في هذا الفريق.
+                                    {t.noMembers}
                                 </div>
                             ) : localMembers.map(m => (
                                 <div key={m.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-white border border-gray-200 rounded-lg shadow-sm text-sm gap-3">
@@ -1317,7 +1382,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                         </div>
                                         <div>
                                             <div className="font-semibold text-gray-900">{m.employee_name}</div>
-                                            <div className="text-xs text-gray-500">{m.role === 'leader' ? 'مشرف الفريق' : 'عضو ميداني'}</div>
+                                            <div className="text-xs text-gray-500">{m.role === 'leader' ? t.teamLeader : t.fieldMember}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -1326,7 +1391,7 @@ function TeamCard({ team, fields, employees, members, onFieldsChange, onMembersC
                                             onClick={() => handleToggleRole(m.id, m.role === 'leader' ? 'member' : 'leader')}
                                             className={cn("px-3 py-1.5 text-xs font-semibold rounded-md transition-colors", m.role === 'leader' ? "bg-gray-100 text-gray-600 hover:bg-gray-200" : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100")}
                                         >
-                                            {m.role === 'leader' ? 'تجريد الإشراف' : 'تعيين مشرف'}
+                                            {m.role === 'leader' ? t.demoteLeader : t.makeLeader}
                                         </button>
                                         <button type="button" onClick={() => handleRemoveMember(m.id)} className="text-red-400 hover:text-red-600 p-1.5 rounded-md hover:bg-red-50 transition-colors">
                                             <Trash2 className="w-4 h-4"/>

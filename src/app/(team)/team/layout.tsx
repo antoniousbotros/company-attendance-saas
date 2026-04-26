@@ -133,24 +133,27 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <TeamContext.Provider value={{ employee, loading, isRTL, lang, t }}>
-      <div className="min-h-screen bg-[#f5f5f5] font-sans">
+      <div className="min-h-screen bg-background font-sans selection:bg-primary/10 selection:text-primary">
 
-        {/* Desktop: Top header bar */}
-        <header className="hidden lg:flex fixed top-0 inset-x-0 h-14 bg-white border-b border-[#f0f0f0] z-40 shadow-sm items-center px-6">
-          {/* Logo */}
-          <div className={cn("flex items-center gap-2.5 shrink-0", isRTL && "flex-row-reverse")}>
+        {/* Desktop: Glassmorphic Top Header */}
+        <header className="hidden lg:flex fixed top-4 inset-x-6 h-16 glass-morphism z-50 rounded-2xl items-center px-6 shadow-sm">
+          {/* Logo & Company Info */}
+          <div className={cn("flex items-center gap-3 shrink-0", isRTL && "flex-row-reverse")}>
             {logoUrl ? (
-              <img src={logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
+              <img src={logoUrl} alt="" className="w-10 h-10 rounded-xl object-cover shadow-sm" />
             ) : (
-              <div className="w-8 h-8 bg-[#ff5a00] rounded-lg flex items-center justify-center text-white font-black text-xs">
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-black text-sm shadow-sm shadow-primary/20">
                 {companyName.charAt(0)}
               </div>
             )}
-            <span className="text-sm font-bold text-[#111]">{companyName}</span>
+            <div className={cn("flex flex-col", isRTL && "items-end")}>
+              <span className="text-[13px] font-black text-foreground tracking-tight leading-none mb-0.5">{companyName}</span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Team Portal</span>
+            </div>
           </div>
 
-          {/* Nav links — center */}
-          <nav className="flex-1 flex items-center justify-center gap-1">
+          {/* Navigation — Centered Pills */}
+          <nav className="flex-1 flex items-center justify-center gap-1.5">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -158,40 +161,46 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex items-center gap-1.5 px-4 h-14 text-[13px] font-semibold transition-all border-b-2",
+                    "relative flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-all duration-300",
                     isActive
-                      ? "border-[#ff5a00] text-[#ff5a00]"
-                      : "border-transparent text-[#111] hover:text-[#ff5a00]"
+                      ? "bg-primary text-white shadow-md shadow-primary/25"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  <item.icon className="w-4 h-4" />
+                  <item.icon className={cn("w-4 h-4", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
                   {item.name}
                 </Link>
               );
             })}
           </nav>
 
-          {/* Employee name + logout — end */}
-          <div className={cn("flex items-center gap-3 shrink-0", isRTL && "flex-row-reverse")}>
-            <span className="text-xs font-medium text-[#6b7280]">{employee?.name}</span>
+          {/* User Profile & Logout */}
+          <div className={cn("flex items-center gap-4 shrink-0", isRTL && "flex-row-reverse")}>
+            <div className={cn("flex flex-col text-right", isRTL && "text-left")}>
+              <span className="text-[12px] font-bold text-foreground leading-none mb-1">{employee?.name}</span>
+              <span className="text-[10px] font-medium text-muted-foreground leading-none">{employee?.department}</span>
+            </div>
+            <div className="w-px h-6 bg-border mx-1" />
             <button
               onClick={handleLogout}
-              className="text-[#9ca3af] hover:text-[#b91c1c] transition-colors p-1.5 rounded-lg hover:bg-[#fef2f2]"
+              className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-danger-soft text-danger hover:bg-danger hover:text-white transition-all duration-300"
               title={t.signOut}
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
             </button>
           </div>
         </header>
 
-        {/* Main content */}
-        <main className="lg:pt-14 pb-20 lg:pb-6">
-          <div className="max-w-5xl mx-auto px-4 lg:px-8 py-5">{children}</div>
+        {/* Main Content Area */}
+        <main className="lg:pt-24 pb-32 lg:pb-12">
+          <div className="max-w-5xl mx-auto px-4 lg:px-10">
+            {children}
+          </div>
         </main>
 
-        {/* Mobile: Bottom nav */}
-        <nav className="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-[#f0f0f0] z-40">
-          <div className="flex items-center justify-around py-1.5 px-2">
+        {/* Mobile: Floating Dock Navigation */}
+        <div className="lg:hidden fixed bottom-6 inset-x-6 z-50">
+          <nav className="floating-dock mx-auto max-w-sm px-2 py-2 flex items-center justify-between">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -199,17 +208,29 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-xl transition-all min-w-[48px]",
-                    isActive ? "text-[#ff5a00]" : "text-[#b0b0b0]"
+                    "relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-300 min-w-[64px]",
+                    isActive ? "bg-white/10 text-primary" : "text-white/40 hover:text-white/70"
                   )}
                 >
-                  <item.icon className={cn("w-5 h-5", isActive && "stroke-[2.5]")} />
-                  <span className="text-[9px] font-bold">{item.name}</span>
+                  <item.icon className={cn("w-6 h-6 mb-1", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
+                  <span className="text-[9px] font-black uppercase tracking-tighter">{item.name}</span>
+                  {isActive && (
+                    <span className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_#ff5a00]" />
+                  )}
                 </Link>
               );
             })}
-          </div>
-        </nav>
+            
+            {/* Mobile Logout Button integrated into dock if needed, or keeping it clean */}
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center justify-center py-2 px-1 rounded-2xl text-white/40 hover:text-danger min-w-[64px]"
+            >
+              <LogOut className="w-6 h-6 mb-1 stroke-[2]" />
+              <span className="text-[9px] font-black uppercase tracking-tighter">{t.signOut}</span>
+            </button>
+          </nav>
+        </div>
       </div>
     </TeamContext.Provider>
   );

@@ -29,131 +29,108 @@ export default function TeamAnnouncementsPage() {
   };
 
   return (
-    <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
-      {/* Minimal Header */}
-      <div className="flex flex-col items-start gap-1.5 text-start mb-2">
-        <h1 className="text-2xl font-black text-[#111] tracking-tight flex items-center gap-2.5">
-          <Megaphone className="w-5 h-5 text-[#ff5a00]" />
-          {isRTL ? "إعلانات الشركة" : "Company Announcements"}
-        </h1>
-        <p className="text-sm font-bold text-[#9ca3af]">
-          {isRTL 
-            ? "ابق على اطلاع بآخر أخبار وقرارات الشركة المهمة" 
-            : "Stay updated with the latest news, policies, and important updates."}
-        </p>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
+      {/* ── Page Header ── */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+            <Megaphone className="w-6 h-6 stroke-[2.5]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-black text-foreground tracking-tight">{isRTL ? "أخبار الشركة" : "Company Bulletin"}</h1>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "ابق على اطلاع بآخر التحديثات" : "Stay informed with latest updates"}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Announcements Grid / List */}
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2].map((i) => (
-            <div key={i} className="animate-pulse bg-white rounded-3xl p-6 h-40 border border-[#f1f1f1]" />
-          ))}
-        </div>
-      ) : announcements.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center bg-white rounded-3xl border border-[#f1f1f1] shadow-sm">
-          <div className="w-16 h-16 bg-[#fff1e8] rounded-full flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-[#ff5a00]" />
+      {/* ── Announcements Feed ── */}
+      <div className="space-y-4">
+        {loading ? (
+          <div className="grid gap-4">
+            {[1, 2].map((i) => (
+              <div key={i} className="animate-pulse premium-card h-32" />
+            ))}
           </div>
-          <h3 className="text-lg font-black text-[#111] mb-2">{isRTL ? "لا توجد إعلانات حالياً" : "All caught up!"}</h3>
-          <p className="text-sm text-[#6b7280] max-w-xs leading-relaxed">
-            {isRTL ? "ستظهر إعلانات وقرارات الشركة الجديدة هنا بمجرد نشرها." : "New firm announcements and directives will appear here when published."}
-          </p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-3xl shadow-sm border border-[#f1f1f1] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500">
-          <div className="overflow-x-auto">
-            <table className="w-full text-start" dir={isRTL ? "rtl" : "ltr"}>
-              <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
-                <tr>
-                  <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                    {isRTL ? "العنوان" : "Title"}
-                  </th>
-                  <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start w-1/2">
-                    {isRTL ? "التفاصيل" : "Message"}
-                  </th>
-                  <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                    {isRTL ? "تاريخ الإنتهاء" : "Expires"}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#f1f1f1]">
-                {announcements.map((a) => {
-                  const recent = isRecent(a.created_at || a.expire_at);
-                  return (
-                    <tr key={a.id} className="hover:bg-[#fff9f5] transition-colors group align-top">
-                      <td className="px-6 py-5">
-                        <div className="flex items-start gap-3">
-                          <div className={cn(
-                            "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors mt-0.5",
-                            recent ? "bg-[#fff1e8] text-[#ff5a00] ring-1 ring-[#ffd4b8]" : "bg-[#f3f4f6] text-[#6b7280]"
-                          )}>
-                            <Pin className="w-4 h-4" />
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-sm font-bold text-[#111] group-hover:text-[#ff5a00] transition-colors">{a.title}</span>
-                            {recent && (
-                              <span className="inline-flex w-fit items-center gap-1 text-[10px] uppercase font-extrabold text-[#ff5a00] mt-1 bg-[#fff1e8] px-2 py-0.5 rounded-lg">
-                                <AlertCircle className="w-3 h-3" />
-                                {isRTL ? "جديد" : "New"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5">
-                        <p className="text-sm text-[#4b5563] whitespace-pre-line leading-relaxed max-w-xl">
-                          {a.message}
-                        </p>
-                      </td>
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-2 mt-1">
-                          <Clock className="w-4 h-4 text-[#d1d5db]" />
-                          <span className="text-xs font-bold text-[#6b7280]">
-                            {new Date(a.expire_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric", year: "numeric" })}
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        ) : announcements.length === 0 ? (
+          <div className="premium-card py-20 flex flex-col items-center justify-center text-center gap-6 border-dashed">
+            <div className="w-20 h-20 bg-primary-soft rounded-full flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-primary opacity-40" />
+            </div>
+            <div>
+              <h3 className="text-lg font-black text-foreground tracking-tight">{isRTL ? "لا توجد أخبار جديدة" : "CLEAR BULLETIN"}</h3>
+              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 opacity-60">
+                {isRTL ? "ستظهر الإعلانات الجديدة هنا" : "You're all caught up"}
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="grid gap-4">
+            {announcements.map((a) => {
+              const recent = isRecent(a.created_at || a.expire_at);
+              return (
+                <div key={a.id} className="premium-card p-6 group hover:border-primary/20 transition-all">
+                  <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
+                    <div className="flex items-start gap-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110",
+                        recent ? "bg-primary-soft text-primary shadow-sm" : "bg-muted text-muted-foreground"
+                      )}>
+                        <Pin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <h3 className="text-lg font-black text-foreground tracking-tight group-hover:text-primary transition-colors">{a.title}</h3>
+                          {recent && (
+                            <span className="bg-primary text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-lg animate-pulse tracking-widest">
+                              {isRTL ? "جديد" : "NEW"}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest opacity-60">
+                          <span className="flex items-center gap-1.5"><Clock className="w-3 h-3" /> {new Date(a.expire_at).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" })}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-foreground/80 leading-relaxed max-w-2xl">
+                    {a.message}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
-      {/* Birthday Table Block */}
+      {/* ── Birthdays Section ── */}
       {!loading && (
-        <div className="mt-12 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-150">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#ff5a00] to-[#ff8c42] rounded-xl flex items-center justify-center shadow-md">
-                <PartyPopper className="w-5 h-5 text-white" />
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-150">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                <PartyPopper className="w-5 h-5 stroke-[2.5]" />
               </div>
               <div>
-                <h2 className="text-xl font-black text-[#111] tracking-tight text-start">
-                  {isRTL ? "أعياد ميلاد الموظفين" : "Employee Birthdays"}
-                </h2>
+                <h2 className="text-xl font-black text-foreground tracking-tight">{isRTL ? "أعياد ميلاد الموظفين" : "Team Birthdays"}</h2>
+                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{isRTL ? "احتفل مع زملائك" : "Celebrate your colleagues"}</p>
               </div>
             </div>
 
-            {/* Scrollable Month Selector */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide md:max-w-md w-full" dir={isRTL ? "rtl" : "ltr"}>
+            {/* Month Selector Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-2 md:pb-0" dir={isRTL ? "rtl" : "ltr"}>
               {Array.from({ length: 12 }).map((_, i) => {
                 const monthNum = i + 1;
-                const d = new Date(2000, i, 1);
-                const monthName = d.toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" });
+                const monthName = new Date(2000, i, 1).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" });
                 const isActive = activeMonth === monthNum;
                 return (
                   <button
                     key={monthNum}
                     onClick={() => setActiveMonth(monthNum)}
                     className={cn(
-                      "px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap",
+                      "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                       isActive 
-                        ? "bg-[#111] text-white shadow-md border-transparent" 
-                        : "bg-[#f9fafb] text-[#6b7280] border border-[#f1f1f1] hover:bg-[#ff5a00]/10 hover:text-[#ff5a00] hover:border-[#ff5a00]/30"
+                        ? "bg-foreground text-white shadow-lg shadow-foreground/20 scale-105" 
+                        : "bg-muted text-muted-foreground hover:bg-muted-strong hover:text-foreground"
                     )}
                   >
                     {monthName}
@@ -163,68 +140,39 @@ export default function TeamAnnouncementsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-sm border border-[#f1f1f1] overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {(() => {
               const filteredBirthdays = allBirthdays.filter((b) => new Date(b.birth_date).getMonth() + 1 === activeMonth).sort((a, b) => new Date(a.birth_date).getDate() - new Date(b.birth_date).getDate());
               
               if (filteredBirthdays.length === 0) {
                 return (
-                  <div className="flex flex-col items-center justify-center p-12 text-center">
-                    <p className="text-sm font-bold text-[#9ca3af]">
-                      {isRTL ? "لا توجد أعياد ميلاد مسجلة في هذا الشهر." : "No birthdays recorded for this month."}
+                  <div className="md:col-span-2 lg:col-span-3 premium-card py-16 flex flex-col items-center justify-center text-center opacity-40 border-dashed">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">
+                      {isRTL ? "لا توجد أعياد ميلاد هذا الشهر" : "No birthdays this month"}
                     </p>
                   </div>
                 );
               }
 
-              return (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-start" dir={isRTL ? "rtl" : "ltr"}>
-                    <thead className="bg-[#f9fafb] border-b border-[#f1f1f1]">
-                      <tr>
-                        <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                          {isRTL ? "الموظف" : "Employee"}
-                        </th>
-                        <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                          {isRTL ? "القسم" : "Department"}
-                        </th>
-                        <th className="px-6 py-4 text-xs font-bold text-[#6b7280] uppercase tracking-wider text-start">
-                          {isRTL ? "التاريخ" : "Date"}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[#f1f1f1]">
-                      {filteredBirthdays.map((b) => (
-                        <tr key={b.id} className="hover:bg-[#fff9f5] transition-colors group">
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-[#fff1e8] text-[#ff5a00] flex items-center justify-center text-xs font-bold ring-1 ring-[#ffd4b8] group-hover:scale-110 transition-transform">
-                                {b.name.substring(0, 2).toUpperCase()}
-                              </div>
-                              <span className="text-sm font-bold text-[#111]">{b.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex py-1 px-2.5 rounded-lg bg-[#f3f4f6] text-[#4b5563] text-xs font-bold">
-                              {b.department || (isRTL ? "غير محدد" : "Unassigned")}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-[#ff5a00]">
-                                {new Date(b.birth_date).getDate()}
-                              </span>
-                              <span className="text-[11px] font-bold text-[#9ca3af] uppercase tracking-wider">
-                                {new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "long" })}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              return filteredBirthdays.map((b) => (
+                <div key={b.id} className="premium-card p-4 group hover:border-primary/20 transition-all flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary-soft text-primary rounded-xl flex items-center justify-center text-xs font-black shadow-inner group-hover:scale-110 transition-transform">
+                      {b.name.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-black text-foreground">{b.name}</p>
+                      <p className="text-[9px] font-black text-muted-foreground uppercase tracking-tighter opacity-60">
+                        {b.department || (isRTL ? "غير محدد" : "Team Member")}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-center bg-muted/30 px-3 py-1.5 rounded-xl border border-border/50">
+                    <span className="text-lg font-black text-primary leading-none">{new Date(b.birth_date).getDate()}</span>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">{new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" })}</span>
+                  </div>
                 </div>
-              );
+              ));
             })()}
           </div>
         </div>

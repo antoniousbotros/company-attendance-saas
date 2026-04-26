@@ -69,7 +69,8 @@
 - [x] Refactor `billing.ts` to read directly from the `pricing_config` table.
 - [x] Implement Advanced Subscription Lifecycle (Trial, Upgrades, Scheduled Downgrades).
 - [x] Enable RLS on `employee_sessions` and `employee_otp` tables.
-- [x] Standardize the "Employee App" naming across all marketing materials.
+- [x] Fix Telegram location conflict and clean up report message formatting.
+- [x] Complete Sales Tracking dashboard localization and team management UX.
 
 ---
 
@@ -80,11 +81,14 @@
 - **2026-04-23**: **Architectural Overhaul (v2.4)**: Deprecated decentralized plan tracking in favor of a unified `user_entitlements` authoritative engine. Decoupled Billing (Stripe/Paymob) from Access (Entitlements).
 - **2026-04-23**: ShowcaseSection with code-based mockups for Analytics (Recharts) and Data-Flow infographic on landing page.
 - **2026-04-23**: Verified Stripe Apple Pay compatibility for Hosted Checkout and verified `yawmy.app` domain association.
+- **2026-04-26**: **Telegram Context-Aware Logic**: Implemented `isFresh` location hijacking (60s window) and explicit draft-report invalidation upon attendance commands.
+- **2026-04-26**: **Sales Tracking UX**: Added rapid team deletion from Global Field Creator and standardized all UI messaging via unified i18n keys.
 
 ---
 
 ## CHANGE LOG
 
+- **v2.5.1**: **UX & Logic Hardening.** Fixed Telegram location conflict (hijacking), cleaned up report messages (removed reference codes), and completed Sales Tracking localization.
 - **v2.5.0**: **Subscription Lifecycle Engine.** Implemented 7-day Pro Trials, Unified Entitlement Hierarchy (LTD > Sub > Trial > Free), and Native SQL Limit Enforcement.
 - **v2.4.1**: **Onboarding UX & Branding.** Implemented guided Telegram Bot setup UI in Settings. Finalized "Employee App" naming standardization.
 - **v2.4.0**: **Monetization Engine v2.** Unified Entitlements system, Idempotent Webhook handlers, and Payment Ledger. Decoupled Billing State from Access Control.

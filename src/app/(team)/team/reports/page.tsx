@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useTeam } from "../layout";
-import { BarChart3, MapPin, Send, User, Download, Camera, Image as ImageIcon } from "lucide-react";
+import { BarChart3, MapPin, Send, User, Download, Camera, Image as ImageIcon, Loader2, AlertTriangle, ChevronDown } from "lucide-react";
 import { cn, compressImageFile } from "@/lib/utils";
 
 type Tab = "submit" | "my_reports" | "team_reports";
@@ -197,235 +197,406 @@ export default function TeamReportsPage() {
   }
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="w-5 h-5 text-[#ff5a00]" />
-        <h1 className="text-lg font-black text-[#111]">{isRTL ? "التقارير" : "Reports"}</h1>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* ── Page Header ── */}
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+          <BarChart3 className="w-6 h-6 stroke-[2.5]" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-black text-foreground tracking-tight">{isRTL ? "التقارير الميدانية" : "Field Reports"}</h1>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "توثيق الأنشطة والمهام" : "Document your daily activities"}</p>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex bg-white rounded-full p-1 shadow-sm">
-        <button onClick={() => { setTab("submit"); setSubmitted(false); }} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all", tab === "submit" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
-          {isRTL ? "إرسال" : "Submit"}
+      {/* ── Navigation Tabs ── */}
+      <div className="flex bg-muted/50 backdrop-blur-sm rounded-2xl p-1.5 border border-border/50">
+        <button 
+          onClick={() => { setTab("submit"); setSubmitted(false); }} 
+          className={cn(
+            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
+            tab === "submit" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {isRTL ? "إرسال تقرير" : "NEW REPORT"}
         </button>
-        <button onClick={() => setTab("my_reports")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all", tab === "my_reports" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
-          {isRTL ? "تقاريري" : "My Reports"}
+        <button 
+          onClick={() => setTab("my_reports")} 
+          className={cn(
+            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
+            tab === "my_reports" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {isRTL ? "سجلي" : "MY HISTORY"}
         </button>
         {isLeader && (
-          <button onClick={() => setTab("team_reports")} className={cn("flex-1 py-1.5 rounded-full text-[11px] font-bold transition-all", tab === "team_reports" ? "bg-[#ff5a00] text-white" : "text-[#6b7280]")}>
-            {isRTL ? "الفريق" : "Team"}
+          <button 
+            onClick={() => setTab("team_reports")} 
+            className={cn(
+              "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
+              tab === "team_reports" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {isRTL ? "تقارير الفريق" : "TEAM LOG"}
           </button>
         )}
       </div>
 
-      {/* Submit */}
+      {/* ── Submission Form ── */}
       {tab === "submit" && (
-        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+        <div className="premium-card p-6 md:p-8 space-y-8">
           {submitted ? (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 bg-[#e6f6ec] rounded-full flex items-center justify-center mx-auto mb-3"><Send className="w-5 h-5 text-[#1e8e3e]" /></div>
-              <p className="text-sm font-bold text-[#1e8e3e]">{isRTL ? "تم إرسال التقرير!" : "Report submitted!"}</p>
-              <button onClick={() => setSubmitted(false)} className="text-xs text-[#ff5a00] font-bold mt-3 hover:underline">{isRTL ? "إرسال تقرير آخر" : "Submit another"}</button>
+            <div className="text-center py-12 flex flex-col items-center gap-6 animate-in zoom-in-95 duration-500">
+              <div className="w-20 h-20 bg-success-soft rounded-full flex items-center justify-center shadow-inner">
+                <Send className="w-8 h-8 text-success animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-foreground tracking-tight mb-2">{isRTL ? "تم الإرسال بنجاح!" : "REPORT SENT!"}</h3>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "شكراً لتوثيق نشاطك اليوم" : "Thank you for your report"}</p>
+              </div>
+              <button 
+                onClick={() => setSubmitted(false)} 
+                className="px-8 py-3 bg-foreground text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg"
+              >
+                {isRTL ? "إرسال تقرير جديد" : "SUBMIT ANOTHER"}
+              </button>
             </div>
           ) : (
             <>
-              <div>
-                <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1.5">{isRTL ? "الموقع" : "Location"}</label>
+              {/* Location Matrix */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{isRTL ? "موقع النشاط" : "LOCATION CAPTURE"}</label>
+                  {location && <span className="text-[9px] font-black text-success uppercase tracking-tighter">VERIFIED</span>}
+                </div>
                 {location ? (
-                  <div className="flex items-center gap-2 text-xs text-[#1e8e3e] font-semibold bg-[#e6f6ec] px-3 py-2 rounded-xl">
-                    <MapPin className="w-3.5 h-3.5" />{location.lat.toFixed(4)}, {location.lng.toFixed(4)}
+                  <div className="flex items-center justify-between gap-4 bg-muted/30 border border-border/50 p-4 rounded-2xl group transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-success-soft rounded-xl flex items-center justify-center text-success">
+                        <MapPin className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-foreground">{location.lat.toFixed(5)}, {location.lng.toFixed(5)}</p>
+                        <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">{isRTL ? "تم تحديد الإحداثيات" : "COORDINATES SECURED"}</p>
+                      </div>
+                    </div>
+                    <button onClick={() => setLocation(null)} className="text-[10px] font-black text-danger hover:underline uppercase tracking-widest">{isRTL ? "تعديل" : "RESET"}</button>
                   </div>
                 ) : (
-                  <>
-                    <button onClick={captureLocation} disabled={locationLoading} className="w-full border border-dashed border-[#e0e0e0] rounded-xl py-3 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5" />{locationLoading ? (isRTL ? "جاري تحديد الموقع..." : "Getting location...") : (isRTL ? "تحديد الموقع" : "Capture Location")}
-                    </button>
-                    {locationError && <p className="text-xs text-[#b91c1c] font-semibold mt-2">{locationError}</p>}
-                  </>
-                )}
-              </div>
-              {fields.map((f) => (
-                <div key={f.id}>
-                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1.5">{f.label}</label>
-                  {f.field_type === "select" ? (
-                    <select value={fieldValues[f.id] || ""} onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00]">
-                      <option value="">{isRTL ? "اختر" : "Select"}</option>
-                      {(f.options || []).map((opt: string, i: number) => (<option key={i} value={opt}>{opt}</option>))}
-                    </select>
-                  ) : f.field_type === "image" ? (
-                    <div>
-                      {fieldValues[f.id] ? (
-                        <div className="relative">
-                          <img src={fieldValues[f.id]} alt="" className="w-full h-40 object-cover rounded-xl border border-[#e0e0e0]" />
-                          <button onClick={() => setFieldValues({ ...fieldValues, [f.id]: "" })} className="absolute top-2 end-2 bg-white/90 text-[#b91c1c] rounded-lg p-1.5 text-xs font-bold shadow-sm">&times;</button>
-                        </div>
-                      ) : uploadingField === f.id ? (
-                        <div className="flex items-center justify-center py-6 text-xs text-[#6b7280] font-semibold gap-2">
-                          <div className="w-4 h-4 border-2 border-[#ff5a00]/20 border-t-[#ff5a00] rounded-full animate-spin" />
-                          {isRTL ? "جاري رفع الصورة..." : "Uploading..."}
-                        </div>
+                  <div className="space-y-3">
+                    <button 
+                      onClick={captureLocation} 
+                      disabled={locationLoading} 
+                      className="w-full h-24 border-2 border-dashed border-border-strong rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary-soft/30 transition-all group disabled:opacity-50"
+                    >
+                      {locationLoading ? (
+                        <Loader2 className="w-6 h-6 text-primary animate-spin" />
                       ) : (
                         <>
-                          <div className="flex gap-2">
-                            <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                              <Camera className="w-4 h-4" />
-                              {isRTL ? "التقاط صورة" : "Take Photo"}
+                          <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <p className="text-xs font-black text-muted-foreground group-hover:text-foreground uppercase tracking-widest">{isRTL ? "اضغط لتحديد الموقع" : "CLICK TO CAPTURE LOCATION"}</p>
+                        </>
+                      )}
+                    </button>
+                    {locationError && (
+                      <div className="bg-danger-soft text-danger p-3 rounded-xl text-xs font-black border border-danger/20 flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        {locationError}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Dynamic Fields Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {fields.map((f) => (
+                  <div key={f.id} className="space-y-3">
+                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">{f.label}</label>
+                    {f.field_type === "select" ? (
+                      <div className="relative group">
+                        <select 
+                          value={fieldValues[f.id] || ""} 
+                          onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} 
+                          className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 text-sm font-black text-foreground outline-none focus:border-primary/50 focus:bg-white transition-all appearance-none"
+                        >
+                          <option value="">{isRTL ? "اختر من القائمة..." : "Choose Option..."}</option>
+                          {(f.options || []).map((opt: string, i: number) => (<option key={i} value={opt}>{opt}</option>))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none group-focus-within:text-primary" />
+                      </div>
+                    ) : f.field_type === "image" ? (
+                      <div className="space-y-3">
+                        {fieldValues[f.id] ? (
+                          <div className="relative group rounded-2xl overflow-hidden shadow-md ring-2 ring-white">
+                            <img src={fieldValues[f.id]} alt="" className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-105" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <button 
+                                onClick={() => setFieldValues({ ...fieldValues, [f.id]: "" })} 
+                                className="bg-white text-danger font-black px-6 py-2 rounded-xl text-xs uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
+                              >
+                                {isRTL ? "إزالة الصورة" : "REMOVE PHOTO"}
+                              </button>
+                            </div>
+                          </div>
+                        ) : uploadingField === f.id ? (
+                          <div className="h-48 border border-border/50 bg-muted/30 rounded-2xl flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest animate-pulse">{isRTL ? "جاري المعالجة..." : "PROCESSING IMAGE..."}</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 gap-3">
+                            <label className="flex flex-col items-center justify-center gap-2 border border-border-strong rounded-2xl py-8 hover:border-primary hover:bg-primary-soft transition-all cursor-pointer group shadow-sm">
+                              <Camera className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                              <span className="text-[10px] font-black text-muted-foreground group-hover:text-foreground uppercase tracking-tighter">{isRTL ? "كاميرا" : "CAMERA"}</span>
                               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
                                 let file = e.target.files?.[0]; if (!file) return;
                                 setUploadingField(f.id); setUploadError("");
-                                
                                 try {
                                   file = await compressImageFile(file);
                                   const fd = new FormData(); fd.append("image", file);
                                   const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
                                   const data = await res.json();
                                   if (data.ok) { setFieldValues((prev) => ({ ...prev, [f.id]: data.url })); }
-                                  else { setUploadError(data.error || (isRTL ? "فشل رفع الصورة" : "Upload failed")); }
-                                } catch (error) { 
-                                  console.error(error);
-                                  setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); 
-                                }
+                                  else { setUploadError(data.error || "Upload failed"); }
+                                } catch (error) { setUploadError("Connection error"); }
                                 setUploadingField(null);
                               }} />
                             </label>
-                            <label className="flex-1 border border-dashed border-[#e0e0e0] rounded-xl py-4 text-xs font-bold text-[#6b7280] hover:border-[#ff5a00] hover:text-[#ff5a00] transition-all flex items-center justify-center gap-1.5 cursor-pointer">
-                              <ImageIcon className="w-4 h-4" />
-                              {isRTL ? "رفع صورة" : "Upload"}
+                            <label className="flex flex-col items-center justify-center gap-2 border border-border-strong rounded-2xl py-8 hover:border-primary hover:bg-primary-soft transition-all cursor-pointer group shadow-sm">
+                              <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                              <span className="text-[10px] font-black text-muted-foreground group-hover:text-foreground uppercase tracking-tighter">{isRTL ? "معرض" : "GALLERY"}</span>
                               <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                                 let file = e.target.files?.[0]; if (!file) return;
                                 setUploadingField(f.id); setUploadError("");
-                                
                                 try {
                                   file = await compressImageFile(file);
                                   const fd = new FormData(); fd.append("image", file);
                                   const res = await fetch("/api/team/reports/upload-image", { method: "POST", body: fd });
                                   const data = await res.json();
                                   if (data.ok) { setFieldValues((prev) => ({ ...prev, [f.id]: data.url })); }
-                                  else { setUploadError(data.error || (isRTL ? "فشل رفع الصورة" : "Upload failed")); }
-                                } catch (error) { 
-                                  console.error(error);
-                                  setUploadError(isRTL ? "خطأ في الاتصال" : "Connection error"); 
-                                }
+                                  else { setUploadError(data.error || "Upload failed"); }
+                                } catch (error) { setUploadError("Connection error"); }
                                 setUploadingField(null);
                               }} />
                             </label>
                           </div>
-                          {uploadError && <p className="text-xs text-[#b91c1c] font-semibold mt-2">{uploadError}</p>}
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <input type={f.field_type === "number" ? "number" : "text"} value={fieldValues[f.id] || ""} onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} placeholder={f.label} className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] placeholder:text-[#9ca3af] outline-none focus:border-[#ff5a00]" />
-                  )}
-                </div>
-              ))}
+                        )}
+                        {uploadError && <p className="text-[10px] font-black text-danger uppercase tracking-tighter text-center">{uploadError}</p>}
+                      </div>
+                    ) : (
+                      <input 
+                        type={f.field_type === "number" ? "number" : "text"} 
+                        value={fieldValues[f.id] || ""} 
+                        onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} 
+                        placeholder={f.label} 
+                        className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 text-sm font-black text-foreground outline-none focus:border-primary/50 focus:bg-white transition-all" 
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+
               {team.show_notes !== false && (
-                <div>
-                  <label className="text-[10px] font-bold text-[#9ca3af] uppercase block mb-1.5">{isRTL ? "ملاحظات" : "Notes"} {team.require_notes ? `(${isRTL ? "إجباري" : "required"})` : ""}</label>
-                  <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="w-full border border-[#e0e0e0] rounded-xl px-3 py-2.5 text-sm font-semibold text-[#111] placeholder:text-[#9ca3af] outline-none focus:border-[#ff5a00] resize-none" placeholder={isRTL ? "أضف ملاحظات..." : "Add notes..."} />
+                <div className="space-y-3">
+                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">
+                    {isRTL ? "ملاحظات إضافية" : "ADDITIONAL NOTES"} {team.require_notes && <span className="text-danger ml-1">*</span>}
+                  </label>
+                  <textarea 
+                    value={notes} 
+                    onChange={(e) => setNotes(e.target.value)} 
+                    rows={4} 
+                    className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 text-sm font-black text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-primary/50 focus:bg-white transition-all resize-none" 
+                    placeholder={isRTL ? "اكتب ملاحظاتك هنا..." : "Provide any extra context..."} 
+                  />
                 </div>
               )}
-              <button
-                onClick={handleSubmit}
-                disabled={submitting || !location}
-                className="w-full bg-[#ff5a00] text-white font-black py-3 rounded-xl hover:bg-[#e04f00] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {submitting ? (isRTL ? "جاري الإرسال..." : "Submitting...") : !location ? (isRTL ? "حدد الموقع أولاً 📍" : "Capture location first 📍") : (isRTL ? "إرسال التقرير" : "Submit Report")}
-              </button>
+
+              <div className="pt-4">
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting || !location}
+                  className="w-full h-16 bg-primary text-white text-sm font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 group"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      {isRTL ? "جاري الإرسال..." : "SUBMITTING REPORT..."}
+                    </>
+                  ) : !location ? (
+                    <>
+                      <MapPin className="w-5 h-5 opacity-40 group-hover:animate-bounce" />
+                      {isRTL ? "يرجى تحديد الموقع" : "CAPTURING GPS..."}
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5 stroke-[2.5]" />
+                      {isRTL ? "إرسال التقرير الميداني" : "TRANSMIT FIELD REPORT"}
+                    </>
+                  )}
+                </button>
+              </div>
             </>
           )}
         </div>
       )}
 
-      {/* My Reports */}
+      {/* ── My Reports History ── */}
       {tab === "my_reports" && (
-        <div className="space-y-2">
+        <div className="space-y-4">
+          <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">{isRTL ? "سجل تقاريري" : "MY SUBMISSIONS"}</h3>
           {myReports.length === 0 ? (
-            <div className="text-center py-12 text-sm text-[#6b7280]">{isRTL ? "لا توجد تقارير" : "No reports yet."}</div>
-          ) : myReports.map((r) => (
-            <div key={r.id} className="bg-white rounded-2xl shadow-sm p-4 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-bold text-[#111]">
-                  {new Date(r.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric" })}
-                </p>
-                {r.location_lat && (
-                  <a href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} target="_blank" rel="noreferrer" className="text-[9px] font-bold text-[#ff5a00] hover:underline flex items-center gap-0.5">
-                    <MapPin className="w-3 h-3" /> {isRTL ? "خريطة" : "Map"}
-                  </a>
-                )}
-              </div>
-              {r.report_values?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {r.report_values.map((v: any, i: number) => {
-                    const isImage = v.value?.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(v.value);
-                    if (isImage) {
-                      return (
-                        <a key={i} href={v.value} target="_blank" rel="noreferrer" className="block">
-                          <img src={v.value} alt={getFieldLabel(v.field_id)} className="w-16 h-16 object-cover rounded-lg border border-[#e0e0e0]" />
-                        </a>
-                      );
-                    }
-                    return <span key={i} className="text-[9px] font-semibold bg-[#f5f5f5] text-[#4b5563] px-2 py-1 rounded-lg">{getFieldLabel(v.field_id)}: {v.value}</span>;
-                  })}
-                </div>
-              )}
-              {r.notes && <p className="text-[11px] text-[#6b7280] italic">{r.notes}</p>}
+            <div className="premium-card py-20 flex flex-col items-center justify-center text-muted-foreground gap-4 border-dashed">
+              <Send className="w-12 h-12 opacity-10" />
+              <p className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "لا توجد تقارير مرسلة" : "No reports found"}</p>
             </div>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 gap-4">
+              {myReports.map((r) => (
+                <div key={r.id} className="premium-card p-5 group hover:border-primary/20 transition-all">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center text-foreground font-black text-xs">
+                        {new Date(r.date).getDate()}
+                      </div>
+                      <div>
+                        <p className="text-[13px] font-black text-foreground">
+                          {new Date(r.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { weekday: "long", month: "short" })}
+                        </p>
+                        <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter opacity-60">
+                          {new Date(r.date).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                    </div>
+                    {r.location_lat && (
+                      <a 
+                        href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="h-8 px-3 rounded-lg bg-primary-soft text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-primary hover:text-white transition-all shadow-sm"
+                      >
+                        <MapPin className="w-3 h-3" /> {isRTL ? "الخريطة" : "MAP"}
+                      </a>
+                    )}
+                  </div>
+
+                  {r.report_values?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {r.report_values.map((v: any, i: number) => {
+                        const isImage = v.value?.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(v.value);
+                        if (isImage) {
+                          return (
+                            <a key={i} href={v.value} target="_blank" rel="noreferrer" className="block relative group/img">
+                              <img src={v.value} alt={getFieldLabel(v.field_id)} className="w-16 h-16 object-cover rounded-xl border border-border/50 shadow-sm transition-transform group-hover/img:scale-105" />
+                            </a>
+                          );
+                        }
+                        return (
+                          <div key={i} className="flex flex-col bg-muted/30 px-3 py-1.5 rounded-xl border border-border/50">
+                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter opacity-60">{getFieldLabel(v.field_id)}</span>
+                            <span className="text-[11px] font-black text-foreground">{v.value}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {r.notes && (
+                    <div className="bg-muted/20 p-3 rounded-xl border-s-4 border-primary/20">
+                      <p className="text-[11px] text-muted-foreground leading-relaxed italic">{r.notes}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Team Reports (Leader) */}
+      {/* ── Team Reports (Leader Dashboard) ── */}
       {tab === "team_reports" && isLeader && (
-        <div className="space-y-3">
-          <div className="flex justify-end">
-            <button onClick={exportToExcel} disabled={exporting || teamReports.length === 0} className="flex items-center gap-1.5 bg-[#111] text-white font-bold text-[11px] px-4 py-2 rounded-xl hover:bg-[#333] transition-all disabled:opacity-50">
-              <Download className="w-3.5 h-3.5" /> {exporting ? (isRTL ? "جاري التصدير..." : "Exporting...") : (isRTL ? "تصدير Excel" : "Export Excel")}
+        <div className="space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest px-1">{isRTL ? "إحصائيات الفريق" : "TEAM ANALYTICS"}</h3>
+            <button 
+              onClick={exportToExcel} 
+              disabled={exporting || teamReports.length === 0} 
+              className="flex items-center justify-center gap-2 bg-foreground text-white font-black text-[10px] px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 uppercase tracking-widest"
+            >
+              <Download className="w-4 h-4" /> 
+              {exporting ? (isRTL ? "جاري التصدير..." : "EXPORTING...") : (isRTL ? "تصدير EXCEL" : "EXPORT EXCEL")}
             </button>
           </div>
 
           {teamReports.length === 0 ? (
-            <div className="text-center py-12 text-sm text-[#6b7280]">{isRTL ? "لا توجد تقارير للفريق" : "No team reports."}</div>
+            <div className="premium-card py-20 flex flex-col items-center justify-center text-muted-foreground gap-4 border-dashed">
+              <User className="w-12 h-12 opacity-10" />
+              <p className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "لا توجد تقارير للفريق حالياً" : "No team reports found"}</p>
+            </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-start text-sm">
-                  <thead className="bg-[#f9fafb] border-b border-[#f0f0f0]">
-                    <tr>
-                      <th className="px-4 py-3 text-[10px] font-bold text-[#6b7280] uppercase text-start">{isRTL ? "التاريخ" : "Date"}</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-[#6b7280] uppercase text-start">{isRTL ? "الموظف" : "Employee"}</th>
+            <div className="premium-card overflow-hidden">
+              <div className="overflow-x-auto no-scrollbar">
+                <table className="w-full text-start">
+                  <thead>
+                    <tr className="bg-muted/30 border-b border-border/50">
+                      <th className="px-6 py-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-start">{isRTL ? "التاريخ" : "DATE"}</th>
+                      <th className="px-6 py-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-start">{isRTL ? "الموظف" : "MEMBER"}</th>
                       {reportFields.map((f) => (
-                        <th key={f.id} className="px-4 py-3 text-[10px] font-bold text-[#6b7280] uppercase text-start">{f.label}</th>
+                        <th key={f.id} className="px-6 py-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-start">{f.label}</th>
                       ))}
-                      <th className="px-4 py-3 text-[10px] font-bold text-[#6b7280] uppercase text-start">{isRTL ? "ملاحظات" : "Notes"}</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-[#6b7280] uppercase text-start">{isRTL ? "موقع" : "Location"}</th>
+                      <th className="px-6 py-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-start">{isRTL ? "ملاحظات" : "NOTES"}</th>
+                      <th className="px-6 py-4 text-[9px] font-black text-muted-foreground uppercase tracking-widest text-start">{isRTL ? "GPS" : "GPS"}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#f0f0f0]">
+                  <tbody className="divide-y divide-border/30">
                     {teamReports.map((r) => (
-                      <tr key={r.id} className="hover:bg-[#f9fafb] transition-colors">
-                        <td className="px-4 py-3 text-xs font-semibold text-[#111] whitespace-nowrap">
-                          {new Date(r.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" })}
+                      <tr key={r.id} className="hover:bg-muted/20 transition-colors group">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-xs font-black text-foreground">
+                            {new Date(r.date).toLocaleDateString(lang === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" })}
+                          </span>
+                          <p className="text-[9px] font-black text-muted-foreground uppercase opacity-40">
+                            {new Date(r.date).toLocaleTimeString(lang === 'ar' ? 'ar-EG' : 'en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                         </td>
-                        <td className="px-4 py-3 text-xs font-semibold text-[#ff5a00] whitespace-nowrap flex items-center gap-1">
-                          <User className="w-3 h-3" /> {r.employee_name}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                              <User className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-black text-foreground">{r.employee_name}</span>
+                          </div>
                         </td>
                         {reportFields.map((f) => (
-                          <td key={f.id} className="px-4 py-3 text-xs text-[#4b5563]">{(() => {
-                            const val = getFieldValue(r, f.id);
-                            if (val && val.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(val)) {
-                              return <a href={val} target="_blank" rel="noreferrer"><img src={val} alt="" className="w-10 h-10 rounded-lg object-cover" /></a>;
-                            }
-                            return val;
-                          })()}</td>
+                          <td key={f.id} className="px-6 py-4">
+                            {(() => {
+                              const val = getFieldValue(r, f.id);
+                              if (val && val.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(val)) {
+                                return (
+                                  <a href={val} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded-xl overflow-hidden border border-border/50 hover:scale-110 transition-transform">
+                                    <img src={val} alt="" className="w-full h-full object-cover" />
+                                  </a>
+                                );
+                              }
+                              return <span className="text-xs font-bold text-foreground/80">{val}</span>;
+                            })()}
+                          </td>
                         ))}
-                        <td className="px-4 py-3 text-xs text-[#6b7280] max-w-[120px] truncate">{r.notes || "-"}</td>
-                        <td className="px-4 py-3 text-xs">
+                        <td className="px-6 py-4">
+                          <p className="text-xs text-muted-foreground max-w-[150px] truncate group-hover:whitespace-normal group-hover:overflow-visible transition-all">
+                            {r.notes || <span className="opacity-30 italic">No notes</span>}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
                           {r.location_lat ? (
-                            <a href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} target="_blank" rel="noreferrer" className="text-[#ff5a00] font-bold hover:underline flex items-center gap-0.5">
-                              <MapPin className="w-3 h-3" /> {isRTL ? "عرض" : "View"}
+                            <a 
+                              href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+                            >
+                              <MapPin className="w-4 h-4" />
                             </a>
-                          ) : "-"}
+                          ) : <span className="text-muted-foreground opacity-30">—</span>}
                         </td>
                       </tr>
                     ))}

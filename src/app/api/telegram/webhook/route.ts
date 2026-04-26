@@ -201,6 +201,8 @@ export async function POST(req: NextRequest) {
     const runNextReportStep = async (ctx: any, employee: any, draftReport: any) => {
         const lang = employee.companies.bot_language || 'en';
         
+        const { data: team } = await supabaseAdmin.from("teams").select("show_notes, require_notes").eq("id", draftReport.team_id).single();
+
         // Get all custom fields
         const { data: fields } = await supabaseAdmin.from("custom_fields").select("*").eq("team_id", draftReport.team_id).order("order_index", { ascending: true });
         
@@ -208,10 +210,22 @@ export async function POST(req: NextRequest) {
         const { data: filledValues } = await supabaseAdmin.from("report_values").select("field_id").eq("report_id", draftReport.id);
         const filledIds = filledValues?.map(v => v.field_id) || [];
 
+        // ── NEW: Location First ──────────────────────────────────────────────
+        if (!draftReport.location_lat || !draftReport.location_lng) {
+            await supabaseAdmin.from("reports").update({ status: 'draft' }).eq("id", draftReport.id); // keep as draft
+            return ctx.reply(lang === 'ar'
+                ? "📍 يرجى إرسال موقعك الجغرافي للتقرير أولاً (استخدم الزر بالأسفل) 👇"
+                : "📍 Please send your location for the report first (use the button below) 👇",
+                Markup.keyboard([[Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location")]])
+                    .resize()
+                    .oneTime()
+            );
+        }
+
         // Find first unfilled field
         const nextField = fields?.find(f => !filledIds.includes(f.id));
-
-        const { data: team } = await supabaseAdmin.from("teams").select("show_notes, require_notes").eq("id", draftReport.team_id).single();
+        const fieldIndex = fields ? fields.findIndex(f => f.id === nextField?.id) : -1;
+        const fieldDisplayIndex = fieldIndex + 2; // +1 for 0-index, +1 for location field
         
         if (nextField) {
             if (nextField.field_type === 'select' && nextField.options && nextField.options.length > 0) {
@@ -227,29 +241,19 @@ export async function POST(req: NextRequest) {
 
             if (nextField.field_type === 'image') {
                 return ctx.reply(lang === 'ar'
-                    ? `📷 يرجى إرسال صورة: ${nextField.label}\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`
-                    : `📷 Please send a photo: ${nextField.label}\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`,
+                    ? `${fieldDisplayIndex}. 📷 يرجى إرسال صورة: ${nextField.label}`
+                    : `${fieldDisplayIndex}. 📷 Please send a photo: ${nextField.label}`,
                     { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "أرسل صورة..." : "Send a photo..." } }
                 );
             }
 
             return ctx.reply(lang === 'ar'
-                ? `يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`
-                : `Please enter: ${nextField.label} (${nextField.field_type})\u2063R:${draftReport.id.substring(0,8)}_${nextField.id.substring(0,8)}\u2063`,
+                ? `${fieldDisplayIndex}. يرجى إدخال: ${nextField.label} (${nextField.field_type === 'number' ? 'أرقام فقط' : 'نص'})`
+                : `${fieldDisplayIndex}. Please enter: ${nextField.label} (${nextField.field_type})`,
                 { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "أدخل هنا..." : "Type here..." } }
             );
         }
 
-        // All fields filled, ask for notes if enabled
-        // ── Location guard: must have coordinates before completing ──────────
-        if (!draftReport.location_lat || !draftReport.location_lng) {
-            await supabaseAdmin.from("reports").update({ status: 'draft' }).eq("id", draftReport.id); // keep as draft
-            return ctx.reply(lang === 'ar'
-                ? "📍 لم يتم تحديد موقعك بعد. يرجى إرسال موقعك الجغرافي أولاً لإكمال التقرير."
-                : "📍 Your location is missing. Please send your location to complete the report.",
-                Markup.keyboard([[Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location")]]).resize()
-            );
-        }
 
         if (team && team.show_notes === false) {
              await supabaseAdmin.from("reports").update({ status: 'completed' }).eq("id", draftReport.id);
@@ -257,20 +261,31 @@ export async function POST(req: NextRequest) {
         }
 
         return ctx.reply(lang === 'ar' 
-            ? `📝 أخيراً، أرسل أي ملاحظات لزيارتك${team?.require_notes ? ' (إجباري)' : ' (أو أرسل "لا")'} 👇\u2063R:${draftReport.id.substring(0,8)}_notes\u2063`
-            : `📝 Finally, any notes regarding your visit${team?.require_notes ? ' (Required)' : ' (or type "no")'} 👇\u2063R:${draftReport.id.substring(0,8)}_notes\u2063`,
+            ? `📝 أخيراً، أرسل أي ملاحظات لزيارتك${team?.require_notes ? ' (إجباري)' : ' (أو أرسل "لا")'} 👇`
+            : `📝 Finally, any notes regarding your visit${team?.require_notes ? ' (Required)' : ' (or type "no")'} 👇`,
             { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "ملاحظاتك..." : "Your notes..." } }
         );
     };
 
-    bot.on("location", async (ctx) => {
+      bot.on("location", async (ctx) => {
       const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", ctx.from.id).eq("company_id", currentCompanyId).limit(1).single();
       if (!employee) return;
       const company = (employee.companies as any);
 
       // Check if location is intended for a Sales Draft
-      const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft").single();
-      if (draftReport && company.sales_tracking_enabled) {
+      const { data: draftReport } = await supabaseAdmin.from("reports")
+        .select("id, team_id, location_lat, location_lng, updated_at")
+        .eq("employee_id", employee.id)
+        .eq("status", "draft")
+        .maybeSingle();
+
+      // CRITICAL: Only hijack location for report if:
+      // 1. We are explicitly missing location for the report
+      // 2. AND the report was updated recently (within 60 seconds) -> indicating the user is in the report flow
+      const isMissingLoc = draftReport && (!draftReport.location_lat || !draftReport.location_lng);
+      const isFresh = draftReport && (new Date().getTime() - new Date(draftReport.updated_at).getTime() < 60000);
+
+      if (isMissingLoc && isFresh && company.sales_tracking_enabled) {
           // Location for sales report! (Update it and proceed to the next step)
           await supabaseAdmin.from("reports").update({ 
              location_lat: ctx.message.location.latitude,
@@ -357,8 +372,13 @@ export async function POST(req: NextRequest) {
 
       // IF Admin granted WFH explicitly for today, bypass GPS entirely!
       if (attendance?.day_type === "wfh" && !attendance?.check_in) {
+         // Mark any fresh report draft as stale to prevent location hijacking if they click "Check In"
+         await supabaseAdmin.from("reports").update({ updated_at: new Date(0).toISOString() }).eq("employee_id", employee.id).eq("status", "draft");
          return await processAttendance(ctx, employee, false, "wfh");
       }
+
+      // Mark any fresh report draft as stale to ensure next location is for attendance
+      await supabaseAdmin.from("reports").update({ updated_at: new Date(0).toISOString() }).eq("employee_id", employee.id).eq("status", "draft");
 
       // Only ask for WFH vs Office on initial check-ins without an active record if Global WFH is enabled
       if (!attendance?.check_in && company.enable_wfh) {
@@ -801,16 +821,11 @@ export async function POST(req: NextRequest) {
           draft = newDraft;
       }
 
-      if (draft && draft.location_lat) {
-          // Already have a location for this draft, resume next field
+      if (draft) {
+          // Touch the draft to make it "fresh" for the location handler
+          await supabaseAdmin.from("reports").update({ updated_at: new Date().toISOString() }).eq("id", draft.id);
           return runNextReportStep(ctx, employee, draft);
       }
-
-      return ctx.reply(lang === 'ar' 
-        ? "أهلاً بك!\nللبدء بتسجيل التقرير الميداني، يرجى إرسال موقعك الحالي أولاً باستخدام زر 'إرسال الموقع' بالأسفل 📍" 
-        : "Welcome!\nTo start tracking your field report, please send your current location using the button below 📍",
-        Markup.keyboard([[Markup.button.locationRequest(lang === 'ar' ? "📍 إرسال الموقع" : "📍 Send Location")]]).resize()
-      );
     });
 
     bot.on("callback_query", async (ctx: any) => {
@@ -1148,49 +1163,47 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // SALES REPORT FORM HOOK
-      if (replyToMsg && "text" in replyToMsg && replyToMsg.text && replyToMsg.text.includes("\u2063R:")) {
-          const match = replyToMsg.text.match(/\u2063R:([a-f0-9]{8})_([a-f0-9]{8}|notes)\u2063/);
-          if (match) {
-             const shortReportId = match[1];
-             const targetFieldShort = match[2];
+      // SALES REPORT FORM HOOK (CLEAN - CONTEXT AWARE)
+      const isReportReply = replyToMsg && "text" in replyToMsg && (
+          replyToMsg.text.includes("يرجى إدخال:") || 
+          replyToMsg.text.includes("Please enter:") ||
+          replyToMsg.text.includes("أخيراً، أرسل أي ملاحظات") ||
+          replyToMsg.text.includes("Finally, any notes") ||
+          replyToMsg.text.includes("\u2063R:") // Support legacy messages during transition
+      );
+
+      if (isReportReply) {
+          const match = replyToMsg && "text" in replyToMsg ? replyToMsg.text.match(/\u2063R:([a-f0-9]{8})_([a-f0-9]{8}|notes)\u2063/) : null;
+          if (true) { // Always enter if isReportReply is true
              const inputValue = ctx.message.text.trim();
-             
              const { data: employee } = await supabaseAdmin.from("employees").select("*, companies(*)").eq("telegram_user_id", telegramUserId).eq("company_id", currentCompanyId).limit(1).single();
              if(!employee) return;
              const lang = (employee.companies as any).bot_language || 'en';
 
-             // Find the draft report
-             const { data: reports } = await supabaseAdmin.from("reports").select("id, team_id, location_lat, location_lng").eq("employee_id", employee.id).eq("status", "draft");
-             const draftReport = reports?.find(r => r.id.startsWith(shortReportId));
+             // Find the active draft report
+             const { data: draftReport } = await supabaseAdmin.from("reports").select("id, team_id").eq("employee_id", employee.id).eq("status", "draft").maybeSingle();
+             if (!draftReport) return ctx.reply(lang === 'ar' ? "❌ لم يتم العثور على مسودة تقرير نشطة." : "❌ No active report draft found.");
+
+             // If we have a legacy match, use it! Otherwise, find the first unfilled field
+             const { data: fields } = await supabaseAdmin.from("custom_fields").select("*").eq("team_id", draftReport.team_id).order("order_index", { ascending: true });
+             const { data: filledValues } = await supabaseAdmin.from("report_values").select("field_id").eq("report_id", draftReport.id);
+             const filledIds = filledValues?.map(v => v.field_id) || [];
+
+             let matchedField = null;
+             const targetFieldShort = match?.[2];
              
-             if (!draftReport) return ctx.reply(lang === 'ar' ? "❌ لم يتم العثور على المسودة، قد تكون أُكملت مسبقاً." : "❌ Report draft not found or already completed.");
-
-             if (targetFieldShort === "notes") {
-                 const { data: tm } = await supabaseAdmin.from("teams").select("require_notes").eq("id", draftReport.team_id).single();
-                 const noVariations = ["no", "none", "لا", "لا يوجد", "لايوجد"];
-                 if (tm?.require_notes && noVariations.includes(inputValue.toLowerCase())) {
-                     return ctx.reply(lang === 'ar' 
-                        ? `❌ الملاحظات إجبارية في هذا الفريق. يرجى توضيح رسالة حقيقية:\u2063R:${shortReportId}_notes\u2063` 
-                        : `❌ Notes are required for your team. Please elaborate:\u2063R:${shortReportId}_notes\u2063`,
-                        { reply_markup: { force_reply: true, input_field_placeholder: lang === 'ar' ? "اكتب هنا..." : "Type here..." } }
-                     );
-                 }
-                 
-                 await supabaseAdmin.from("reports").update({ notes: inputValue, status: 'completed' }).eq("id", draftReport.id);
-                 return ctx.reply(lang === 'ar' ? "✅ تم تسجيل تقريرك الميداني بنجاح! شكراً لك." : "✅ Field report submitted successfully! Thank you.", getMainMenu(employee.companies));
+             if (targetFieldShort && targetFieldShort !== "notes") {
+                matchedField = fields?.find(f => f.id.startsWith(targetFieldShort));
+             } else if (!targetFieldShort) {
+                matchedField = fields?.find(f => !filledIds.includes(f.id));
              }
-
-             // Find targeted field
-             const { data: fields } = await supabaseAdmin.from("custom_fields").select("id, field_type").eq("team_id", draftReport.team_id);
-             const matchedField = fields?.find(f => f.id.startsWith(targetFieldShort));
 
              if (matchedField) {
                  if (matchedField.field_type === 'number' && isNaN(Number(inputValue))) {
                      return ctx.reply(lang === 'ar' 
-                        ? `❌ خطأ في الإدخال. الرجاء إدخال رقم صحيح:\u2063R:${shortReportId}_${targetFieldShort}\u2063` 
-                        : `❌ Invalid input. Please enter a number:\u2063R:${shortReportId}_${targetFieldShort}\u2063`,
-                        { reply_markup: { force_reply: true, input_field_placeholder: "123..." } }
+                        ? `❌ خطأ في الإدخال. الرجاء إدخال رقم صحيح لـ (${matchedField.label}):` 
+                        : `❌ Invalid input. Please enter a number for (${matchedField.label}):`,
+                        { reply_markup: { force_reply: true } }
                      );
                  }
                  await supabaseAdmin.from("report_values").insert({
@@ -1198,8 +1211,25 @@ export async function POST(req: NextRequest) {
                      field_id: matchedField.id,
                      value: inputValue
                  });
-                 // Move to next step!
                  return runNextReportStep(ctx, employee, draftReport);
+             } else {
+                 // Must be notes
+                 const { data: tm } = await supabaseAdmin.from("teams").select("require_notes").eq("id", draftReport.team_id).single();
+                 const noVariations = ["no", "none", "لا", "لا يوجد", "لايوجد"];
+                 if (tm?.require_notes && noVariations.includes(inputValue.toLowerCase())) {
+                     return ctx.reply(lang === 'ar' 
+                        ? "❌ الملاحظات إجبارية لهذا الفريق. يرجى كتابة تفاصيل حقيقية:" 
+                        : "❌ Notes are required for this team. Please provide actual details:",
+                        { reply_markup: { force_reply: true } }
+                     );
+                 }
+                 
+                 await supabaseAdmin.from("reports").update({ 
+                     notes: (inputValue === "no" || inputValue === "لا") ? "" : inputValue, 
+                     status: 'completed' 
+                 }).eq("id", draftReport.id);
+                 
+                 return ctx.reply(lang === 'ar' ? "✅ تم تسجيل تقريرك الميداني بنجاح! شكراً لك." : "✅ Field report submitted successfully! Thank you.", getMainMenu(employee.companies));
              }
           }
       }
