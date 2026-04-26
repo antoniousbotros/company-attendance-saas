@@ -345,7 +345,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
             "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#eeeeee] flex items-stretch",
             "safe-area-inset-bottom"
           )}>
-            {navItems.map((item) => {
+            {navItems.filter(item => item.href !== "/team/announcements").map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
