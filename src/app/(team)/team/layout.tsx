@@ -155,6 +155,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
     { name: t.home, icon: Home, href: "/team" },
     { name: t.attendance, icon: CalendarDays, href: "/team/attendance" },
     { name: t.tasks, icon: CheckSquare, href: "/team/tasks" },
+    { name: t.announcements, icon: Megaphone, href: "/team/announcements" },
     ...(salesEnabled
       ? [{ name: t.reports, icon: BarChart3, href: "/team/reports" }]
       : []),
