@@ -175,71 +175,73 @@ export default function AttendancePage() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader title={t.attendanceTitle} subtitle={t.attendanceRange} subtitleTone="orange" isRTL={isRTL} />
+    <div className="space-y-6 animate-in fade-in duration-700">
+      <PageHeader title="" isRTL={isRTL} />
 
-      {/* Period Filter */}
-      <div className="flex flex-wrap items-center gap-2">
-        {presets.map((p) => (
-          <button
-            key={p.key}
-            onClick={() => handlePreset(p.key)}
-            className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold transition-all",
-              activePreset === p.key
-                ? "bg-[#ff5a00] text-white shadow-sm"
-                : "bg-white text-[#6b7280] border border-[#e5e7eb] hover:border-[#ff5a00] hover:text-[#ff5a00]"
-            )}
-          >
-            {p.key === "custom" && <CalendarDays className="w-3.5 h-3.5 inline me-1.5 -mt-0.5" />}
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Custom Date Picker */}
-      {showCustom && (
-        <div className="bg-white border border-[#e5e7eb] rounded-2xl p-4 flex flex-wrap items-end gap-3 shadow-sm animate-in fade-in duration-200">
-          <div>
-            <label className="text-[10px] font-bold text-[#6b7280] uppercase block mb-1">{isRTL ? "من" : "From"}</label>
-            <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00]" />
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-[#6b7280] uppercase block mb-1">{isRTL ? "إلى" : "To"}</label>
-            <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="border border-[#e5e7eb] rounded-lg px-3 py-2 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00]" />
-          </div>
-          <button onClick={handleCustomApply} className="bg-[#ff5a00] text-white font-bold text-xs px-5 py-2.5 rounded-lg hover:bg-[#e04f00] transition-all">
-            {isRTL ? "تطبيق" : "Apply"}
-          </button>
-          <button onClick={() => setShowCustom(false)} className="text-[#9ca3af] hover:text-[#111] p-2">
-            <X className="w-4 h-4" />
-          </button>
+      <SectionCard className="space-y-6">
+        {/* Period Filter */}
+        <div className="flex flex-wrap items-center gap-2">
+          {presets.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => handlePreset(p.key)}
+              className={cn(
+                "px-4 py-2 rounded-md text-xs font-bold transition-all",
+                activePreset === p.key
+                  ? "bg-[#ff5a00] text-white"
+                  : "bg-white text-[#6b7280] border border-[#eeeeee] hover:border-[#ff5a00] hover:text-[#ff5a00]"
+              )}
+            >
+              {p.key === "custom" && <CalendarDays className="w-3.5 h-3.5 inline me-1.5 -mt-0.5" />}
+              {p.label}
+            </button>
+          ))}
         </div>
-      )}
 
-      {/* Search + Export */}
-      <div className={cn("flex flex-wrap items-center gap-3", isRTL && "flex-row-reverse")}>
-        <SearchField placeholder={t.searchPlaceholder} value={query} onChange={setQuery} />
-        <div className="ms-auto">
-          <GhostButton icon={Download} onClick={handleExport}>{t.downloadReport}</GhostButton>
+        {/* Custom Date Picker */}
+        {showCustom && (
+          <div className="bg-[#f9fafb] border border-[#eeeeee] rounded-md p-4 flex flex-wrap items-end gap-3 animate-in fade-in duration-200">
+            <div>
+              <label className="text-[10px] font-bold text-[#6b7280] uppercase block mb-1">{isRTL ? "من" : "From"}</label>
+              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="border border-[#eeeeee] rounded-md px-3 py-2 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00] bg-white" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-[#6b7280] uppercase block mb-1">{isRTL ? "إلى" : "To"}</label>
+              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="border border-[#eeeeee] rounded-md px-3 py-2 text-sm font-semibold text-[#111] outline-none focus:border-[#ff5a00] bg-white" />
+            </div>
+            <button onClick={handleCustomApply} className="bg-[#ff5a00] text-white font-bold text-xs px-5 py-2.5 rounded-md hover:bg-[#e04f00] transition-all">
+              {isRTL ? "تطبيق" : "Apply"}
+            </button>
+            <button onClick={() => setShowCustom(false)} className="text-[#9ca3af] hover:text-[#111] p-2">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Search + Export */}
+        <div className={cn("flex flex-wrap items-center gap-3", isRTL && "flex-row-reverse")}>
+          <SearchField placeholder={t.searchPlaceholder} value={query} onChange={setQuery} />
+          <div className="ms-auto">
+            <GhostButton icon={Download} onClick={handleExport}>{t.downloadReport}</GhostButton>
+          </div>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Stats Summary */}
       <div className="grid grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-[#e5e7eb] p-3 text-center">
+        <div className="bg-white rounded-md border border-[#eeeeee] p-3 text-center">
           <p className="text-xl font-black text-[#111]">{stats.total}</p>
           <p className="text-[9px] font-bold text-[#6b7280] uppercase">{isRTL ? "إجمالي" : "Total"}</p>
         </div>
-        <div className="bg-[#e6f6ec] rounded-xl p-3 text-center">
+        <div className="bg-[#e6f6ec] rounded-md p-3 text-center">
           <p className="text-xl font-black text-[#1e8e3e]">{stats.present}</p>
           <p className="text-[9px] font-bold text-[#1e8e3e] uppercase">{isRTL ? "حاضر" : "Present"}</p>
         </div>
-        <div className="bg-[#fdf4d8] rounded-xl p-3 text-center">
+        <div className="bg-[#fdf4d8] rounded-md p-3 text-center">
           <p className="text-xl font-black text-[#b45309]">{stats.late}</p>
           <p className="text-[9px] font-bold text-[#b45309] uppercase">{isRTL ? "متأخر" : "Late"}</p>
         </div>
-        <div className="bg-[#fef2f2] rounded-xl p-3 text-center">
+        <div className="bg-[#fef2f2] rounded-md p-3 text-center">
           <p className="text-xl font-black text-[#b91c1c]">{stats.absent}</p>
           <p className="text-[9px] font-bold text-[#b91c1c] uppercase">{isRTL ? "غائب" : "Absent"}</p>
         </div>

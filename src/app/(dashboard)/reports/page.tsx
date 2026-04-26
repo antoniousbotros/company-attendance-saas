@@ -178,16 +178,16 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="space-y-8">
-      <PageHeader title={t.reportsTitle} subtitle={t.reportsSubtitle} isRTL={isRTL} />
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <PageHeader title="" isRTL={isRTL} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <ReportCard
           icon={FileSpreadsheet} tone="orange" title={t.monthlySummary} description={t.monthlySummaryDesc}
           action={
             <div className={cn("flex flex-wrap items-center gap-3", isRTL && "flex-row-reverse")}>
-              <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="h-10 px-4 rounded-xl bg-[#f9fafb] border border-[#eeeeee] text-sm font-semibold outline-none focus:bg-white focus:border-[#ff5a00] transition-colors" />
-              <button onClick={handleExport} disabled={exporting} className={cn("flex items-center gap-2 h-10 px-5 rounded-xl text-white font-bold transition-all", exporting ? "bg-[#ff5a00]/50" : "bg-[#ff5a00] hover:bg-[#e65100]")}>
+              <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="h-10 px-4 rounded-md bg-[#f9fafb] border border-[#eeeeee] text-sm font-semibold outline-none focus:bg-white focus:border-[#ff5a00] transition-colors" />
+              <button onClick={handleExport} disabled={exporting} className={cn("flex items-center gap-2 h-10 px-5 rounded-md text-white font-bold transition-all", exporting ? "bg-[#ff5a00]/50" : "bg-[#ff5a00] hover:bg-[#e65100]")}>
                  <Download className="w-4 h-4" /> {exporting ? "..." : t.export}
               </button>
             </div>
@@ -197,7 +197,7 @@ export default function ReportsPage() {
           icon={AlertCircle} tone="red" title={t.anomalyDetection} description={t.anomalyDesc}
           action={
             <div className={cn("flex flex-col gap-3 items-start", isRTL && "items-end")}>
-              <button onClick={handleAnalyze} disabled={analyzing} className={cn("flex items-center gap-2 h-10 px-5 rounded-xl text-white font-bold transition-all", analyzing ? "bg-[#111]/50" : "bg-[#111] hover:bg-black")}>
+              <button onClick={handleAnalyze} disabled={analyzing} className={cn("flex items-center gap-2 h-10 px-5 rounded-md text-white font-bold transition-all", analyzing ? "bg-[#111]/50" : "bg-[#111] hover:bg-black")}>
                  <TrendingUp className="w-4 h-4" /> {analyzing ? "..." : t.analyzeData}
               </button>
               {anomalyResult && (

@@ -109,12 +109,8 @@ export default function OverviewPage() {
     data.total > 0 ? Math.round((data.present / data.total) * 100) : 0;
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={t.overviewTitle}
-        subtitle={t.overviewSubtitle}
-        isRTL={isRTL}
-      />
+    <div className="space-y-8 animate-in fade-in duration-700">
+      <div className="h-2" /> {/* Top spacing */}
 
       {/* Stat row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

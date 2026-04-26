@@ -170,59 +170,8 @@ export default function TeamHomePage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-
-      {/* ── Top Row: Personalized Greeting ── */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="relative group">
-            {employee?.avatar_url ? (
-              <img src={employee.avatar_url} alt="" className="w-14 h-14 rounded-2xl object-cover shadow-md group-hover:scale-105 transition-transform duration-300" />
-            ) : employee?.companies?.logo_url ? (
-              <img src={employee.companies.logo_url} alt="" className="w-14 h-14 rounded-2xl object-cover shadow-md group-hover:scale-105 transition-transform duration-300" />
-            ) : (
-              <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform duration-300">
-                {employee?.name?.charAt(0)}
-              </div>
-            )}
-            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 border-2 border-white rounded-full shadow-sm" />
-          </div>
-          <div className={cn("flex flex-col", isRTL && "items-end")}>
-            <p className="text-[12px] text-muted-foreground font-bold uppercase tracking-widest mb-1">{greeting}</p>
-            <h1 className="text-2xl font-black text-foreground tracking-tight leading-tight">
-              {isRTL ? "أهلاً،" : "Hello,"} <span className="text-primary">{employee?.name?.split(" ")[0]}</span>
-            </h1>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 self-end md:self-auto">
-          {/* Period Selection Pills */}
-          <div className="flex bg-muted/50 backdrop-blur-sm rounded-2xl p-1.5 border border-border/50">
-            {(["week", "month"] as Period[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={cn(
-                  "px-5 py-2 rounded-xl text-xs font-black transition-all duration-300",
-                  period === p 
-                    ? "bg-white text-foreground shadow-sm" 
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {p === "week" ? (isRTL ? "أسبوع" : "WEEK") : (isRTL ? "شهر" : "MONTH")}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={loadData}
-            className="w-11 h-11 bg-white rounded-2xl shadow-sm border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary/30 transition-all duration-300 group"
-          >
-            <RefreshCw className="w-5 h-5 group-active:rotate-180 transition-transform duration-500" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Dashboard Grid ── */}
       <div className="lg:grid lg:grid-cols-5 lg:gap-8 space-y-8 lg:space-y-0">
+        {/* ── Dashboard Grid ── */}
 
         {/* ── Left Column (3/5): Performance ── */}
         <div className="lg:col-span-3 space-y-8">
@@ -242,8 +191,8 @@ export default function TeamHomePage() {
                   </span>
                   {!loading && (
                     <div className={cn(
-                      "px-2.5 py-1 rounded-lg text-[11px] font-black flex items-center gap-1",
-                      stats.onTimeRate >= 80 ? "bg-success-soft text-success" : "bg-danger-soft text-danger"
+                      "px-2.5 py-1 rounded-md text-[11px] font-black flex items-center gap-1",
+                      stats.onTimeRate >= 80 ? "bg-success-soft text-success border border-success/10" : "bg-danger-soft text-danger border border-danger/10"
                     )}>
                       {stats.onTimeRate >= 80 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                       {stats.onTime}/{stats.total} {isRTL ? "يوم" : "DAYS"}
@@ -251,7 +200,7 @@ export default function TeamHomePage() {
                   )}
                 </div>
               </div>
-              <div className="bg-muted p-2 rounded-xl text-muted-foreground font-bold text-[10px] uppercase tracking-wider">
+              <div className="bg-[#f5f5f5] p-2 rounded-md text-[#6b7280] font-bold text-[10px] uppercase tracking-wider">
                 {period === "week" ? (isRTL ? "آخر 7 أيام" : "Last 7 Days") : (isRTL ? "آخر 30 يوم" : "Last 30 Days")}
               </div>
             </div>
@@ -274,20 +223,20 @@ export default function TeamHomePage() {
                         width={30}
                       />
                       <Tooltip
-                        cursor={{ fill: '#f1f5f9', radius: 8 }}
+                        cursor={{ fill: '#f5f5f5', radius: 4 }}
                         contentStyle={{ 
-                          borderRadius: 20, 
-                          border: "none", 
-                          boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", 
+                          borderRadius: 8, 
+                          border: "1px solid #eeeeee", 
+                          boxShadow: "none", 
                           fontSize: 11,
                           fontWeight: 800,
-                          padding: "12px 16px"
+                          padding: "8px 12px"
                         }}
                       />
                       <Bar 
                         dataKey="hours" 
-                        fill="var(--primary)" 
-                        radius={[6, 6, 2, 2]} 
+                        fill="#ff5a00" 
+                        radius={[4, 4, 0, 0]} 
                         name={isRTL ? "ساعات" : "Hours"} 
                       />
                     </BarChart>
@@ -300,7 +249,7 @@ export default function TeamHomePage() {
                 </div>
               ) : (
                 <div className="h-56 flex items-center justify-center">
-                  <div className="w-10 h-10 border-4 border-primary/10 border-t-primary rounded-full animate-spin" />
+                  <div className="w-10 h-10 border-4 border-[#ff5a00]/10 border-t-[#ff5a00] rounded-full animate-spin" />
                 </div>
               )}
             </div>
@@ -312,8 +261,8 @@ export default function TeamHomePage() {
               {[
                 { label: isRTL ? "حضور منتظم" : "ON TIME", val: stats.onTime, color: "text-success", bg: "bg-success-soft" },
                 { label: isRTL ? "تأخير" : "LATE", val: stats.late, color: "text-danger", bg: "bg-danger-soft" },
-                { label: isRTL ? "متوسط الساعات" : "AVG HOURS", val: `${stats.avgHours}h`, color: "text-foreground", bg: "bg-muted" },
-                { label: isRTL ? "مهام معلقة" : "PENDING", val: taskCount, color: "text-primary", bg: "bg-primary-soft" },
+                { label: isRTL ? "متوسط الساعات" : "AVG HOURS", val: `${stats.avgHours}h`, color: "text-[#111]", bg: "bg-[#f5f5f5]" },
+                { label: isRTL ? "مهام معلقة" : "PENDING", val: taskCount, color: "text-[#ff5a00]", bg: "bg-[#fff1e8]" },
               ].map((m, idx) => (
                 <div key={idx} className="premium-card p-5 group">
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-2 transition-colors group-hover:text-primary">
@@ -321,7 +270,7 @@ export default function TeamHomePage() {
                   </p>
                   <div className="flex items-center justify-between">
                     <span className={cn("text-3xl font-black tracking-tighter", m.color)}>{m.val}</span>
-                    <div className={cn("w-1.5 h-6 rounded-full opacity-50", m.bg)} />
+                  <div className={cn("w-1 h-4 bg-[#eeeeee] rounded-full", m.bg)} />
                   </div>
                 </div>
               ))}
@@ -340,7 +289,7 @@ export default function TeamHomePage() {
 
             <div className="flex items-center justify-between mb-8 relative z-10">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                <div className="w-11 h-11 bg-[#ff5a00]/10 rounded-md flex items-center justify-center text-[#ff5a00] border border-[#ff5a00]/10">
                   <Clock className="w-6 h-6 stroke-[2.5]" />
                 </div>
                 <div>
@@ -351,9 +300,9 @@ export default function TeamHomePage() {
                 </div>
               </div>
               {geofencing && (
-                <div className="bg-muted px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 animate-pulse">
-                  <MapPin className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[10px] font-black text-muted-foreground uppercase">{isRTL ? "موقع نشط" : "LIVE GPS"}</span>
+                <div className="bg-[#fff1e8] px-2 py-1 rounded-md flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3 text-[#ff5a00]" />
+                  <span className="text-[9px] font-black text-[#ff5a00] uppercase">{isRTL ? "موقع نشط" : "LIVE GPS"}</span>
                 </div>
               )}
             </div>
@@ -362,21 +311,21 @@ export default function TeamHomePage() {
             {todayRecord && (
               <div className="grid grid-cols-2 gap-3 mb-8 relative z-10">
                 {todayRecord.check_in && (
-                  <div className="bg-muted/50 rounded-2xl p-4 border border-border/50">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{isRTL ? "دخول" : "CHECK IN"}</p>
-                    <p className="text-xl font-black text-foreground">{formatTime(todayRecord.check_in)}</p>
+                  <div className="bg-[#fcfcfc] rounded-md p-4 border border-[#eeeeee]">
+                    <p className="text-[10px] font-black text-[#9ca3af] uppercase tracking-widest mb-1">{isRTL ? "دخول" : "CHECK IN"}</p>
+                    <p className="text-xl font-black text-[#111]">{formatTime(todayRecord.check_in)}</p>
                   </div>
                 )}
                 {todayRecord.check_out && (
-                  <div className="bg-muted/50 rounded-2xl p-4 border border-border/50">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">{isRTL ? "خروج" : "CHECK OUT"}</p>
-                    <p className="text-xl font-black text-foreground">{formatTime(todayRecord.check_out)}</p>
+                  <div className="bg-[#fcfcfc] rounded-md p-4 border border-[#eeeeee]">
+                    <p className="text-[10px] font-black text-[#9ca3af] uppercase tracking-widest mb-1">{isRTL ? "خروج" : "CHECK OUT"}</p>
+                    <p className="text-xl font-black text-[#111]">{formatTime(todayRecord.check_out)}</p>
                   </div>
                 )}
                 {!todayRecord.check_out && todayRecord.working_hours && (
-                  <div className="col-span-2 bg-primary/5 rounded-2xl p-4 border border-primary/10 flex items-center justify-between">
-                    <span className="text-[11px] font-black text-primary uppercase tracking-widest">{isRTL ? "مدة العمل الحالية" : "SESSION DURATION"}</span>
-                    <span className="text-xl font-black text-primary">{todayRecord.working_hours}h</span>
+                  <div className="col-span-2 bg-[#fff1e8] rounded-md p-4 border border-[#ff5a00]/10 flex items-center justify-between">
+                    <span className="text-[11px] font-black text-[#ff5a00] uppercase tracking-widest">{isRTL ? "مدة العمل الحالية" : "SESSION DURATION"}</span>
+                    <span className="text-xl font-black text-[#ff5a00]">{todayRecord.working_hours}h</span>
                   </div>
                 )}
               </div>
@@ -385,8 +334,8 @@ export default function TeamHomePage() {
             {/* Feedback Messages */}
             {actionResult && (
               <div className={cn(
-                "p-4 rounded-2xl text-xs font-bold mb-6 animate-in zoom-in-95 duration-300", 
-                actionResult.ok ? "bg-success-soft text-success border border-success/20" : "bg-danger-soft text-danger border border-danger/20"
+                "p-4 rounded-md text-[10px] font-black uppercase tracking-widest mb-6 animate-in zoom-in-95 duration-300 border", 
+                actionResult.ok ? "bg-success-soft text-success border-success/10" : "bg-danger-soft text-danger border-danger/10"
               )}>
                 <div className="flex items-center gap-2">
                   <div className={cn("w-1.5 h-1.5 rounded-full animate-ping", actionResult.ok ? "bg-success" : "bg-danger")} />
@@ -396,7 +345,7 @@ export default function TeamHomePage() {
             )}
             
             {locationError && (
-              <div className="bg-warning-soft text-warning p-4 rounded-2xl text-xs font-bold mb-6 border border-warning/20 flex items-center gap-3">
+              <div className="bg-warning-soft text-warning p-4 rounded-md text-[10px] font-black uppercase tracking-widest mb-6 border border-warning/10 flex items-center gap-3">
                 <AlertTriangle className="w-5 h-5 shrink-0" />
                 <p>{locationError}</p>
               </div>
@@ -405,9 +354,9 @@ export default function TeamHomePage() {
             {/* Primary Action Button */}
             <div className="mt-auto relative z-10">
               {shiftDone ? (
-                <div className="w-full py-6 rounded-3xl bg-success-soft text-success border-2 border-dashed border-success/30 flex flex-col items-center justify-center gap-2">
+                <div className="w-full py-6 rounded-md bg-success-soft text-success border border-dashed border-success/30 flex flex-col items-center justify-center gap-2">
                   <TrendingUp className="w-8 h-8" />
-                  <span className="text-sm font-black uppercase tracking-widest">{isRTL ? "اكتمل يومك بنجاح" : "Shift Completed"}</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest">{isRTL ? "اكتمل يومك بنجاح" : "Shift Completed"}</span>
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
@@ -419,13 +368,12 @@ export default function TeamHomePage() {
                           else handleAttendance("check-in");
                       }}
                       disabled={actionLoading}
-                      className="w-full group/btn relative bg-primary text-white font-black py-5 rounded-3xl shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 disabled:opacity-50 overflow-hidden"
+                      className="w-full bg-[#ff5a00] text-white font-black py-4 rounded-md shadow-lg shadow-[#ff5a00]/10 hover:-translate-y-0.5 transition-all disabled:opacity-50"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 -translate-x-full group-hover/btn:animate-shimmer" />
                       <div className="flex items-center justify-center gap-3">
                         {actionLoading
-                          ? <RefreshCw className="w-6 h-6 animate-spin" />
-                          : <><LogIn className="w-6 h-6 stroke-[3]" /> <span className="text-lg">{isRTL ? "تسجيل دخول" : "CHECK IN"}</span></>}
+                          ? <RefreshCw className="w-5 h-5 animate-spin" />
+                          : <><LogIn className="w-5 h-5 stroke-[3]" /> <span className="text-lg">{isRTL ? "تسجيل دخول" : "CHECK IN"}</span></>}
                       </div>
                     </button>
                   )}
@@ -435,18 +383,18 @@ export default function TeamHomePage() {
                         <button
                           onClick={() => handleAttendance("check-in", "office")}
                           disabled={actionLoading}
-                          className="flex-1 bg-primary text-white font-black py-6 rounded-3xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex flex-col items-center justify-center disabled:opacity-50 gap-2"
+                          className="flex-1 bg-[#ff5a00] text-white font-black py-5 rounded-md hover:scale-[1.01] transition-all flex flex-col items-center justify-center disabled:opacity-50 gap-1"
                         >
-                           <span className="text-2xl">🏢</span>
-                           <span className="text-[11px] uppercase tracking-widest">{isRTL ? "المكتب" : "OFFICE"}</span>
+                           <span className="text-xl">🏢</span>
+                           <span className="text-[10px] uppercase tracking-widest">{isRTL ? "المكتب" : "OFFICE"}</span>
                         </button>
                         <button
                           onClick={() => handleAttendance("check-in", "wfh")}
                           disabled={actionLoading}
-                          className="flex-1 bg-foreground text-white font-black py-6 rounded-3xl shadow-lg shadow-foreground/20 hover:scale-[1.02] active:scale-95 transition-all flex flex-col items-center justify-center disabled:opacity-50 gap-2"
+                          className="flex-1 bg-[#111] text-white font-black py-5 rounded-md hover:scale-[1.01] transition-all flex flex-col items-center justify-center disabled:opacity-50 gap-1"
                         >
-                           <span className="text-2xl">🏠</span>
-                           <span className="text-[11px] uppercase tracking-widest">{isRTL ? "المنزل" : "WFH"}</span>
+                           <span className="text-xl">🏠</span>
+                           <span className="text-[10px] uppercase tracking-widest">{isRTL ? "المنزل" : "WFH"}</span>
                         </button>
                      </div>
                   )}
@@ -455,13 +403,12 @@ export default function TeamHomePage() {
                     <button
                       onClick={() => handleAttendance("check-out")}
                       disabled={actionLoading}
-                      className="w-full group/btn relative bg-danger text-white font-black py-5 rounded-3xl shadow-xl shadow-danger/20 hover:shadow-danger/40 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 disabled:opacity-50 overflow-hidden"
+                      className="w-full bg-[#dc2626] text-white font-black py-4 rounded-md shadow-lg shadow-[#dc2626]/10 hover:-translate-y-0.5 transition-all disabled:opacity-50"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover/btn:animate-shimmer" />
                       <div className="flex items-center justify-center gap-3">
                         {actionLoading
-                          ? <RefreshCw className="w-6 h-6 animate-spin" />
-                          : <><LogOut className="w-6 h-6 stroke-[3]" /> <span className="text-lg">{isRTL ? "تسجيل انصراف" : "CHECK OUT"}</span></>}
+                          ? <RefreshCw className="w-5 h-5 animate-spin" />
+                          : <><LogOut className="w-5 h-5 stroke-[3]" /> <span className="text-lg">{isRTL ? "تسجيل انصراف" : "CHECK OUT"}</span></>}
                       </div>
                     </button>
                   )}
@@ -472,33 +419,33 @@ export default function TeamHomePage() {
 
           {/* Quick Nav: Tasks & Announcements */}
           <div className="grid grid-cols-2 gap-4">
-            <Link href="/team/tasks" className="premium-card p-6 flex flex-col gap-4 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500">
+            <Link href="/team/tasks" className="premium-card p-6 flex flex-col gap-4 group transition-all hover:border-[#ff5a00]/20">
+              <div className="w-12 h-12 bg-[#fff1e8] rounded-md flex items-center justify-center text-[#ff5a00] border border-[#ff5a00]/10 group-hover:scale-110 transition-transform duration-500">
                 <CheckSquare className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 group-hover:text-primary transition-colors">
+                <p className="text-[10px] font-black text-[#6b7280] uppercase tracking-widest mb-1 group-hover:text-[#ff5a00] transition-colors">
                   {isRTL ? "المهام" : "TASKS"}
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black text-foreground tracking-tighter">{taskCount}</span>
-                  <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                  <span className="text-2xl font-black text-[#111] tracking-tighter">{taskCount}</span>
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#ff5a00] animate-pulse" />
                 </div>
               </div>
             </Link>
             
-            <Link href="/team/announcements" className="premium-card p-6 flex flex-col gap-4 group">
-              <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500">
+            <Link href="/team/announcements" className="premium-card p-6 flex flex-col gap-4 group transition-all hover:border-[#ff5a00]/20">
+              <div className="w-12 h-12 bg-[#fff1e8] rounded-md flex items-center justify-center text-[#ff5a00] border border-[#ff5a00]/10 group-hover:scale-110 transition-transform duration-500">
                 <Megaphone className="w-6 h-6 stroke-[2.5]" />
               </div>
               <div>
-                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 group-hover:text-primary transition-colors">
+                <p className="text-[10px] font-black text-[#6b7280] uppercase tracking-widest mb-1 group-hover:text-[#ff5a00] transition-colors">
                   {isRTL ? "الإعلانات" : "NEWS"}
                 </p>
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black text-foreground tracking-tighter">{announcementCount}</span>
+                  <span className="text-2xl font-black text-[#111] tracking-tighter">{announcementCount}</span>
                   {announcementCount > 0 && (
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#ff5a00] animate-pulse" />
                   )}
                 </div>
               </div>

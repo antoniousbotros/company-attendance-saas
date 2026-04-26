@@ -198,7 +198,7 @@ export default function LoginPage() {
 
             <div className="relative group perspective">
                <div className="absolute inset-0 bg-white/20 blur-2xl rounded-3xl transform group-hover:scale-105 transition-all duration-700"></div>
-               <img src="https://media.discordapp.net/attachments/1231649964593414235/1231650073699844096/telegram_mockup.png" alt="App Preview" className="relative drop-shadow-2xl rounded-2xl transform rotate-[-2deg] group-hover:rotate-0 transition-transform duration-700 border-4 border-white/10" onError={(e) => (e.currentTarget.style.display = 'none')} />
+               <img src="/hr_mobile_mockup.png" alt="App Preview" className="relative drop-shadow-2xl rounded-2xl transform rotate-[-2deg] group-hover:rotate-0 transition-transform duration-700 border-4 border-white/10" onError={(e) => (e.currentTarget.style.display = 'none')} />
             </div>
 
             <div className="pt-12 text-center text-white/50 text-sm font-bold flex items-center justify-center gap-8 opacity-60">

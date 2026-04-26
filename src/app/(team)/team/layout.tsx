@@ -13,6 +13,9 @@ import {
   Menu,
   X,
   User,
+  ChevronLeft,
+  ChevronRight,
+  Calculator,
   Cake,
   Phone,
   Briefcase
@@ -167,172 +170,165 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <TeamContext.Provider value={{ employee, loading, isRTL, lang, t, refreshEmployee }}>
-      <div className="min-h-screen bg-background font-sans selection:bg-primary/10 selection:text-primary overflow-x-hidden">
-
-        {/* 📱 Mobile Top Header (Fixed) */}
-        <header className="lg:hidden fixed top-0 inset-x-0 h-20 bg-white/80 backdrop-blur-md border-b border-border/50 z-[60] px-6 flex items-center justify-between">
-           <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-black text-sm">
-                 {companyName.charAt(0)}
-              </div>
-              <div className={cn("flex flex-col", isRTL && "items-end")}>
-                 <span className="text-[14px] font-black tracking-tight">{companyName}</span>
-                 <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">Portal</span>
-              </div>
-           </div>
-           <button 
-             onClick={() => setSidebarOpen(true)}
-             className="w-10 h-10 flex items-center justify-center bg-muted rounded-xl text-foreground active:scale-90 transition-transform"
-           >
-              <Menu className="w-5 h-5" />
-           </button>
-        </header>
-
-        {/* 📱 Mobile Sidebar Overlay */}
-        <div className={cn(
-          "fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm transition-opacity duration-500 lg:hidden",
-          sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        )} onClick={() => setSidebarOpen(false)} />
-
-        {/* 📱 Mobile Sidebar Drawer */}
+      <div className="min-h-screen bg-[#f5f5f5] text-[#111] flex font-sans">
+        
+        {/* 🏢 Desktop Sidebar */}
         <aside className={cn(
-          "fixed inset-y-0 z-[80] w-[80%] max-w-[300px] bg-white shadow-2xl transition-transform duration-500 lg:hidden",
-          isRTL ? (sidebarOpen ? "translate-x-0" : "translate-x-full") : (sidebarOpen ? "translate-x-0" : "-translate-x-full"),
+          "hidden lg:flex flex-col w-[240px] bg-[#f5f5f5] border-r border-[#eeeeee] fixed inset-y-0 z-50",
           isRTL ? "right-0" : "left-0"
         )}>
-           <div className="h-full flex flex-col">
-              <div className="p-8 border-b border-border/50 flex items-center justify-between">
-                 <div className="flex flex-col">
-                    <span className="text-sm font-black tracking-tight">{employee?.name}</span>
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{employee?.department}</span>
+           <div className="p-8">
+              <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                 <div className="w-10 h-10 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-sm">
+                    {companyName.charAt(0)}
                  </div>
-                 <button onClick={() => setSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center bg-muted rounded-lg">
-                    <X className="w-4 h-4" />
-                 </button>
+                 <div className={cn("flex flex-col", isRTL && "items-end")}>
+                    <span className="text-[14px] font-black tracking-tight">{companyName}</span>
+                    <span className="text-[9px] font-bold text-[#9ca3af] uppercase tracking-widest">Portal</span>
+                 </div>
               </div>
+           </div>
 
-              <nav className="flex-1 p-6 space-y-2">
-                 <Link href="/team/profile" className="flex items-center gap-4 p-4 rounded-2xl bg-primary/5 text-primary font-black text-sm">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                       <User className="w-5 h-5" />
-                    </div>
-                    {t.profile}
-                 </Link>
-                 <Link href="/team/announcements" className="flex items-center gap-4 p-4 rounded-2xl hover:bg-muted text-muted-foreground hover:text-foreground font-black text-sm transition-colors">
-                    <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center">
-                       <Megaphone className="w-5 h-5" />
-                    </div>
-                    {t.announcements}
-                 </Link>
-              </nav>
+           <nav className="flex-1 px-4 space-y-1">
+              {navItems.map((item) => {
+                 const isActive = pathname === item.href;
+                 return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-md text-sm font-bold transition-all",
+                        isActive 
+                          ? "bg-white text-[#111] border-l-4 border-[#ff5a00] shadow-sm" 
+                          : "text-[#6b7280] hover:bg-white/50 hover:text-[#111]",
+                        isRTL && isActive && "border-l-0 border-r-4",
+                        isRTL && "flex-row-reverse text-right"
+                      )}
+                    >
+                       <item.icon className="w-4 h-4" />
+                       {item.name}
+                    </Link>
+                 );
+              })}
+           </nav>
 
-              <div className="p-8 border-t border-border/50">
-                 <button 
-                   onClick={handleLogout}
-                   className="w-full flex items-center justify-center gap-3 p-4 rounded-2xl bg-danger-soft text-danger font-black text-sm active:scale-95 transition-all"
-                 >
-                    <LogOut className="w-5 h-5" />
-                    {t.signOut}
-                 </button>
-              </div>
+           <div className="p-4 border-t border-[#eeeeee] space-y-2">
+              <Link href="/team/profile" className={cn("flex items-center gap-3 p-3 rounded-md hover:bg-white/50 transition-colors", isRTL && "flex-row-reverse text-right")}>
+                 <div className="w-8 h-8 rounded-md bg-[#eeeeee] flex items-center justify-center text-[#6b7280] overflow-hidden border border-[#eeeeee]">
+                    {employee?.avatar_url ? (
+                      <img src={employee.avatar_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-4 h-4" />
+                    )}
+                 </div>
+                 <div className="flex flex-col">
+                    <span className="text-xs font-bold text-[#111]">{employee?.name?.split(" ")[0]}</span>
+                    <span className="text-[10px] text-[#9ca3af]">{t.profile}</span>
+                 </div>
+              </Link>
+              <button 
+                onClick={handleLogout}
+                className={cn("w-full flex items-center gap-3 p-3 rounded-md text-[#dc2626] hover:bg-red-50 transition-colors text-sm font-bold", isRTL && "flex-row-reverse text-right")}
+              >
+                 <LogOut className="w-4 h-4" />
+                 {t.signOut}
+              </button>
            </div>
         </aside>
 
-        {/* Desktop: Glassmorphic Top Header */}
-        <header className="hidden lg:flex fixed top-4 inset-x-6 h-16 glass-morphism z-50 rounded-2xl items-center px-6 shadow-sm">
-          {/* Logo & Company Info */}
-          <div className={cn("flex items-center gap-3 shrink-0", isRTL && "flex-row-reverse")}>
-            {logoUrl ? (
-              <img src={logoUrl} alt="" className="w-10 h-10 rounded-xl object-cover shadow-sm" />
-            ) : (
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-black text-sm shadow-sm shadow-primary/20">
-                {companyName.charAt(0)}
-              </div>
-            )}
-            <div className={cn("flex flex-col", isRTL && "items-end")}>
-              <span className="text-[13px] font-black text-foreground tracking-tight leading-none mb-0.5">{companyName}</span>
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">Team Portal</span>
-            </div>
-          </div>
-
-          {/* Navigation — Centered Pills */}
-          <nav className="flex-1 flex items-center justify-center gap-1.5">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "relative flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-all duration-300",
-                    isActive
-                      ? "bg-primary text-white shadow-md shadow-primary/25"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  )}
-                >
-                  <item.icon className={cn("w-4 h-4", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {/* User Profile & Logout */}
-          <div className={cn("flex items-center gap-4 shrink-0", isRTL && "flex-row-reverse")}>
-             <Link href="/team/profile" className={cn("flex items-center gap-3 p-1.5 hover:bg-muted rounded-xl transition-colors", isRTL && "flex-row-reverse")}>
-                <div className={cn("flex flex-col text-right", isRTL && "text-left")}>
-                <span className="text-[12px] font-bold text-foreground leading-none mb-1">{employee?.name}</span>
-                <span className="text-[10px] font-medium text-muted-foreground leading-none">{employee?.department}</span>
+        <div className={cn(
+          "flex-1 flex flex-col min-h-screen min-w-0 bg-white",
+          isRTL ? "lg:mr-[240px]" : "lg:ml-[240px]"
+        )}>
+          {/* 📱 Mobile Top Header */}
+          <header className="lg:hidden h-16 bg-white border-b border-[#eeeeee] px-6 flex items-center justify-between z-40">
+             <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
+                <div className="w-8 h-8 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-xs">
+                   {companyName.charAt(0)}
                 </div>
-                {employee?.avatar_url ? (
-                    <img src={employee.avatar_url} alt="" className="w-9 h-9 rounded-xl object-cover border border-border" />
-                ) : (
-                    <div className="w-9 h-9 rounded-xl bg-muted flex items-center justify-center text-muted-foreground">
-                        <User className="w-5 h-5" />
-                    </div>
-                )}
-             </Link>
-            <div className="w-px h-6 bg-border mx-1" />
-            <button
-              onClick={handleLogout}
-              className="group relative flex items-center justify-center w-9 h-9 rounded-xl bg-danger-soft text-danger hover:bg-danger hover:text-white transition-all duration-300"
-              title={t.signOut}
-            >
-              <LogOut className="w-4 h-4 transition-transform group-hover:scale-110" />
-            </button>
-          </div>
-        </header>
+                <span className="text-sm font-black">{companyName}</span>
+             </div>
+             <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f5] rounded-md transition-colors">
+                <Menu className="w-5 h-5" />
+             </button>
+          </header>
 
-        {/* Main Content Area */}
-        <main className="pt-24 lg:pt-28 pb-32 lg:pb-12">
-          <div className="max-w-5xl mx-auto px-4 lg:px-10">
+          {/* 📱 Mobile Sidebar Overlay */}
+          {sidebarOpen && (
+             <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] lg:hidden" onClick={() => setSidebarOpen(false)} />
+          )}
+
+          {/* 📱 Mobile Sidebar Drawer */}
+          <aside className={cn(
+            "fixed inset-y-0 z-[110] w-[280px] bg-white shadow-2xl transition-transform duration-300 lg:hidden",
+            isRTL ? (sidebarOpen ? "translate-x-0" : "translate-x-full") : (sidebarOpen ? "translate-x-0" : "-translate-x-full"),
+            isRTL ? "right-0" : "left-0"
+          )}>
+             <div className="flex flex-col h-full">
+                <div className="p-6 border-b border-[#eeeeee] flex items-center justify-between">
+                   <span className="font-black text-lg">{t.home}</span>
+                   <button onClick={() => setSidebarOpen(false)} className="p-2 hover:bg-[#f5f5f5] rounded-md">
+                      <X className="w-5 h-5" />
+                   </button>
+                </div>
+                <nav className="flex-1 p-4 space-y-1">
+                   {navItems.map((item) => (
+                      <Link 
+                        key={item.href} 
+                        href={item.href} 
+                        className={cn("flex items-center gap-3 p-4 rounded-md font-bold text-sm", pathname === item.href ? "bg-[#fff1e8] text-[#ff5a00]" : "text-[#6b7280]", isRTL && "flex-row-reverse text-right")}
+                      >
+                         <item.icon className="w-5 h-5" />
+                         {item.name}
+                      </Link>
+                   ))}
+                   <div className="pt-4 mt-4 border-t border-[#eeeeee]">
+                      <Link 
+                        href="/team/profile" 
+                        className={cn("flex items-center gap-3 p-4 rounded-md font-bold text-sm", pathname === "/team/profile" ? "bg-[#fff1e8] text-[#ff5a00]" : "text-[#6b7280]", isRTL && "flex-row-reverse text-right")}
+                      >
+                         <div className="w-6 h-6 rounded-md bg-[#eeeeee] flex items-center justify-center overflow-hidden border border-[#eeeeee]">
+                            {employee?.avatar_url ? (
+                              <img src={employee.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <User className="w-3 h-3" />
+                            )}
+                         </div>
+                         {t.profile}
+                      </Link>
+                   </div>
+                </nav>
+                <div className="p-4 border-t border-[#eeeeee]">
+                   <button onClick={handleLogout} className={cn("w-full flex items-center gap-3 p-4 rounded-md text-[#dc2626] font-bold", isRTL && "flex-row-reverse text-right")}>
+                      <LogOut className="w-5 h-5" />
+                      {t.signOut}
+                   </button>
+                </div>
+             </div>
+          </aside>
+
+          {/* 🖼️ Page Banner */}
+          <div className="page-banner">
+             <div className={cn("flex flex-col gap-1", isRTL && "items-end")}>
+                <div className={cn("flex items-center gap-2 text-[10px] font-bold text-[#9ca3af] uppercase tracking-widest mb-1", isRTL && "flex-row-reverse")}>
+                   <Link href="/team" className="hover:text-[#ff5a00] transition-colors">{t.home}</Link>
+                   {pathname !== "/team" && (
+                     <>
+                       {isRTL ? <ChevronLeft className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                       <span className="text-[#6b7280]">{navItems.find(i => i.href === pathname)?.name || t.profile}</span>
+                     </>
+                   )}
+                </div>
+                <h1 className="text-3xl font-black text-[#111] tracking-tight">
+                   {navItems.find(i => i.href === pathname)?.name || t.profile}
+                </h1>
+             </div>
+          </div>
+
+          {/* 🚀 Main Content */}
+          <main className="flex-1 px-8 py-10 max-w-[1200px] w-full mx-auto bg-white min-h-[calc(100vh-64px-116px)]">
             {children}
-          </div>
-        </main>
-
-        {/* Mobile: Floating Dock Navigation */}
-        <div className="lg:hidden fixed bottom-6 inset-x-6 z-50">
-          <nav className="floating-dock mx-auto max-w-sm px-2 py-2 flex items-center justify-center gap-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all duration-300 flex-1",
-                    isActive ? "bg-white/10 text-primary" : "text-white/40 hover:text-white/70"
-                  )}
-                >
-                  <item.icon className={cn("w-6 h-6 mb-1", isActive ? "stroke-[2.5]" : "stroke-[2]")} />
-                  <span className="text-[9px] font-black uppercase tracking-tighter">{item.name}</span>
-                  {isActive && (
-                    <span className="absolute -bottom-1 w-1 h-1 bg-primary rounded-full shadow-[0_0_8px_#ff5a00]" />
-                  )}
-                </Link>
-              );
-            })}
-          </nav>
+          </main>
         </div>
       </div>
     </TeamContext.Provider>

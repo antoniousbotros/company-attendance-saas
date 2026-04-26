@@ -57,15 +57,6 @@ export default function TeamProfilePage() {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-black text-foreground tracking-tight">
-          {t.profile}
-        </h1>
-        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-          {lang === "ar" ? "إدارة معلوماتك الشخصية" : "Manage your personal information"}
-        </p>
-      </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         
@@ -73,7 +64,7 @@ export default function TeamProfilePage() {
         <div className="lg:col-span-1 space-y-6">
           <div className="premium-card p-8 flex flex-col items-center gap-6">
             <div className="relative group">
-              <div className="w-32 h-32 rounded-3xl overflow-hidden bg-muted border-4 border-white shadow-xl">
+              <div className="w-32 h-32 rounded-md overflow-hidden bg-[#f5f5f5] border-2 border-[#eeeeee]">
                 {previewUrl ? (
                   <img src={previewUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -84,7 +75,7 @@ export default function TeamProfilePage() {
               </div>
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute -bottom-2 -right-2 w-10 h-10 bg-primary text-white rounded-xl shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                className="absolute -bottom-2 -right-2 w-10 h-10 bg-[#ff5a00] text-white rounded-md shadow-md flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
               >
                 <Camera className="w-5 h-5" />
               </button>
@@ -110,14 +101,13 @@ export default function TeamProfilePage() {
         <div className="lg:col-span-2 space-y-6">
           <div className="premium-card p-6 md:p-8 space-y-8">
             
-            {/* Status Messages */}
             {result && (
               <div className={cn(
-                "p-4 rounded-2xl flex items-center gap-3 animate-in zoom-in-95 duration-300",
-                result.ok ? "bg-success-soft text-success border border-success/20" : "bg-danger-soft text-danger border border-danger/20"
+                "p-4 rounded-md flex items-center gap-3 animate-in zoom-in-95 duration-300",
+                result.ok ? "bg-success-soft text-success border border-success/10" : "bg-danger-soft text-danger border border-danger/10"
               )}>
                 {result.ok ? <CheckCircle2 className="w-5 h-5" /> : <AlertCircle className="w-5 h-5" />}
-                <span className="text-xs font-bold">{result.message}</span>
+                <span className="text-[11px] font-black uppercase tracking-widest">{result.message}</span>
               </div>
             )}
 
@@ -129,9 +119,9 @@ export default function TeamProfilePage() {
                   <Phone className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">{t.phone}</span>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-2xl border border-border/50 text-sm font-bold text-muted-foreground flex items-center justify-between">
+                <div className="p-4 bg-[#fcfcfc] rounded-md border border-[#eeeeee] text-sm font-bold text-[#6b7280] flex items-center justify-between">
                   {employee?.phone}
-                  <div className="px-2 py-0.5 bg-muted rounded-md text-[9px] uppercase tracking-tighter">Read Only</div>
+                  <div className="px-2 py-0.5 bg-[#f5f5f5] rounded-md text-[9px] uppercase tracking-tighter">Read Only</div>
                 </div>
               </div>
 
@@ -141,9 +131,9 @@ export default function TeamProfilePage() {
                   <Briefcase className="w-4 h-4" />
                   <span className="text-[10px] font-bold uppercase tracking-widest">{t.department}</span>
                 </div>
-                <div className="p-4 bg-muted/30 rounded-2xl border border-border/50 text-sm font-bold text-muted-foreground flex items-center justify-between">
+                <div className="p-4 bg-[#fcfcfc] rounded-md border border-[#eeeeee] text-sm font-bold text-[#6b7280] flex items-center justify-between">
                   {employee?.department}
-                  <div className="px-2 py-0.5 bg-muted rounded-md text-[9px] uppercase tracking-tighter">Read Only</div>
+                  <div className="px-2 py-0.5 bg-[#f5f5f5] rounded-md text-[9px] uppercase tracking-tighter">Read Only</div>
                 </div>
               </div>
 
@@ -157,7 +147,7 @@ export default function TeamProfilePage() {
                   type="date"
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
-                  className="w-full p-4 bg-white rounded-2xl border border-border focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all outline-none text-sm font-bold"
+                  className="w-full p-4 bg-[#fcfcfc] rounded-md border border-[#eeeeee] focus:border-[#ff5a00] transition-all outline-none text-sm font-bold"
                 />
               </div>
             </div>
@@ -167,7 +157,7 @@ export default function TeamProfilePage() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-primary text-white font-black px-8 py-4 rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 disabled:opacity-50"
+                className="flex items-center justify-center gap-2 bg-[#ff5a00] text-white font-black px-8 py-4 rounded-md shadow-md shadow-[#ff5a00]/10 hover:-translate-y-1 active:translate-y-0 transition-all duration-300 disabled:opacity-50"
               >
                 {saving ? (
                   <Loader2 className="w-5 h-5 animate-spin" />

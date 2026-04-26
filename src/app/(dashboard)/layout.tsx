@@ -102,7 +102,7 @@ function Sidebar({
 
       <aside
         className={cn(
-          "fixed top-0 bottom-0 z-50 w-[232px] bg-white flex flex-col transition-transform duration-200 ease-out lg:translate-x-0",
+          "fixed top-0 bottom-0 z-50 w-[240px] bg-white flex flex-col transition-transform duration-200 ease-out lg:translate-x-0",
           isRTL
             ? "right-0 border-l border-[#eeeeee]"
             : "left-0 border-r border-[#eeeeee]",
@@ -142,13 +142,13 @@ function Sidebar({
                         href={item.href}
                         onClick={() => setIsOpen(false)}
                         className={cn(
-                          "flex items-center gap-3 px-3 py-2 rounded-md text-[14px] transition-colors",
+                          "flex items-center gap-3 px-4 py-2.5 text-[13px] transition-colors",
                           isActive
-                            ? "text-[#ff5a00] font-semibold"
-                            : "text-[#4b5563] hover:text-[#111] hover:bg-[#f7f7f7]"
+                            ? "bg-[#f5f5f5] text-[#111] font-bold border-r-2 border-[#ff5a00] -mr-[1px]"
+                            : "text-[#6b7280] hover:text-[#111] hover:bg-[#f9fafb]"
                         )}
                       >
-                        <Icon className="w-[18px] h-[18px] shrink-0" />
+                        <Icon className={cn("w-[18px] h-[18px] shrink-0", isActive ? "text-[#ff5a00]" : "text-[#9ca3af]")} />
                         <span className="truncate">{item.name}</span>
                       </Link>
                     </li>
@@ -171,13 +171,14 @@ function Sidebar({
         </div>
 
         {/* Collapse chevron (decorative on desktop — functional for mobile close) */}
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 mt-auto">
+          <div className="w-full h-px bg-[#f5f5f5] mb-4" />
           <button
             onClick={() => setIsOpen(false)}
-            className="w-8 h-8 rounded-full border border-[#eeeeee] bg-white flex items-center justify-center text-[#6b7280] hover:text-[#111] hover:bg-[#f5f5f5] transition-colors"
-            aria-label="Collapse sidebar"
+            className="w-full py-2 flex items-center justify-center gap-2 text-[11px] font-bold text-[#9ca3af] hover:text-[#111] transition-colors uppercase tracking-widest"
           >
-            <ChevronLeft className={cn("w-4 h-4", isRTL && "rotate-180")} />
+            <ChevronLeft className={cn("w-3 h-3", isRTL && "rotate-180")} />
+            <span>{isRTL ? "تصغير القائمة" : "Collapse"}</span>
           </button>
         </div>
       </aside>
@@ -185,8 +186,35 @@ function Sidebar({
   );
 }
 
+function PageBanner() {
+  const pathname = usePathname();
+  const { isRTL } = useLanguage();
+  const groups = useNav();
+
+  const activeItem = groups
+    .flatMap((g) => g.items)
+    .find((item) => pathname.startsWith(item.href));
+
+  if (!activeItem) return null;
+
+  return (
+    <div className="bg-[#fcfcfc] border-b border-[#eeeeee] py-10 px-8">
+      <div className="max-w-[1200px] mx-auto w-full">
+        <h1 className="text-3xl font-bold tracking-tight text-[#111]">
+          {activeItem.name}
+        </h1>
+        <div className="flex items-center gap-2 mt-2 text-xs font-bold text-[#9ca3af] uppercase tracking-wider">
+          <span>{isRTL ? "لوحة التحكم" : "Dashboard"}</span>
+          <span className="opacity-30">/</span>
+          <span className="text-primary">{activeItem.name}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function TopBar({ setIsSidebarOpen }: { setIsSidebarOpen: (v: boolean) => void }) {
-  const { t, toggleLang, lang, isRTL } = useLanguage();
+  const { toggleLang, lang, isRTL } = useLanguage();
 
   return (
     <header className="h-16 bg-white border-b border-[#eeeeee] sticky top-0 z-30">
@@ -287,11 +315,35 @@ function DashboardChrome({
 
       <div
         className={cn(
-          "flex-1 flex flex-col min-h-screen min-w-0",
-          isRTL ? "lg:mr-[232px]" : "lg:ml-[232px]"
+          "flex-1 flex flex-col min-h-screen min-w-0 bg-white",
+          isRTL ? "lg:mr-[240px]" : "lg:ml-[240px]"
         )}
       >
         <TopBar setIsSidebarOpen={setIsSidebarOpen} />
+
+        {!isTrialExpired && (
+          <div className="bg-[#1e8e3e] text-white px-4 md:px-8 py-3 relative flex items-center justify-between text-start md:text-center z-20">
+            <div className="flex flex-col md:flex-row md:items-center justify-center gap-2 md:gap-4 flex-1">
+              <span className="text-sm font-medium">
+                 {isRTL 
+                   ? "دع موظفيك يستخدمون تطبيقهم الخاص لإدارة المهام والتسجيل والتقارير." 
+                   : "Give your employees their own Pro App to manage tasks, attendance, and reports."}
+              </span>
+              <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="bg-white text-[#1e8e3e] w-fit px-4 py-1.5 rounded-full text-xs font-bold shadow-sm hover:bg-gray-100 transition-colors">
+                {isRTL ? "تطبيق فريق العمل" : "Open Team App"}
+              </a>
+            </div>
+            <button 
+              onClick={dismissBanner} 
+              className={cn("absolute w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors", isRTL ? "left-4" : "right-4")} 
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        <PageBanner />
         
         {/* Trial Banners */}
         {isTrialActive && (
@@ -320,29 +372,8 @@ function DashboardChrome({
           </div>
         )}
 
-        {showTeamBanner && !isTrialExpired && (
-          <div className="bg-[#1e8e3e] text-white px-4 md:px-8 py-3 relative flex items-center justify-between text-start md:text-center z-20">
-            <div className="flex flex-col md:flex-row md:items-center justify-center gap-2 md:gap-4 flex-1">
-              <span className="text-sm font-medium">
-                 {isRTL 
-                   ? "دع موظفيك يستخدمون تطبيقهم الخاص لإدارة المهام والتسجيل والتقارير." 
-                   : "Give your employees their own Pro App to manage tasks, attendance, and reports."}
-              </span>
-              <a href="https://team.yawmy.app" target="_blank" rel="noreferrer" className="bg-white text-[#1e8e3e] w-fit px-4 py-1.5 rounded-full text-xs font-bold shadow-sm hover:bg-gray-100 transition-colors">
-                {isRTL ? "تطبيق فريق العمل" : "Open Team App"}
-              </a>
-            </div>
-            <button 
-              onClick={dismissBanner} 
-              className={cn("absolute w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors", isRTL ? "left-4" : "right-4")} 
-              aria-label="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
 
-        <main className="flex-1 px-4 md:px-8 py-8 max-w-[1200px] w-full mx-auto">
+        <main className="flex-1 px-8 py-10 max-w-[1200px] w-full mx-auto bg-white min-h-[calc(100vh-64px-116px)]">
           {children}
         </main>
 

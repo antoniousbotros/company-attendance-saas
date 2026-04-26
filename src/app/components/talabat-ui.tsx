@@ -89,7 +89,7 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        "bg-white border border-[#eeeeee] rounded-xl",
+        "bg-white border border-[#eeeeee] rounded-md shadow-none",
         pad,
         className
       )}
@@ -121,25 +121,27 @@ export function PageHeader({
         isRTL && "text-right"
       )}
     >
-      <div>
-        <h1 className="text-[28px] md:text-[32px] font-bold text-[#111] leading-tight tracking-tight">
-          {title}
-        </h1>
-        {subtitle && (
-          <button
-            type="button"
-            className={cn(
-              "mt-2 inline-flex items-center gap-1 text-[15px] font-medium",
-              subtitleTone === "orange"
-                ? "text-[#ff5a00] hover:underline"
-                : "text-[#6b7280]"
-            )}
-          >
-            {subtitle}
-            {subtitleTone === "orange" && <ChevronDown className="w-4 h-4" />}
-          </button>
-        )}
-      </div>
+      {title && (
+        <div>
+          <h1 className="text-[28px] md:text-[32px] font-bold text-[#111] leading-tight tracking-tight">
+            {title}
+          </h1>
+          {subtitle && (
+            <button
+              type="button"
+              className={cn(
+                "mt-2 inline-flex items-center gap-1 text-[15px] font-medium",
+                subtitleTone === "orange"
+                  ? "text-[#ff5a00] hover:underline"
+                  : "text-[#6b7280]"
+              )}
+            >
+              {subtitle}
+              {subtitleTone === "orange" && <ChevronDown className="w-4 h-4" />}
+            </button>
+          )}
+        </div>
+      )}
       {action && <div className="shrink-0">{action}</div>}
     </div>
   );
@@ -250,7 +252,7 @@ export function SearchField({
         value={value ?? ""}
         onChange={(e) => onChange?.(e.target.value)}
         placeholder={placeholder}
-        className="w-full h-10 pl-10 pr-4 rounded-full bg-white border border-[#eeeeee] text-sm text-[#111] placeholder-[#9ca3af] outline-none focus:border-[#ffd4b8] focus:ring-2 focus:ring-[#ff5a00]/10 transition-all"
+        className="w-full h-10 pl-10 pr-4 rounded-md bg-white border border-[#eeeeee] text-sm text-[#111] placeholder-[#9ca3af] outline-none focus:border-primary/30 transition-all"
       />
     </div>
   );

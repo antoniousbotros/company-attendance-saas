@@ -74,9 +74,13 @@ export default function PayrollPage() {
       const { data: company } = await supabase.from("companies").select("id").eq("owner_id", user?.id).single();
 
       if (company) {
+        const { data: { session } } = await supabase.auth.getSession();
         const res = await fetch("/api/payroll/calculate", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token}`
+          },
           body: JSON.stringify({ company_id: company.id, month: selectedMonth })
         });
         const result = await res.json();

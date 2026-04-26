@@ -198,24 +198,14 @@ export default function TeamReportsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* ── Page Header ── */}
-      <div className="flex items-center gap-4">
-        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-          <BarChart3 className="w-6 h-6 stroke-[2.5]" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black text-foreground tracking-tight">{isRTL ? "التقارير الميدانية" : "Field Reports"}</h1>
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "توثيق الأنشطة والمهام" : "Document your daily activities"}</p>
-        </div>
-      </div>
 
       {/* ── Navigation Tabs ── */}
       <div className="flex bg-muted/50 backdrop-blur-sm rounded-2xl p-1.5 border border-border/50">
         <button 
           onClick={() => { setTab("submit"); setSubmitted(false); }} 
           className={cn(
-            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
-            tab === "submit" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            "flex-1 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-300", 
+            tab === "submit" ? "bg-white text-[#111] shadow-sm ring-1 ring-[#eeeeee]" : "text-[#6b7280] hover:text-[#111]"
           )}
         >
           {isRTL ? "إرسال تقرير" : "NEW REPORT"}
@@ -223,8 +213,8 @@ export default function TeamReportsPage() {
         <button 
           onClick={() => setTab("my_reports")} 
           className={cn(
-            "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
-            tab === "my_reports" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+            "flex-1 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-300", 
+            tab === "my_reports" ? "bg-white text-[#111] shadow-sm ring-1 ring-[#eeeeee]" : "text-[#6b7280] hover:text-[#111]"
           )}
         >
           {isRTL ? "سجلي" : "MY HISTORY"}
@@ -233,8 +223,8 @@ export default function TeamReportsPage() {
           <button 
             onClick={() => setTab("team_reports")} 
             className={cn(
-              "flex-1 py-2.5 rounded-xl text-xs font-black transition-all duration-300", 
-              tab === "team_reports" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              "flex-1 py-2.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all duration-300", 
+              tab === "team_reports" ? "bg-white text-[#111] shadow-sm ring-1 ring-[#eeeeee]" : "text-[#6b7280] hover:text-[#111]"
             )}
           >
             {isRTL ? "تقارير الفريق" : "TEAM LOG"}
@@ -256,7 +246,7 @@ export default function TeamReportsPage() {
               </div>
               <button 
                 onClick={() => setSubmitted(false)} 
-                className="px-8 py-3 bg-foreground text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg"
+                className="px-8 py-3 bg-[#111] text-white text-[10px] font-black uppercase tracking-widest rounded-md hover:scale-105 active:scale-95 transition-all shadow-lg"
               >
                 {isRTL ? "إرسال تقرير جديد" : "SUBMIT ANOTHER"}
               </button>
@@ -270,9 +260,9 @@ export default function TeamReportsPage() {
                   {location && <span className="text-[9px] font-black text-success uppercase tracking-tighter">VERIFIED</span>}
                 </div>
                 {location ? (
-                  <div className="flex items-center justify-between gap-4 bg-muted/30 border border-border/50 p-4 rounded-2xl group transition-all">
+                  <div className="flex items-center justify-between gap-4 bg-[#fcfcfc] border border-[#eeeeee] p-4 rounded-md group transition-all">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-success-soft rounded-xl flex items-center justify-center text-success">
+                      <div className="w-10 h-10 bg-success-soft rounded-md flex items-center justify-center text-success border border-success/10">
                         <MapPin className="w-5 h-5" />
                       </div>
                       <div>
@@ -287,19 +277,19 @@ export default function TeamReportsPage() {
                     <button 
                       onClick={captureLocation} 
                       disabled={locationLoading} 
-                      className="w-full h-24 border-2 border-dashed border-border-strong rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-primary-soft/30 transition-all group disabled:opacity-50"
+                      className="w-full h-24 border-2 border-dashed border-[#eeeeee] rounded-md flex flex-col items-center justify-center gap-2 hover:border-[#ff5a00]/50 hover:bg-[#fff1e8]/30 transition-all group disabled:opacity-50"
                     >
                       {locationLoading ? (
-                        <Loader2 className="w-6 h-6 text-primary animate-spin" />
+                        <Loader2 className="w-6 h-6 text-[#ff5a00] animate-spin" />
                       ) : (
                         <>
-                          <MapPin className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                          <p className="text-xs font-black text-muted-foreground group-hover:text-foreground uppercase tracking-widest">{isRTL ? "اضغط لتحديد الموقع" : "CLICK TO CAPTURE LOCATION"}</p>
+                          <MapPin className="w-6 h-6 text-[#6b7280] group-hover:text-[#ff5a00] transition-colors" />
+                          <p className="text-[10px] font-black text-[#6b7280] group-hover:text-[#111] uppercase tracking-widest">{isRTL ? "اضغط لتحديد الموقع" : "CLICK TO CAPTURE LOCATION"}</p>
                         </>
                       )}
                     </button>
                     {locationError && (
-                      <div className="bg-danger-soft text-danger p-3 rounded-xl text-xs font-black border border-danger/20 flex items-center gap-2">
+                      <div className="bg-danger-soft text-danger p-3 rounded-md text-[10px] font-black border border-danger/10 flex items-center gap-2 uppercase tracking-widest">
                         <AlertTriangle className="w-4 h-4" />
                         {locationError}
                       </div>
@@ -318,37 +308,37 @@ export default function TeamReportsPage() {
                         <select 
                           value={fieldValues[f.id] || ""} 
                           onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} 
-                          className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 text-sm font-black text-foreground outline-none focus:border-primary/50 focus:bg-white transition-all appearance-none"
+                          className="w-full bg-[#fcfcfc] border border-[#eeeeee] rounded-md px-4 py-3 text-sm font-black text-[#111] outline-none focus:border-[#ff5a00] focus:bg-white transition-all appearance-none"
                         >
                           <option value="">{isRTL ? "اختر من القائمة..." : "Choose Option..."}</option>
                           {(f.options || []).map((opt: string, i: number) => (<option key={i} value={opt}>{opt}</option>))}
                         </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none group-focus-within:text-primary" />
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#6b7280] pointer-events-none group-focus-within:text-[#ff5a00]" />
                       </div>
                     ) : f.field_type === "image" ? (
                       <div className="space-y-3">
                         {fieldValues[f.id] ? (
-                          <div className="relative group rounded-2xl overflow-hidden shadow-md ring-2 ring-white">
+                          <div className="relative group rounded-md overflow-hidden border border-[#eeeeee]">
                             <img src={fieldValues[f.id]} alt="" className="w-full h-48 object-cover transition-transform duration-700 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                               <button 
                                 onClick={() => setFieldValues({ ...fieldValues, [f.id]: "" })} 
-                                className="bg-white text-danger font-black px-6 py-2 rounded-xl text-xs uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
+                                className="bg-white text-danger font-black px-6 py-2 rounded-md text-[10px] uppercase tracking-widest shadow-lg hover:scale-105 active:scale-95 transition-all"
                               >
                                 {isRTL ? "إزالة الصورة" : "REMOVE PHOTO"}
                               </button>
                             </div>
                           </div>
                         ) : uploadingField === f.id ? (
-                          <div className="h-48 border border-border/50 bg-muted/30 rounded-2xl flex flex-col items-center justify-center gap-3">
-                            <Loader2 className="w-8 h-8 text-primary animate-spin" />
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest animate-pulse">{isRTL ? "جاري المعالجة..." : "PROCESSING IMAGE..."}</p>
+                          <div className="h-48 border border-[#eeeeee] bg-[#fcfcfc] rounded-md flex flex-col items-center justify-center gap-3">
+                            <Loader2 className="w-8 h-8 text-[#ff5a00] animate-spin" />
+                            <p className="text-[10px] font-black text-[#6b7280] uppercase tracking-widest animate-pulse">{isRTL ? "جاري المعالجة..." : "PROCESSING IMAGE..."}</p>
                           </div>
                         ) : (
                           <div className="grid grid-cols-2 gap-3">
-                            <label className="flex flex-col items-center justify-center gap-2 border border-border-strong rounded-2xl py-8 hover:border-primary hover:bg-primary-soft transition-all cursor-pointer group shadow-sm">
-                              <Camera className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                              <span className="text-[10px] font-black text-muted-foreground group-hover:text-foreground uppercase tracking-tighter">{isRTL ? "كاميرا" : "CAMERA"}</span>
+                            <label className="flex flex-col items-center justify-center gap-2 border border-[#eeeeee] rounded-md py-8 hover:border-[#ff5a00] hover:bg-[#fff1e8] transition-all cursor-pointer group shadow-sm">
+                              <Camera className="w-5 h-5 text-[#6b7280] group-hover:text-[#ff5a00] transition-colors" />
+                              <span className="text-[10px] font-black text-[#6b7280] group-hover:text-[#111] uppercase tracking-tighter">{isRTL ? "كاميرا" : "CAMERA"}</span>
                               <input type="file" accept="image/*" capture="environment" className="hidden" onChange={async (e) => {
                                 let file = e.target.files?.[0]; if (!file) return;
                                 setUploadingField(f.id); setUploadError("");
@@ -363,9 +353,9 @@ export default function TeamReportsPage() {
                                 setUploadingField(null);
                               }} />
                             </label>
-                            <label className="flex flex-col items-center justify-center gap-2 border border-border-strong rounded-2xl py-8 hover:border-primary hover:bg-primary-soft transition-all cursor-pointer group shadow-sm">
-                              <ImageIcon className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                              <span className="text-[10px] font-black text-muted-foreground group-hover:text-foreground uppercase tracking-tighter">{isRTL ? "معرض" : "GALLERY"}</span>
+                            <label className="flex flex-col items-center justify-center gap-2 border border-[#eeeeee] rounded-md py-8 hover:border-[#ff5a00] hover:bg-[#fff1e8] transition-all cursor-pointer group shadow-sm">
+                              <ImageIcon className="w-5 h-5 text-[#6b7280] group-hover:text-[#ff5a00] transition-colors" />
+                              <span className="text-[10px] font-black text-[#6b7280] group-hover:text-[#111] uppercase tracking-tighter">{isRTL ? "معرض" : "GALLERY"}</span>
                               <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                                 let file = e.target.files?.[0]; if (!file) return;
                                 setUploadingField(f.id); setUploadError("");
@@ -390,7 +380,7 @@ export default function TeamReportsPage() {
                         value={fieldValues[f.id] || ""} 
                         onChange={(e) => setFieldValues({ ...fieldValues, [f.id]: e.target.value })} 
                         placeholder={f.label} 
-                        className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 text-sm font-black text-foreground outline-none focus:border-primary/50 focus:bg-white transition-all" 
+                        className="w-full bg-[#fcfcfc] border border-[#eeeeee] rounded-md px-4 py-3 text-sm font-black text-[#111] outline-none focus:border-[#ff5a00] focus:bg-white transition-all" 
                       />
                     )}
                   </div>
@@ -406,7 +396,7 @@ export default function TeamReportsPage() {
                     value={notes} 
                     onChange={(e) => setNotes(e.target.value)} 
                     rows={4} 
-                    className="w-full bg-muted/50 border border-border/50 rounded-2xl px-4 py-3 text-sm font-black text-foreground placeholder:text-muted-foreground/30 outline-none focus:border-primary/50 focus:bg-white transition-all resize-none" 
+                    className="w-full bg-[#fcfcfc] border border-[#eeeeee] rounded-md px-4 py-3 text-sm font-black text-[#111] placeholder:text-[#6b7280]/30 outline-none focus:border-[#ff5a00] focus:bg-white transition-all resize-none" 
                     placeholder={isRTL ? "اكتب ملاحظاتك هنا..." : "Provide any extra context..."} 
                   />
                 </div>
@@ -416,7 +406,7 @@ export default function TeamReportsPage() {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !location}
-                  className="w-full h-16 bg-primary text-white text-sm font-black uppercase tracking-[0.2em] rounded-2xl shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 group"
+                  className="w-full h-16 bg-[#ff5a00] text-white text-sm font-black uppercase tracking-[0.2em] rounded-md shadow-lg shadow-[#ff5a00]/10 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:scale-100 disabled:shadow-none flex items-center justify-center gap-3 group"
                 >
                   {submitting ? (
                     <>
@@ -473,7 +463,7 @@ export default function TeamReportsPage() {
                         href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
                         target="_blank" 
                         rel="noreferrer" 
-                        className="h-8 px-3 rounded-lg bg-primary-soft text-primary text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-primary hover:text-white transition-all shadow-sm"
+                        className="h-8 px-3 rounded-md bg-[#fff1e8] text-[#ff5a00] border border-[#ff5a00]/10 text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-[#ff5a00] hover:text-white transition-all shadow-sm"
                       >
                         <MapPin className="w-3 h-3" /> {isRTL ? "الخريطة" : "MAP"}
                       </a>
@@ -487,7 +477,7 @@ export default function TeamReportsPage() {
                         if (isImage) {
                           return (
                             <a key={i} href={v.value} target="_blank" rel="noreferrer" className="block relative group/img">
-                              <img src={v.value} alt={getFieldLabel(v.field_id)} className="w-16 h-16 object-cover rounded-xl border border-border/50 shadow-sm transition-transform group-hover/img:scale-105" />
+                              <img src={v.value} alt={getFieldLabel(v.field_id)} className="w-16 h-16 object-cover rounded-md border border-[#eeeeee] shadow-sm transition-transform group-hover/img:scale-105" />
                             </a>
                           );
                         }
@@ -501,8 +491,8 @@ export default function TeamReportsPage() {
                     </div>
                   )}
                   {r.notes && (
-                    <div className="bg-muted/20 p-3 rounded-xl border-s-4 border-primary/20">
-                      <p className="text-[11px] text-muted-foreground leading-relaxed italic">{r.notes}</p>
+                    <div className="bg-[#fcfcfc] p-3 rounded-md border-s-4 border-[#ff5a00]/20 border border-[#eeeeee]">
+                      <p className="text-[11px] text-[#6b7280] leading-relaxed italic">{r.notes}</p>
                     </div>
                   )}
                 </div>
@@ -520,7 +510,7 @@ export default function TeamReportsPage() {
             <button 
               onClick={exportToExcel} 
               disabled={exporting || teamReports.length === 0} 
-              className="flex items-center justify-center gap-2 bg-foreground text-white font-black text-[10px] px-6 py-3 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 uppercase tracking-widest"
+              className="flex items-center justify-center gap-2 bg-[#111] text-white font-black text-[10px] px-6 py-3 rounded-md hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-50 uppercase tracking-widest"
             >
               <Download className="w-4 h-4" /> 
               {exporting ? (isRTL ? "جاري التصدير..." : "EXPORTING...") : (isRTL ? "تصدير EXCEL" : "EXPORT EXCEL")}
@@ -560,7 +550,7 @@ export default function TeamReportsPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+                            <div className="w-7 h-7 bg-[#ff5a00]/10 rounded-md flex items-center justify-center text-[#ff5a00] border border-[#ff5a00]/10">
                               <User className="w-4 h-4" />
                             </div>
                             <span className="text-xs font-black text-foreground">{r.employee_name}</span>
@@ -572,7 +562,7 @@ export default function TeamReportsPage() {
                               const val = getFieldValue(r, f.id);
                               if (val && val.startsWith("http") && /\.(jpg|jpeg|png|webp|gif)/i.test(val)) {
                                 return (
-                                  <a href={val} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded-xl overflow-hidden border border-border/50 hover:scale-110 transition-transform">
+                                  <a href={val} target="_blank" rel="noreferrer" className="block w-10 h-10 rounded-md overflow-hidden border border-[#eeeeee] hover:scale-110 transition-transform">
                                     <img src={val} alt="" className="w-full h-full object-cover" />
                                   </a>
                                 );
@@ -592,7 +582,7 @@ export default function TeamReportsPage() {
                               href={`https://www.google.com/maps?q=${r.location_lat},${r.location_lng}`} 
                               target="_blank" 
                               rel="noreferrer" 
-                              className="w-8 h-8 rounded-xl bg-muted flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-all shadow-sm"
+                              className="w-8 h-8 rounded-md bg-[#f5f5f5] flex items-center justify-center text-[#ff5a00] border border-[#eeeeee] hover:bg-[#ff5a00] hover:text-white transition-all shadow-sm"
                             >
                               <MapPin className="w-4 h-4" />
                             </a>

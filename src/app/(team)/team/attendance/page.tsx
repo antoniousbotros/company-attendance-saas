@@ -62,29 +62,21 @@ export default function TeamAttendancePage() {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      
-      {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-            <CalendarDays className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight">{isRTL ? "سجل الحضور" : "Attendance Log"}</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "عرض وتحليل أدائك" : "Review your performance"}</p>
-          </div>
-        </div>
-
-        <div className="flex bg-muted/50 backdrop-blur-sm rounded-2xl p-1.5 border border-border/50 self-end md:self-auto">
+      {/* ── Filter Card ── */}
+      <div className="premium-card p-4 flex items-center justify-between bg-[#fcfcfc]">
+        <h3 className="text-sm font-black text-[#111] uppercase tracking-widest px-1">
+          {isRTL ? "تحليل الفترة" : "PERIOD ANALYSIS"}
+        </h3>
+        <div className="flex bg-[#f5f5f5] rounded-md p-1 border border-[#eeeeee]">
           {(["week", "month"] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={cn(
-                "px-5 py-2 rounded-xl text-xs font-black transition-all duration-300",
+                "px-4 py-1.5 rounded-md text-[10px] font-black transition-all",
                 period === p 
-                  ? "bg-white text-foreground shadow-sm" 
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-white text-[#ff5a00] shadow-sm" 
+                  : "text-[#6b7280] hover:text-[#111]"
               )}
             >
               {p === "week" ? (isRTL ? "أسبوع" : "WEEK") : (isRTL ? "شهر" : "MONTH")}
@@ -101,10 +93,9 @@ export default function TeamAttendancePage() {
             { label: isRTL ? "متأخر" : "LATE", val: stats.late, color: "text-warning", bg: "bg-warning-soft" },
             { label: isRTL ? "غائب" : "ABSENT", val: stats.absent, color: "text-danger", bg: "bg-danger-soft" },
           ].map((m, idx) => (
-            <div key={idx} className="premium-card p-5 text-center group">
+            <div key={idx} className="premium-card p-5 text-center">
               <p className={cn("text-3xl font-black tracking-tighter mb-1", m.color)}>{m.val}</p>
-              <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">{m.label}</p>
-              <div className={cn("mt-3 h-1 w-8 mx-auto rounded-full opacity-30", m.bg)} />
+              <p className="text-[10px] font-black text-[#9ca3af] uppercase tracking-widest">{m.label}</p>
             </div>
           ))}
         </div>
@@ -114,8 +105,8 @@ export default function TeamAttendancePage() {
       {!loading && chartData.length > 0 && (
         <div className="premium-card p-6 md:p-8">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-sm font-black text-muted-foreground uppercase tracking-widest">{isRTL ? "ساعات العمل اليومية" : "DAILY SESSION HOURS"}</h3>
-            <div className="bg-primary/5 px-3 py-1 rounded-xl text-primary text-[10px] font-black uppercase tracking-tighter">
+            <h3 className="text-sm font-black text-[#6b7280] uppercase tracking-widest">{isRTL ? "ساعات العمل اليومية" : "DAILY SESSION HOURS"}</h3>
+            <div className="bg-[#fff1e8] px-2 py-1 rounded-md text-[#ff5a00] text-[9px] font-black uppercase tracking-tighter">
               {period === "week" ? (isRTL ? "آخر 7 أيام" : "Last 7 Days") : (isRTL ? "آخر 30 يوم" : "Last 30 Days")}
             </div>
           </div>
@@ -125,10 +116,10 @@ export default function TeamAttendancePage() {
                 <XAxis dataKey="day" tick={{ fontSize: 9, fontWeight: 700, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fontWeight: 700, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={25} />
                 <Tooltip
-                  cursor={{ fill: '#f1f5f9', radius: 8 }}
-                  contentStyle={{ borderRadius: 16, border: "none", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)", fontSize: 11, fontWeight: 800 }}
+                  cursor={{ fill: '#f1f5f9', radius: 4 }}
+                  contentStyle={{ borderRadius: 8, border: "1px solid #eeeeee", boxShadow: "none", fontSize: 11, fontWeight: 800 }}
                 />
-                <Bar dataKey="hours" radius={[6, 6, 2, 2]}>
+                <Bar dataKey="hours" radius={[4, 4, 0, 0]}>
                   {chartData.map((entry, i) => (
                     <Cell key={i} fill={barColor(entry.status)} />
                   ))}
@@ -159,7 +150,7 @@ export default function TeamAttendancePage() {
               <div key={r.id} className="premium-card p-5 flex items-center justify-between group hover:border-primary/20 transition-all">
                 <div className="flex items-center gap-5">
                   <div className={cn(
-                    "w-12 h-12 rounded-2xl flex flex-col items-center justify-center shadow-sm",
+                    "w-12 h-12 rounded-md flex flex-col items-center justify-center",
                     r.status === 'present' ? "bg-success-soft text-success" : r.status === 'late' ? "bg-warning-soft text-warning" : "bg-danger-soft text-danger"
                   )}>
                     <span className="text-[10px] font-black uppercase leading-none opacity-60">
@@ -193,9 +184,9 @@ export default function TeamAttendancePage() {
 
                 <div className="flex flex-col items-end gap-2">
                   <span className={cn(
-                    "text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl border",
+                    "text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-md border",
                     statusColor(r.status),
-                    r.status === 'present' ? "border-success/20" : r.status === 'late' ? "border-warning/20" : "border-danger/20"
+                    r.status === 'present' ? "border-success/10" : r.status === 'late' ? "border-warning/10" : "border-danger/10"
                   )}>
                     {r.status === "present" ? (isRTL ? "حاضر" : "Present") : r.status === "late" ? (isRTL ? "متأخر" : "Late") : (isRTL ? "غائب" : "Absent")}
                   </span>

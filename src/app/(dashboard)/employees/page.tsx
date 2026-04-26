@@ -378,8 +378,7 @@ export default function EmployeesPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       <PageHeader
-        title={isRTL ? "الموظفين" : "Employees"}
-        subtitle={isRTL ? "إدارة فريق العمل وحالة الربط مع تليجرام" : "Manage your team and Telegram linking status"}
+        title=""
         isRTL={isRTL}
         action={
           <div className="flex items-center gap-3">
@@ -440,13 +439,15 @@ export default function EmployeesPage() {
 
       {activeTab === 'employees' ? (
         <>
-          <div className={cn("flex flex-wrap items-center gap-3", isRTL && "flex-row-reverse")}>
-            <SearchField
-              placeholder={isRTL ? "بحث عن موظف..." : "Search employees..."}
-              value={query}
-              onChange={setQuery}
-            />
-          </div>
+          <SectionCard className="mb-6">
+            <div className={cn("flex flex-wrap items-center gap-3", isRTL && "flex-row-reverse")}>
+              <SearchField
+                placeholder={isRTL ? "بحث عن موظف..." : "Search employees..."}
+                value={query}
+                onChange={setQuery}
+              />
+            </div>
+          </SectionCard>
 
           <SectionCard padding="none" className="overflow-hidden bg-white border border-[#eeeeee]">
             {selectedEmployeeIds.length > 0 && (

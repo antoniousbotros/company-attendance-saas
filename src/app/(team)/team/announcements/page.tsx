@@ -30,18 +30,6 @@ export default function TeamAnnouncementsPage() {
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
-      {/* ── Page Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
-            <Megaphone className="w-6 h-6 stroke-[2.5]" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-foreground tracking-tight">{isRTL ? "أخبار الشركة" : "Company Bulletin"}</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{isRTL ? "ابق على اطلاع بآخر التحديثات" : "Stay informed with latest updates"}</p>
-          </div>
-        </div>
-      </div>
 
       {/* ── Announcements Feed ── */}
       <div className="space-y-4">
@@ -53,8 +41,8 @@ export default function TeamAnnouncementsPage() {
           </div>
         ) : announcements.length === 0 ? (
           <div className="premium-card py-20 flex flex-col items-center justify-center text-center gap-6 border-dashed">
-            <div className="w-20 h-20 bg-primary-soft rounded-full flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-primary opacity-40" />
+            <div className="w-20 h-20 bg-[#fff1e8] rounded-full flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-[#ff5a00] opacity-40" />
             </div>
             <div>
               <h3 className="text-lg font-black text-foreground tracking-tight">{isRTL ? "لا توجد أخبار جديدة" : "CLEAR BULLETIN"}</h3>
@@ -72,16 +60,16 @@ export default function TeamAnnouncementsPage() {
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-4">
                     <div className="flex items-start gap-4">
                       <div className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110",
-                        recent ? "bg-primary-soft text-primary shadow-sm" : "bg-muted text-muted-foreground"
+                        "w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0 transition-all group-hover:scale-110",
+                        recent ? "bg-[#fff1e8] text-[#ff5a00] border border-[#ff5a00]/10 shadow-sm" : "bg-[#f5f5f5] text-[#6b7280] border border-[#eeeeee]"
                       )}>
                         <Pin className="w-5 h-5" />
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center gap-2 mb-1">
                           <h3 className="text-lg font-black text-foreground tracking-tight group-hover:text-primary transition-colors">{a.title}</h3>
-                          {recent && (
-                            <span className="bg-primary text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-lg animate-pulse tracking-widest">
+                           {recent && (
+                            <span className="bg-[#ff5a00] text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-md animate-pulse tracking-widest">
                               {isRTL ? "جديد" : "NEW"}
                             </span>
                           )}
@@ -107,7 +95,7 @@ export default function TeamAnnouncementsPage() {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-700 delay-150">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+              <div className="w-10 h-10 bg-[#ff5a00]/10 rounded-md flex items-center justify-center text-[#ff5a00]">
                 <PartyPopper className="w-5 h-5 stroke-[2.5]" />
               </div>
               <div>
@@ -127,10 +115,10 @@ export default function TeamAnnouncementsPage() {
                     key={monthNum}
                     onClick={() => setActiveMonth(monthNum)}
                     className={cn(
-                      "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                      "px-4 py-2 rounded-md text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border",
                       isActive 
-                        ? "bg-foreground text-white shadow-lg shadow-foreground/20 scale-105" 
-                        : "bg-muted text-muted-foreground hover:bg-muted-strong hover:text-foreground"
+                        ? "bg-[#111] text-white border-[#111] shadow-md shadow-black/10 scale-105" 
+                        : "bg-[#f5f5f5] text-[#6b7280] border-[#eeeeee] hover:bg-[#fff1e8] hover:text-[#ff5a00] hover:border-[#ff5a00]/20"
                     )}
                   >
                     {monthName}
@@ -157,7 +145,7 @@ export default function TeamAnnouncementsPage() {
               return filteredBirthdays.map((b) => (
                 <div key={b.id} className="premium-card p-4 group hover:border-primary/20 transition-all flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-primary-soft text-primary rounded-xl flex items-center justify-center text-xs font-black shadow-inner group-hover:scale-110 transition-transform">
+                    <div className="w-10 h-10 bg-[#fff1e8] text-[#ff5a00] border border-[#ff5a00]/10 rounded-md flex items-center justify-center text-xs font-black shadow-inner group-hover:scale-110 transition-transform">
                       {b.name.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
@@ -167,9 +155,9 @@ export default function TeamAnnouncementsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-col items-center bg-muted/30 px-3 py-1.5 rounded-xl border border-border/50">
-                    <span className="text-lg font-black text-primary leading-none">{new Date(b.birth_date).getDate()}</span>
-                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-tighter">{new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" })}</span>
+                  <div className="flex flex-col items-center bg-[#fcfcfc] px-3 py-1.5 rounded-md border border-[#eeeeee]">
+                    <span className="text-lg font-black text-[#ff5a00] leading-none">{new Date(b.birth_date).getDate()}</span>
+                    <span className="text-[8px] font-black text-[#6b7280] uppercase tracking-tighter">{new Date(b.birth_date).toLocaleString(lang === "ar" ? "ar-EG" : "en-US", { month: "short" })}</span>
                   </div>
                 </div>
               ));

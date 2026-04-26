@@ -230,7 +230,7 @@ function LandingPageContent() {
                </div>
                <div className="flex-1 w-full relative flex justify-center lg:justify-end">
                   <div className="absolute inset-0 bg-[#0284c7]/5 blur-3xl rounded-full"></div>
-                  <img src="https://media.discordapp.net/attachments/1231649964593414235/1231650073699844096/telegram_mockup.png" alt="Telegram App Mockup" className="relative z-10 w-full max-w-[320px] drop-shadow-2xl hover:-translate-y-2 transition-transform duration-700 rounded-3xl" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                  <img src="/hr_mobile_mockup.png" alt="Telegram App Mockup" className="relative z-10 w-full max-w-[320px] drop-shadow-2xl hover:-translate-y-2 transition-transform duration-700 rounded-3xl" onError={(e) => (e.currentTarget.style.display = 'none')} />
                </div>
             </div>
 
