@@ -335,7 +335,7 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
             "lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#eeeeee] flex items-stretch",
             "safe-area-inset-bottom"
           )}>
-            {[...navItems, { name: t.profile, icon: User, href: "/team/profile" }].map((item) => {
+            {navItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
