@@ -241,16 +241,25 @@ export default function TeamLayout({ children }: { children: React.ReactNode }) 
           isRTL ? "lg:mr-[240px]" : "lg:ml-[240px]"
         )}>
           {/* 📱 Mobile Top Header */}
-          <header className="lg:hidden h-16 bg-white border-b border-[#eeeeee] px-6 flex items-center justify-between z-40">
-             <div className={cn("flex items-center gap-3", isRTL && "flex-row-reverse")}>
-                <div className="w-8 h-8 bg-[#ff5a00] rounded-md flex items-center justify-center text-white font-black text-xs">
+          <header dir={isRTL ? "rtl" : "ltr"} className="lg:hidden h-14 bg-white/80 backdrop-blur-xl border-b border-[#eeeeee] px-5 flex items-center justify-between z-40 sticky top-0">
+             <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 bg-[#ff5a00] rounded-lg flex items-center justify-center text-white font-black text-[10px] shrink-0">
                    {companyName.charAt(0)}
                 </div>
-                <span className="text-sm font-black">{companyName}</span>
+                <span className="text-[13px] font-black tracking-tight">{companyName}</span>
              </div>
-             <button onClick={() => setSidebarOpen(true)} className="p-2 hover:bg-[#f5f5f5] rounded-md transition-colors">
-                <Menu className="w-5 h-5" />
-             </button>
+             <div className="flex items-center gap-2">
+                <Link href="/team/profile" className="w-8 h-8 rounded-full bg-[#f0f0f0] flex items-center justify-center overflow-hidden border border-[#e5e5e5] shrink-0">
+                   {employee?.avatar_url ? (
+                     <img src={employee.avatar_url} alt="" className="w-full h-full object-cover" />
+                   ) : (
+                     <User className="w-3.5 h-3.5 text-[#9ca3af]" />
+                   )}
+                </Link>
+                <button onClick={() => setSidebarOpen(true)} className="w-8 h-8 flex items-center justify-center hover:bg-[#f5f5f5] rounded-lg transition-colors">
+                   <Menu className="w-[18px] h-[18px] text-[#6b7280]" />
+                </button>
+             </div>
           </header>
 
           {/* 📱 Mobile Sidebar Overlay */}
